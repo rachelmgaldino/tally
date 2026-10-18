@@ -46,7 +46,7 @@ export function Sidebar({ name }: { name: string }) {
           <Wallet size={20} /> Contas e cartões
         </NavLink>
         <NavLink to="/configuracoes/categorias"><Tag size={20} /> Categorias</NavLink>
-        <span className="soon" title="Em breve"><SlidersHorizontal size={20} /> Preferências <small>em breve</small></span>
+        <NavLink to="/configuracoes/preferencias"><SlidersHorizontal size={20} /> Preferências</NavLink>
       </nav>
       <div className="profile">
         <Link to="/perfil">

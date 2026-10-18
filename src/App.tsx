@@ -7,6 +7,7 @@ import { TxFormProvider } from './components/TxFormContext'
 import { ToastProvider } from './components/Toast'
 import { DEMO } from './lib/config'
 import { useSeriesUpkeep } from './lib/entries'
+import { PrefsProvider } from './lib/prefs'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Invoice from './pages/Invoice'
@@ -15,6 +16,7 @@ import Profile from './pages/Profile'
 import Transactions from './pages/Transactions'
 import AccountsAndCards from './pages/settings/AccountsAndCards'
 import Categories from './pages/settings/Categories'
+import Preferences from './pages/settings/Preferences'
 import SettingsLayout from './pages/settings/SettingsLayout'
 
 export default function App() {
@@ -38,6 +40,7 @@ export default function App() {
   const name = (session?.user.user_metadata?.name as string | undefined) || capitalize(email.split(/[@.]/)[0])
 
   return (
+    <PrefsProvider saved={session?.user.user_metadata?.prefs}>
     <ToastProvider>
       <TxFormProvider>
         <SeriesUpkeep />
@@ -54,6 +57,7 @@ export default function App() {
             <Route path="categorias" element={<Categories />} />
             <Route path="contas" element={<AccountsAndCards />} />
             <Route path="cartoes" element={<AccountsAndCards />} />
+            <Route path="preferencias" element={<Preferences />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -61,6 +65,7 @@ export default function App() {
         </div>
       </TxFormProvider>
     </ToastProvider>
+    </PrefsProvider>
   )
 }
 
