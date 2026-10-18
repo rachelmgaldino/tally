@@ -1,14 +1,14 @@
-import { AlertCircle, ArrowDown, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt } from 'lucide-react'
+import { AlertCircle, ArrowDown, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
 import { Mascot } from '../components/Sidebar'
 import { useTxForm } from '../components/TxFormContext'
 import { accountBalance } from '../lib/balances'
-import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey } from '../lib/cards'
+import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
 import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
 import { formatBRL, formatCents } from '../lib/money'
-import { byId, useAccounts, useCards, useCategories, useTransactions } from '../lib/queries'
+import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
 
 function greeting() {
@@ -18,6 +18,14 @@ function greeting() {
   return 'Boa noite,'
 }
 
+const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+/** "sábado, 18 de outubro" */
+function todayLabel(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}, ${d} de ${MONTHS[m - 1]}`
+}
+
 export default function Overview({ name }: { name: string }) {
   const { data: accounts = [] } = useAccounts()
   const { data: categories = [] } = useCategories()
@@ -25,6 +33,7 @@ export default function Overview({ name }: { name: string }) {
   const { data: allCards = [] } = useCards()
   const cards = allCards.filter((c) => !c.archived)
   const { open } = useTxForm()
+  const { update } = useTransactionMutations()
   const navigate = useNavigate()
   const [hidden, setHidden] = useState(() => {
     try { return localStorage.getItem('tally-hide-balance') === '1' } catch { return false }
@@ -98,8 +107,70 @@ export default function Overview({ name }: { name: string }) {
   const expensePending = toPay.reduce((s, tx) => s + tx.amount_cents, 0)
   const included = active.filter((a) => !a.exclude_from_total)
 
+  // Phone only: the next bills and incomes, the late ones, and money kept outside the total.
+  const nextUp = ledger
+    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t : tx.date >= from && tx.date < to))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 4)
+  const kept = active.filter((a) => a.exclude_from_total)
+  const keptTotal = kept.reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
+  const entryName = (tx: Transaction) => {
+    const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
+    if (card) return `Fatura ${card.name} ${monthLabel(toMonth(tx.invoice_month!)).split(' ')[0].toLowerCase()}`
+    return tx.description || (tx.category_id ? categoryMap.get(tx.category_id)?.name : '') || 'Sem descrição'
+  }
+  const settle = (tx: Transaction) => {
+    if (tx.virtual && tx.card_id) open({ kind: 'payment', cardId: tx.card_id, invoiceMonth: tx.invoice_month! })
+    else update.mutate({ id: tx.id, patch: { paid: true } })
+  }
+  const nextRow = (tx: Transaction) => {
+    const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
+    const parent = c?.parent_id ? categoryMap.get(c.parent_id) : undefined
+    const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
+    const when = tx.date === t ? 'hoje' : card ? `vence ${shortDate(tx.date).slice(0, 5)}` : shortDate(tx.date).slice(0, 5)
+    const where = card ? '' : tx.account_id ? accountMap.get(tx.account_id)?.name : ''
+    return (
+      <div key={tx.id} className="ph-next-row">
+        {card ? (
+          <span className="avatar cat" style={{ width: 40, height: 40, background: 'var(--invoice)' }}><Receipt size={18} /></span>
+        ) : (
+          <CategoryAvatar category={parent ?? c} />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <b>{entryName(tx)}</b>
+          <small>{when}{where ? ` · ${where}` : ''}</small>
+        </div>
+        <span className={`money ${tx.kind === 'income' ? 'income' : 'expense'}`}>
+          {hidden ? '•••••' : `${tx.kind === 'income' ? '+' : '−'}${formatCents(tx.amount_cents)}`}
+        </span>
+        <button className="paid-btn pending" onClick={() => settle(tx)} aria-label={card ? 'Pagar fatura' : 'Marcar como pago'} title={card ? 'Pagar fatura' : 'Marcar como pago'}>
+          <ThumbsDown size={18} style={{ transform: 'scaleX(-1)' }} />
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <main className="page">
+    <main className="page ov-page">
+      <header className="ph-head phone-only">
+        <Mascot size={44} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1>{greeting()} {name}!</h1>
+          <small>{todayLabel(t)}</small>
+        </div>
+        <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? 'Mostrar valores' : 'Esconder valores'}>
+          {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </header>
+      <div className="ph-month phone-only">
+        <div className="month-nav">
+          <button onClick={() => setM(addMonths(m, -1))} aria-label="Mês anterior"><ChevronLeft size={20} /></button>
+          <span>{monthLabel(m).toLowerCase()}</span>
+          <button onClick={() => setM(addMonths(m, 1))} aria-label="Próximo mês"><ChevronRight size={20} /></button>
+        </div>
+        {!isCurrent && <button className="btn" onClick={() => setM(currentMonth())}>Hoje</button>}
+      </div>
+
       <header className="page-head">
         <div>
           <h1>{greeting()} {name}!</h1>
@@ -151,6 +222,58 @@ export default function Overview({ name }: { name: string }) {
         </button>
         </div>
       </section>
+
+      <div className="ph-home phone-only">
+        <section className="ph-tiles" aria-label="Resumo">
+          <button className="ph-tile" style={{ background: 'var(--lavender)' }} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
+            <span>Faturas</span><b>{money(invoicesTotal)}</b>
+            <small>{cards.length === 0 ? 'adicionar cartão' : cards.length === 1 ? `vence ${shortDate(currentInvoices[0].due).slice(0, 5)}` : `${cards.length} cartões`}</small>
+          </button>
+          <Link className="ph-tile" to="/lancamentos" style={{ background: 'var(--pink)' }}>
+            <span>A pagar</span><b>{money(expensePending)}</b>
+            <small>{toPay.length === 0 ? 'nada pendente' : toPay.length === 1 ? '1 despesa' : `${toPay.length} despesas`}</small>
+          </Link>
+          <Link className="ph-tile" to="/lancamentos" style={{ background: 'var(--green)' }}>
+            <span>A receber</span><b>{money(incomePending)}</b>
+            <small>{incomePending ? 'ainda neste mês' : income ? 'tudo recebido' : 'nada lançado'}</small>
+          </Link>
+          {kept.length > 0 && (
+            <Link className="ph-tile" to="/configuracoes/contas" style={{ background: 'var(--sand)' }}>
+              <span>{kept.length === 1 ? kept[0].name : 'Guardado'}</span><b>{money(keptTotal)}</b>
+              <small>fora do saldo geral</small>
+            </Link>
+          )}
+        </section>
+
+        {overdue.length > 0 && (
+          <div className="ph-alert" role="alert">
+            <AlertCircle size={20} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{overdue.length === 1 ? entryName(overdue[0]) : `${overdue.length} contas atrasadas`}</b>
+              <small>{overdue.length === 1 ? `atrasada · venceu ${shortDate(overdue[0].date).slice(0, 5)} · ` : ''}{money(overdue.reduce((s, tx) => s + tx.amount_cents, 0))}</small>
+            </div>
+            {overdue.length === 1
+              ? <button className="btn" onClick={() => settle(overdue[0])}>Pagar</button>
+              : <Link className="btn" to="/lancamentos">Ver</Link>}
+          </div>
+        )}
+
+        <section className="card card-pad" aria-label="Próximos">
+          <div className="section-title"><h3>Próximos</h3><Link to="/lancamentos" className="link">Ver tudo</Link></div>
+          {nextUp.length === 0 ? <p className="muted small" style={{ margin: 0 }}>Nada pendente por aqui.</p> : nextUp.map(nextRow)}
+        </section>
+
+        <section className="card card-pad" aria-label="Minhas contas">
+          <div className="section-title"><h3>Minhas contas</h3><Link to="/configuracoes/contas" className="link">{active.length ? 'Gerenciar' : 'Adicionar'}</Link></div>
+          {active.length === 0 ? <p className="muted small" style={{ margin: 0 }}>Nenhuma conta ainda.</p> : active.map((a) => (
+            <div key={a.id} className="account-line" style={{ background: pastel(a.color, 0.82) }}>
+              <AccountAvatar account={a} />
+              <b style={{ flex: 1, minWidth: 0 }}>{a.name}</b>
+              <span className="money">{money(balances.get(a.id) ?? 0)}</span>
+            </div>
+          ))}
+        </section>
+      </div>
 
       <section className="quick" aria-label="Ações rápidas">
         <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> Despesa <span className="kbd">D</span></button>
