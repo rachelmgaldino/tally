@@ -216,13 +216,13 @@ select.input { appearance: auto; }
 .picker-pop.menu-dark .kbd { margin-left: auto; }
 
 /* Icon grids */
-.icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 6px; max-height: 280px; overflow-y: auto; padding: 4px; }
-.icon-grid button { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); text-align: center; }
+.icon-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 6px; max-height: 280px; overflow-y: auto; padding: 4px; }
+.icon-grid button { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); text-align: center; min-width: 0; overflow-wrap: anywhere; }
 .generic-icons { display: flex; justify-content: center; gap: 26px; margin-bottom: 16px; }
 .generic-icons button { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .generic-icons button.on .avatar,
 .icon-grid button.on .avatar { outline: 3px solid var(--yellow); outline-offset: 2px; }
-.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; max-height: 160px; overflow-y: auto; padding: 4px; }
+.swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; max-height: 160px; overflow-y: auto; padding: 4px; }
 .swatch { width: 32px; height: 32px; border-radius: 50%; justify-self: center; border: var(--border); }
 .swatch.on { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .cat-icons { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; max-height: 130px; overflow-y: auto; padding: 4px; }
@@ -847,4 +847,11 @@ select.input { appearance: auto; }
   /* Behind sheets: the mockup's muted purple-grey, and the sheet itself on the page colour */
   .overlay, .drawer-overlay { background: rgb(110 104 114 / 88%); background-image: none; }
   .modal-form { background: var(--bg); }
+}
+
+/* Phone: icon picker fits the sheet */
+@media (max-width: 760px) {
+  .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .segmented button { min-width: 0; padding: 4px 8px; white-space: normal; line-height: 1.15; font-size: 13px; }
+  .cat-icons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
