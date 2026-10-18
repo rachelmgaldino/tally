@@ -1,4 +1,4 @@
-import { Bell, CircleUser, LogOut, Settings } from 'lucide-react'
+import { Bell, CircleUser, LogOut, Settings, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { DEMO } from '../lib/config'
@@ -42,10 +42,13 @@ export function TopBar() {
           </Dropdown>
           <button aria-label="Notificações" title="Em breve"><Bell size={18} /></button>
           <Dropdown icon={<CircleUser size={24} />} label="Conta">
-            {() => (
-              <button onClick={() => !DEMO && supabase.auth.signOut()}>
-                <LogOut size={16} /> Sair
-              </button>
+            {(close) => (
+              <>
+                <Link to="/perfil" onClick={close}><User size={16} /> Meu perfil</Link>
+                <button onClick={() => !DEMO && supabase.auth.signOut()}>
+                  <LogOut size={16} /> Sair
+                </button>
+              </>
             )}
           </Dropdown>
         </div>
