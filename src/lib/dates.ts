@@ -11,6 +11,13 @@ export function today(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/** The date `n` days after `iso` (both YYYY-MM-DD). */
+export function addDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const x = new Date(y, m - 1, d + n)
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`
+}
+
 export interface Month {
   year: number
   /** 1–12 */

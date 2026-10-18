@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { accountBalance, periodSummary } from './balances'
-import { addMonths, monthEnd, monthLabel, shortDate } from './dates'
+import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
 import { centsFromTyping, formatBRL, formatCents, formatSigned } from './money'
 import type { Account, Transaction } from './types'
 
@@ -20,6 +20,11 @@ describe('money', () => {
 })
 
 describe('dates', () => {
+  it('adds days across months and years', () => {
+    expect(addDays('2026-10-28', 7)).toBe('2026-11-04')
+    expect(addDays('2026-12-25', 14)).toBe('2027-01-08')
+  })
+
   it('moves across years', () => {
     expect(addMonths({ year: 2026, month: 12 }, 1)).toEqual({ year: 2027, month: 1 })
     expect(addMonths({ year: 2026, month: 1 }, -1)).toEqual({ year: 2025, month: 12 })

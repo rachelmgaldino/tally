@@ -366,11 +366,10 @@ select.input { appearance: auto; }
 .series-nav button:disabled { opacity: 0.3; }
 
 /* Prompt card */
-.prompt-card { position: fixed; right: 16px; bottom: 16px; width: min(300px, calc(100% - 32px)); background: var(--card); border: var(--border); border-radius: 24px; box-shadow: 6px 6px 0 var(--ink); padding: 20px 16px 16px; text-align: center; z-index: 80; }
-.prompt-card h3 { font-size: 20px; font-weight: 500; margin: 8px 0 4px; }
+.prompt-card h3 { font-size: 24px; margin: 4px 0 6px; }
 .prompt-card p { font-size: 14px; color: var(--muted); margin: 0 0 14px; }
-.prompt-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--lavender); border: var(--border); display: inline-flex; align-items: center; justify-content: center; }
-.prompt-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: var(--border); display: flex; align-items: center; justify-content: center; }
+.prompt-icon { width: 52px; height: 52px; margin-bottom: 8px; border-radius: 50%; background: var(--lavender); border: var(--border); display: inline-flex; align-items: center; justify-content: center; }
+.prompt-close { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 50%; border: var(--border); display: flex; align-items: center; justify-content: center; }
 .prompt-option { display: block; width: 100%; min-height: 44px; border-radius: 999px; border: var(--border); background: var(--card); font-size: 14px; font-weight: 800; margin-top: 8px; }
 .prompt-option:hover { background: var(--hover); }
 .prompt-option.primary { background: var(--yellow); box-shadow: var(--shadow); }
@@ -544,7 +543,7 @@ select.input { appearance: auto; }
 
 @media print {
   body, :root { background: #fff; }
-  .side, .filters, .head-actions > :not(.month-nav), .month-nav button, .bulk-bar, .drawer, .drawer-overlay, .paid-btn, .paid-spacer, .toast, .prompt-card { display: none !important; }
+  .side, .filters, .head-actions > :not(.month-nav), .month-nav button, .bulk-bar, .drawer, .drawer-overlay, .paid-btn, .paid-spacer, .toast, .prompt-card, .confirm-overlay { display: none !important; }
   .app { display: block; padding: 0; }
   .card { break-inside: auto; }
   .tx-row { break-inside: avoid; padding: 6px 12px; }
@@ -655,7 +654,6 @@ select.input { appearance: auto; }
   .drawer h2 { font-size: 24px; }
   .drawer-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toast { top: max(16px, env(safe-area-inset-top)); left: 16px; right: 16px; max-width: none; }
-  .prompt-card { bottom: calc(96px + env(safe-area-inset-bottom)); }
 
   /* Fatura */
   .invoice-head { padding: 18px; gap: 16px; }
@@ -997,3 +995,19 @@ select.input { appearance: auto; }
 .ph-next-row { cursor: pointer; border-radius: 14px; margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
 .ph-next-row:hover, .ph-next-row.selected { background: var(--hover); }
 .ph-next-row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.next-head h3 { flex: 1; }
+.days-pick { padding: 2px; }
+.days-pick button { min-height: 30px; padding: 0 10px; font-size: 13px; }
+/* Início: Próximos and cartões share a row at the same height; contas run full width underneath */
+.ov-grid { align-items: stretch; }
+.ov-grid .ov-wide { grid-column: 1 / -1; }
+.acc-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.acc-tiles .account-line { margin-bottom: 0; }
+@media (max-width: 760px) {
+  .next-head { flex-wrap: wrap; }
+  .next-head .days-pick { order: 3; width: 100%; }
+}
+.ov-grid > section[aria-label="Próximos"] { display: flex; flex-direction: column; }
+.ov-grid > section[aria-label="Próximos"] > .all-clear { margin: auto 0; justify-content: center; }
+.acc-tiles { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.acc-tiles .account-line b, .acc-tiles .account-line .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
