@@ -1,6 +1,7 @@
 import { createContext, Fragment, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { DEMO } from './config'
 import { browserLanguage, isLanguage, setLanguage, type Language } from './i18n'
+import { isCurrency, setHomeCurrency, type Currency } from './money'
 import type { PeriodKind } from './periods'
 import { supabase } from './supabase'
 
@@ -20,9 +21,13 @@ export interface Prefs {
   language: Language
   /** Show the total of the kept accounts (savings) on the Saldo geral card. Off: they stay out of sight. */
   showSaved: boolean
+  /** "Moeda principal": the Saldo geral and the month's totals are in it. */
+  homeCurrency: Currency
+  /** Adds an approximate total in the Moeda principal, at today's rate, under the other currencies on the Saldo geral card. */
+  convertTotal: boolean
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false }
 const KEY = 'tally-prefs'
 /** The last language used on this device, for the login screen. */
 const LANGUAGE_KEY = 'tally-language'
@@ -63,8 +68,10 @@ export function PrefsProvider({ saved, children }: { saved?: Partial<Prefs>; chi
     return { ...DEFAULT_PREFS, ...cached, ...saved, language }
   })
   const lang = isLanguage(prefs.language) ? prefs.language : DEFAULT_PREFS.language
-  // Set before the children render, so everything below reads the right strings.
+  // Set before the children render, so everything below reads the right strings and currency.
   setLanguage(lang)
+  const home = isCurrency(prefs.homeCurrency) ? prefs.homeCurrency : DEFAULT_PREFS.homeCurrency
+  setHomeCurrency(home)
   useEffect(() => { if (!DEMO) rememberLanguage(lang) }, [lang])
 
   const setPrefs = useCallback(async (patch: Partial<Prefs>) => {
@@ -77,10 +84,10 @@ export function PrefsProvider({ saved, children }: { saved?: Partial<Prefs>; chi
     }
   }, [])
 
-  // A new language redraws everything, so no screen keeps text in the old one.
+  // A new language or Moeda principal redraws everything, so no screen keeps the old one.
   return (
     <PrefsContext.Provider value={{ prefs, setPrefs }}>
-      <Fragment key={lang}>{children}</Fragment>
+      <Fragment key={`${lang}-${home}`}>{children}</Fragment>
     </PrefsContext.Provider>
   )
 }

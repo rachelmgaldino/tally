@@ -3,7 +3,8 @@ import type { Account, Transaction } from './types'
 
 /**
  * How a transaction changes one account's balance, in centavos.
- * Transfers take money out of account_id and put it into to_account_id.
+ * Transfers take money out of account_id and put it into to_account_id
+ * (to_amount_cents of it when the two accounts are in different currencies).
  * Card purchases have no account, so they change no account balance; the
  * invoice payment ("payment") is what takes the money out.
  */
@@ -12,7 +13,7 @@ export function effectOn(tx: Transaction, accountId: string): number {
   if (tx.kind === 'expense' || tx.kind === 'payment') return tx.account_id === accountId ? -tx.amount_cents : 0
   let delta = 0
   if (tx.account_id === accountId) delta -= tx.amount_cents
-  if (tx.to_account_id === accountId) delta += tx.amount_cents
+  if (tx.to_account_id === accountId) delta += tx.to_amount_cents ?? tx.amount_cents
   return delta
 }
 
@@ -59,13 +60,16 @@ export interface PeriodSummary {
   forecast: number
   /** Net moved into the kept accounts (left out of the Saldo geral) this period. */
   saved: number
+  /** Net sent to accounts in other currencies (`abroadIds`) this period, in the selection's currency. */
+  sent: number
 }
 
 /**
  * The footer of the Lançamentos screen for one period [from, to).
  * Transfers between the selected accounts cancel out; a transfer into or out of
  * the selection counts as income or expense for it, except one into or out of
- * a kept account (`keptIds`), which goes to `saved`.
+ * a kept account (`keptIds`), which goes to `saved`, or one to or from an account
+ * in another currency (`abroadIds`), which goes to `sent`.
  */
 export function periodSummary(
   accounts: Account[],
@@ -73,9 +77,11 @@ export function periodSummary(
   from: string,
   to: string,
   keptIds: Set<string> = new Set(),
+  abroadIds: Set<string> = new Set(),
 ): PeriodSummary {
   const ids = new Set(accounts.map((a) => a.id))
   let saved = 0
+  let sent = 0
   let previous = 0
   for (const a of accounts) previous += a.initial_balance_cents
   let incomePaid = 0, incomeAll = 0, expensePaid = 0, expenseAll = 0
@@ -92,6 +98,11 @@ export function periodSummary(
       saved -= d
       continue
     }
+    // Money changed into another currency left this one without being spent.
+    if (tx.kind === 'transfer' && (abroadIds.has(tx.to_account_id ?? '') || abroadIds.has(tx.account_id ?? ''))) {
+      sent -= d
+      continue
+    }
     if (d > 0) {
       incomeAll += d
       if (tx.paid) incomePaid += d
@@ -106,8 +117,9 @@ export function periodSummary(
     incomeAll,
     expensePaid,
     expenseAll,
-    balance: previous + incomePaid - expensePaid - saved,
-    forecast: previous + incomeAll - expenseAll - saved,
+    balance: previous + incomePaid - expensePaid - saved - sent,
+    forecast: previous + incomeAll - expenseAll - saved - sent,
     saved,
+    sent,
   }
 }

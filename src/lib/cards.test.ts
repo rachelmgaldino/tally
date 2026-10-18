@@ -4,7 +4,7 @@ import type { Card, Transaction } from './types'
 
 const card: Card = {
   id: 'c1', name: 'Inter', icon: 'bank:inter', color: '#ff7a00', limit_cents: 100000,
-  closing_day: 29, due_day: 5, payment_account_id: 'a1', archived: false, created_at: '',
+  closing_day: 29, due_day: 5, payment_account_id: 'a1', currency: 'BRL', archived: false, created_at: '',
 }
 
 const tx = (o: Partial<Transaction>): Transaction => ({

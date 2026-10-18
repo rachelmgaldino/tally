@@ -297,6 +297,7 @@ select.input { appearance: auto; }
 .sum-bar .topay, .sw.topay { background: repeating-linear-gradient(135deg, var(--pink) 0 6px, #fbe3e8 6px 12px); }
 .sum-bar .left, .sw.left { background: var(--green); }
 .sum-bar .kept, .sw.kept { background: #8fb0e3; }
+.sum-bar .sent, .sw.sent { background: #b9a3e3; }
 .sum-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 12px; font-weight: 800; color: var(--muted); }
 .sum-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .sum-legend .v { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 14px; color: var(--ink); }
@@ -309,7 +310,9 @@ select.input { appearance: auto; }
 .sum-split .in { background: var(--green); }
 .sum-split .out { background: var(--pink); }
 .sum-split .kept { background: #8fb0e3; min-width: 0; padding: 0; }
-.sum-split-kept { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.sum-split .sent { background: #b9a3e3; min-width: 0; padding: 0; }
+.sum-split-kept { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 14px; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.sum-split-kept > span { display: inline-flex; align-items: center; gap: 6px; }
 .sum-split-kept .v { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 14px; color: var(--ink); }
 .sum-split em { font-style: normal; }
 .sum-pending { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
@@ -1174,3 +1177,38 @@ select.input { appearance: auto; }
 .hero-kept span { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; }
 .hero-kept svg { flex-shrink: 0; }
 .hero-kept small { font-weight: 600; color: var(--muted); padding-left: 22px; }
+
+/* Currencies: accounts in other currencies under the Saldo geral, the currency
+   pills on the account form and the two amounts of a transfer between currencies. */
+.hero-fx { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.fx-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; border: var(--border); border-radius: 999px; background: var(--card); }
+.fx-pill .money { font-size: 15px; }
+.fx-conv { flex-basis: 100%; font-weight: 700; color: var(--muted); font-size: 13px; }
+.fx-conv b { font-family: var(--display); font-weight: 500; color: var(--ink); font-size: 15px; }
+.cur-code { display: inline-block; flex: none; margin-left: 8px; padding: 1px 7px; border: 1.5px solid var(--ink); border-radius: 999px; font-family: 'Nunito', system-ui, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .04em; line-height: 1.4; vertical-align: 2px; background: var(--card); color: var(--ink); }
+.input > span.cur-code { overflow: visible; margin-left: 0; }
+.cur-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.cur-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 14px; border: var(--border); border-radius: 999px; background: var(--card); font-weight: 800; font-size: 14px; color: var(--ink); }
+.cur-pill .s { font-family: var(--display); font-weight: 500; font-size: 16px; }
+.cur-pill.on { background: var(--yellow); box-shadow: 2px 2px 0 var(--shade); }
+.cur-pill:disabled { opacity: .45; }
+.field-hint { display: flex; align-items: flex-start; gap: 6px; margin: 6px 2px 0; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.field-hint svg { flex: none; margin-top: 1px; }
+.fx-box { border: var(--border); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.fx-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end; }
+.fx-arrow { width: 36px; height: 36px; border: var(--border); border-radius: 999px; display: grid; place-items: center; background: var(--card); margin-bottom: 4px; }
+.fx-rate { margin: 0; font-size: 13px; font-weight: 700; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.fx-rate svg { flex: none; }
+.fx-rate b { color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 15px; white-space: nowrap; }
+.tx-amount .tx-landed { display: block; font-size: 12px; font-weight: 700; color: var(--muted); }
+.pref-select { width: auto; min-width: 230px; }
+@media (min-width: 761px) { .hero-fx { padding-right: 60px; } }
+@media (max-width: 760px) {
+  .form-group .fx-box { margin: 4px 0 10px; }
+  .form-group .fx-box .field { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 0; border: 0; }
+  .fx-row { grid-template-columns: 1fr; gap: 6px; }
+  .fx-arrow { justify-self: center; transform: rotate(90deg); margin: 0; width: 30px; height: 30px; }
+  .fx-box .input { min-height: 48px; border: var(--border) !important; border-radius: 16px !important; background: var(--card) !important; padding: 0 14px !important; display: flex; align-items: center; gap: 8px; font-size: 18px; }
+  .fx-box .input input { font-family: var(--display); font-size: 20px; }
+  .pref-select { width: 100%; }
+}
