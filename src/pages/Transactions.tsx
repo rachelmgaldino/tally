@@ -412,7 +412,7 @@ export default function Transactions() {
                           }}
                           disabled={tx.kind === 'transfer' || tx.kind === 'payment'}
                         >
-                          {tx.paid ? <ThumbsUp size={18} /> : <ThumbsDown size={18} />}
+                          {tx.paid ? <ThumbsUp size={18} /> : <ThumbsDown size={18} style={{ transform: 'scaleX(-1)' }} />}
                         </button>
                       )}
                     </div>
