@@ -5,7 +5,7 @@ import { today } from './dates'
 // Demo mode keeps everything in localStorage so the UI can be tried without a
 // database. It is only reachable through `npm run demo` in development.
 
-const KEY = 'tally-demo'
+const KEY = 'tally-demo-2'
 type Store = Record<string, Record<string, unknown>[]>
 
 function load(): Store {
@@ -40,10 +40,15 @@ function seed(): Store {
   const savings = { id: id(), name: 'Nuconta Poupança', icon: 'bank:nubank', color: '#820ad1', initial_balance_cents: 60000, exclude_from_total: true, archived: false, created_at: now() }
   const t = today()
   const month = t.slice(0, 8)
-  const tx = (o: Record<string, unknown>) => ({ id: id(), created_at: now(), notes: null, to_account_id: null, paid: true, ...o })
+  const tx = (o: Record<string, unknown>) => ({
+    id: id(), created_at: now(), notes: null, to_account_id: null, paid: true,
+    series_id: null, series_index: null, tag_ids: [], attachments: [], ...o,
+  })
   return {
     categories,
     accounts: [nu, inter, savings],
+    series: [],
+    tags: [{ id: id(), name: 'Viagem', created_at: now() }, { id: id(), name: 'Trabalho', created_at: now() }],
     transactions: [
       tx({ kind: 'income', description: 'Salário', amount_cents: 180000, date: `${month}01`, account_id: nu.id, category_id: cat('Salário') }),
       tx({ kind: 'expense', description: 'Mercado', amount_cents: 23490, date: `${month}03`, account_id: nu.id, category_id: cat('Mercado') }),
@@ -62,25 +67,41 @@ export function demoTable<Row extends { id: string }, New>(name: string): Table<
   const rows = () => (getStore()[name] ??= []) as unknown as Row[]
   return {
     async list() {
-      return [...rows()]
+      // Copies, so later edits to the store never change rows the UI already holds.
+      return structuredClone(rows())
     },
     async insert(newRows) {
       const created = newRows.map((r) => ({ id: id(), created_at: now(), ...r }) as unknown as Row)
       rows().push(...created)
       save(getStore())
-      return created
+      return structuredClone(created)
     },
     async update(rowId, patch) {
       const row = rows().find((r) => r.id === rowId)
       if (!row) throw new Error('not found')
+      Object.assign(row, structuredClone(patch))
+      save(getStore())
+      return structuredClone(row)
+    },
+    async updateIf(rowId, expect, patch) {
+      const row = rows().find((r) => r.id === rowId) as Record<string, unknown> | undefined
+      if (!row || Object.entries(expect).some(([k, v]) => row[k] !== v)) return null
       Object.assign(row, patch)
       save(getStore())
-      return { ...row }
+      return { ...row } as unknown as Row
+    },
+    async updateMany(ids, patch) {
+      for (const row of rows()) if (ids.includes(row.id)) Object.assign(row, patch)
+      save(getStore())
     },
     async remove(rowId) {
       const list = rows()
       const i = list.findIndex((r) => r.id === rowId)
       if (i >= 0) list.splice(i, 1)
+      save(getStore())
+    },
+    async removeMany(ids) {
+      getStore()[name] = rows().filter((r) => !ids.includes(r.id)) as unknown as Record<string, unknown>[]
       save(getStore())
     },
   }
