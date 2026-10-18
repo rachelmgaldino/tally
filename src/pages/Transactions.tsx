@@ -146,8 +146,14 @@ export default function Transactions() {
   // In/out totals of the rows in view. An invoice payment is money leaving the account, so in
   // Fluxo de caixa it counts as an expense (the full list hides payments and counts the purchases instead).
   const totals = useMemo(() => {
-    const sum = { income: 0, expense: 0, pendingIncome: 0, pendingExpense: 0 }
+    const sum = { income: 0, expense: 0, pendingIncome: 0, pendingExpense: 0, saved: 0 }
     for (const tx of rows) {
+      // A transfer into savings (or back out) is "guardado": it leaves the day-to-day money without being spent.
+      if (tx.kind === 'transfer') {
+        const into = keptIds.has(tx.to_account_id ?? ''), outOf = keptIds.has(tx.account_id ?? '')
+        if (into !== outOf) sum.saved += into ? tx.amount_cents : -tx.amount_cents
+        continue
+      }
       if (tx.account_id && keptIds.has(tx.account_id)) continue
       if (tx.kind === 'income') sum[tx.paid ? 'income' : 'pendingIncome'] += tx.amount_cents
       else if (tx.kind === 'expense' || tx.kind === 'payment') sum[tx.paid ? 'expense' : 'pendingExpense'] += tx.amount_cents
@@ -500,7 +506,7 @@ export default function Transactions() {
         {rows.length > 0 && (
           <SummaryPill
             label={simpleTotal ? s.periodBalance : s.forecast}
-            cents={simpleTotal ? totals.income - totals.expense : summary.forecast}
+            cents={simpleTotal ? totals.income - totals.expense - totals.saved : summary.forecast}
           />
         )}
       {selecting && (

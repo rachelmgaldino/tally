@@ -15,7 +15,7 @@ export function SummaryCard({
 }: {
   summary: PeriodSummary
   /** Paid in and out, plus what is still pending (shown when nothing is paid yet). */
-  totals: { income: number; expense: number; pendingIncome: number; pendingExpense: number }
+  totals: { income: number; expense: number; pendingIncome: number; pendingExpense: number; saved: number }
   totalsOnly: boolean
   /** Left out when only totals make sense (a card is filtered). */
   onToggle?: () => void
@@ -36,7 +36,8 @@ export function SummaryCard({
   const heroFilter = filter && <div className="sum-hero-filter">{filter}</div>
 
   if (totalsOnly) {
-    const { income, expense, pendingIncome, pendingExpense } = totals
+    const { income, expense, pendingIncome, pendingExpense, saved } = totals
+    const kept = Math.max(saved, 0)
     return (
       <section className="card summary-card" aria-label={s.summary}>
         {head}
@@ -44,10 +45,10 @@ export function SummaryCard({
           <div className="sum-hero">
             {heroFilter}
             <div className="k">{s.periodBalance}</div>
-            <div className="sum-big">{formatBRL(income - expense)}</div>
+            <div className="sum-big">{formatBRL(income - expense - saved)}</div>
           </div>
           <div className="sum-side">
-            {income + expense === 0 ? (
+            {income + expense + kept === 0 ? (
               <p className="sum-pending">
                 {pendingIncome + pendingExpense === 0 ? s.nothing(isMonth) : (
                   <>
@@ -63,8 +64,9 @@ export function SummaryCard({
                 <div className="sum-split">
                   {income > 0 && <i className="in" style={{ flex: income }}><span><em>{s.incomeIn}</em>{formatCents(income)}</span></i>}
                   {expense > 0 && <i className="out" style={{ flex: expense }}><span><em>{s.expenseIn}</em>{formatCents(expense)}</span></i>}
+                  {kept > 0 && <i className="kept" style={{ flex: kept }}><span><em>{s.keptIn}</em>{formatCents(kept)}</span></i>}
                 </div>
-                <div className="sum-split-legend"><small>{s.incomeLegend}</small><small>{s.expenseLegend}</small></div>
+                <div className="sum-split-legend"><small>{s.incomeLegend}</small><small>{s.expenseLegend}</small>{kept > 0 && <small>{s.keptLegend}</small>}</div>
               </>
             )}
           </div>
