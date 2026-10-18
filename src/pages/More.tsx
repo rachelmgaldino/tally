@@ -7,6 +7,7 @@ import { Toggle } from '../components/ui'
 import { DEMO } from '../lib/config'
 import { useAccounts, useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
+import { tone } from '../lib/theme'
 
 /** The phone's "Mais" tab: everything the desktop sidebar keeps under Ajustes. */
 export default function More({ name }: { name: string }) {
@@ -34,15 +35,15 @@ export default function More({ name }: { name: string }) {
       </Link>
 
       <div className="more-grid">
-        <Link to="/configuracoes/contas" style={{ background: 'var(--lavender)' }}>
+        <Link className="toned" to="/configuracoes/contas" style={tone('var(--lavender)')}>
           <span className="bi"><Wallet size={20} /></span>
           <span><b>Contas e cartões</b><small>{plural(nAcc, 'conta', 'contas')}, {plural(nCard, 'cartão', 'cartões')}</small></span>
         </Link>
-        <Link to="/configuracoes/categorias" style={{ background: 'var(--green)' }}>
+        <Link className="toned" to="/configuracoes/categorias" style={tone('var(--green)')}>
           <span className="bi"><Tag size={20} /></span>
           <span><b>Categorias</b><small>despesas e receitas</small></span>
         </Link>
-        <Link to="/configuracoes/preferencias" style={{ background: 'var(--blue)' }}>
+        <Link className="toned" to="/configuracoes/preferencias" style={tone('var(--blue)')}>
           <span className="bi"><SlidersHorizontal size={20} /></span>
           <span><b>Preferências</b><small>ordem, período, saldo</small></span>
         </Link>

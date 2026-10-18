@@ -2,6 +2,7 @@ import { findBank } from '../lib/banks'
 import { ACCOUNT_ICONS, categoryIcon } from '../lib/icons'
 import { useAvatarUrl, useProfile } from '../lib/profile'
 import type { Account, Card, Category } from '../lib/types'
+import { tone } from '../lib/theme'
 
 /** The user's colour softened towards the card colour, so icons sit on pastel fills with ink lines. */
 export function pastel(hex: string, amount = 0.55): string {
@@ -57,7 +58,7 @@ export function CategoryAvatar({ category, size }: { category: Category | undefi
 /** A credit card drawn as a pastel card with the issuer icon, used on the overview, settings and invoice pages. */
 export function CardArt({ card, sub, tilt, style }: { card: Pick<Card, 'name' | 'icon' | 'color'>; sub?: React.ReactNode; tilt?: boolean; style?: React.CSSProperties }) {
   return (
-    <div className={`ccard ${tilt ? 'tilt' : ''}`} style={{ background: pastel(card.color, 0.5), ...style }}>
+    <div className={`ccard toned ${tilt ? 'tilt' : ''}`} style={{ ...tone(pastel(card.color, 0.5)), ...style }}>
       <div className="top">
         <span className="chipdeco" />
         <AccountIcon icon={card.icon} color={card.color} size={32} />

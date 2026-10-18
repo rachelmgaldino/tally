@@ -32,6 +32,7 @@ function dayLabel(iso: string): string {
 import { formatBRL, formatCents, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { CategoryKind, Transaction, TxKind } from '../lib/types'
+import { tone } from '../lib/theme'
 
 const KIND_NAME: Record<TxKind, string> = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência', payment: 'Pagamento de fatura' }
 
@@ -278,7 +279,7 @@ export default function Transactions() {
             popClassName="menu-dark"
             className="new-menu"
             trigger={(_, toggle) => (
-              <button className="icon-btn" style={{ background: 'var(--yellow)' }} onClick={toggle} aria-label="Novo lançamento" title="Novo lançamento"><Plus size={20} /></button>
+              <button className="icon-btn toned strong" style={tone('var(--yellow)')} onClick={toggle} aria-label="Novo lançamento" title="Novo lançamento"><Plus size={20} /></button>
             )}
           >
             {(close) => (
