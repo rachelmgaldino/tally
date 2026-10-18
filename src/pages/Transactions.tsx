@@ -133,8 +133,11 @@ export default function Transactions() {
     return out
   }, [rows])
 
-  const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts
-  const summary = periodSummary(summaryAccounts, ledger, from, to)
+  // With no account picked, the summary covers the same accounts as the Saldo geral:
+  // the kept ones (savings) stay out, and money moved into them shows as "guardado".
+  const keptIds = useMemo(() => new Set(accountFilter ? [] : accounts.filter((a) => a.exclude_from_total).map((a) => a.id)), [accounts, accountFilter])
+  const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts.filter((a) => !keptIds.has(a.id))
+  const summary = periodSummary(summaryAccounts, ledger, from, to, keptIds)
   // A plain total (income minus expenses, transfers left out) when asked for, or when a card is filtered,
   // since account balances say nothing about a card.
   const simpleTotal = totalsOnly || !!filteredCard
@@ -145,11 +148,12 @@ export default function Transactions() {
   const totals = useMemo(() => {
     const sum = { income: 0, expense: 0, pendingIncome: 0, pendingExpense: 0 }
     for (const tx of rows) {
+      if (tx.account_id && keptIds.has(tx.account_id)) continue
       if (tx.kind === 'income') sum[tx.paid ? 'income' : 'pendingIncome'] += tx.amount_cents
       else if (tx.kind === 'expense' || tx.kind === 'payment') sum[tx.paid ? 'expense' : 'pendingExpense'] += tx.amount_cents
     }
     return sum
-  }, [rows])
+  }, [rows, keptIds])
 
   // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
   const dayBalance = useMemo(() => {

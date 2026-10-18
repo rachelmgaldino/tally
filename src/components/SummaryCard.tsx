@@ -73,11 +73,12 @@ export function SummaryCard({
     )
   }
 
-  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast } = summary
+  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast, saved } = summary
   const toPay = expenseAll - expensePaid
   const left = Math.max(forecast, 0)
   const short = Math.max(-forecast, 0)
-  const whole = expensePaid + toPay + left
+  const kept = Math.max(saved, 0)
+  const whole = expensePaid + toPay + kept + left
   return (
     <section className="card summary-card" aria-label={s.summary}>
       {head}
@@ -102,6 +103,7 @@ export function SummaryCard({
               <>
                 {expensePaid > 0 && <i className="paid" style={{ flex: expensePaid }} />}
                 {toPay > 0 && <i className="topay" style={{ flex: toPay }} />}
+                {kept > 0 && <i className="kept" style={{ flex: kept }} />}
                 {left > 0 && <i className="left" style={{ flex: left }} />}
               </>
             )}
@@ -109,6 +111,7 @@ export function SummaryCard({
           <div className="sum-legend">
             <span><b className="sw paid" /><span className="lbl">{s.alreadyPaid}</span> <b className="v">{formatCents(expensePaid)}</b><span className="lbl-after">{s.paidAfter}</span></span>
             <span><b className="sw topay" /><span className="lbl">{s.toPay}</span> <b className="v">{formatCents(toPay)}</b><span className="lbl-after">{s.toPay}</span></span>
+            {kept > 0 && <span><b className="sw kept" /><span className="lbl">{s.kept}</span> <b className="v">{formatCents(kept)}</b><span className="lbl-after">{s.kept}</span></span>}
             {short > 0
               ? <span className="sum-neg"><TriangleAlert size={14} strokeWidth={2.5} aria-hidden="true" /><b className="v">{formatCents(short)}</b>{s.negative}</span>
               : <span><b className="sw left" /><span className="lbl">{s.left}</span> <b className="v">{formatCents(left)}</b><span className="lbl-after">{s.left}</span></span>}
