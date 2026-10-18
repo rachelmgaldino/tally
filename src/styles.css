@@ -426,6 +426,8 @@ select.input { appearance: auto; }
 /* Overview */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
 .stat { min-height: 150px; padding: 20px; position: relative; overflow: hidden; text-align: left; }
+/* A button centres its content by default; keep the bills card top-aligned like the others. */
+button.stat { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
 .stat .k { min-height: 32px; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .stat .k .ico { width: 32px; height: 32px; border-radius: 50%; border: var(--border); background: var(--card); display: grid; place-items: center; }
 .stat .v { font-size: 30px; margin-top: 10px; }
@@ -540,7 +542,7 @@ select.input { appearance: auto; }
 .bulk-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; background: var(--card); border: var(--border); border-radius: 999px; box-shadow: 6px 6px 0 var(--shade); padding: 8px 8px 8px 22px; z-index: 45; max-width: calc(100% - 32px); }
 .bulk-bar > b { font-weight: 800; margin-right: 6px; white-space: nowrap; }
 .bulk-bar .picker-pop { top: auto; bottom: calc(100% + 8px); max-height: 320px; min-width: 240px; }
-.more-menu .picker-pop { left: auto; right: 0; min-width: 250px; }
+.more-menu .picker-pop, .new-menu .picker-pop { left: auto; right: 0; min-width: 250px; }
 .picker-item:disabled { opacity: 0.45; }
 .page:has(.bulk-bar) { padding-bottom: 120px; }
 
