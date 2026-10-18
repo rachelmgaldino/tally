@@ -1,15 +1,16 @@
-import { AlertCircle, CalendarCheck, CalendarClock, ChevronLeft, ChevronRight, EllipsisVertical, PieChart, Plus, Receipt, Search, Settings, X } from 'lucide-react'
+import { AlertCircle, ChevronLeft, ChevronRight, EllipsisVertical, Plus, Search, Settings, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
 import { FilterMenu } from '../components/FilterMenu'
+import { Mascot } from '../components/Sidebar'
 import { Popover } from '../components/Picker'
 import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { availableLimit, invoiceFor, invoiceOf, shiftInvoice, STATUS_LABEL, toMonth } from '../lib/cards'
 import { monthLabel, shortDate, today } from '../lib/dates'
-import { formatBRL, formatSigned } from '../lib/money'
+import { formatBRL, formatCents, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import type { TxKind } from '../lib/types'
 
@@ -79,7 +80,11 @@ export default function Invoice() {
   const pay = () => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })
 
   return (
-    <main className="page page-narrow inv-page">
+    <main className="page inv-page">
+      <header className="page-head desk-only">
+        <h1>Faturas</h1>
+        <button className="link" onClick={() => navigate('/configuracoes/contas#cartoes')}>Gerenciar cartões</button>
+      </header>
       <header className="ph-inv-head phone-only">
         <h1>Faturas</h1>
         <Popover
@@ -138,11 +143,22 @@ export default function Invoice() {
             <span>Fatura {label.split(' ')[0]}</span>
             <button onClick={() => go(1)} aria-label="Próxima fatura"><ChevronRight size={20} /></button>
           </h1>
-          <span className="muted" style={{ fontWeight: 700 }}>{card.name} · {m.year}</span>
+          <span className="muted" style={{ fontWeight: 700 }}>{card.name} · vence {shortDate(invoice.due).slice(0, 5)} · fecha {shortDate(invoice.closing).slice(0, 5)}</span>
+          {card.limit_cents > 0 && (
+            <div className="inv-limit">
+              <div className="limit-bar"><div style={{ width: `${usedPct}%`, background: pastel(card.color, 0.4) }} /></div>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <span>Limite usado {formatBRL(card.limit_cents - avail)}</span><span>Disponível {formatBRL(avail)}</span>
+              </div>
+            </div>
+          )}
         </div>
         <div className="invoice-totals">
           <span className="k">Fatura total</span>
           <span className="v">{formatBRL(invoice.total)}</span>
+          {invoice.paid > 0 && <span className="paid-note">pago {formatBRL(invoice.paid)} · falta {formatBRL(invoice.remaining)}</span>}
+          {previous.remaining > 0 && <span className="paid-note expense">anterior: faltam {formatBRL(previous.remaining)}</span>}
+          {invoice.remaining === 0 && invoice.total > 0 && <span className="inv-paid"><Mascot size={30} /> Fatura paga!</span>}
           {invoice.remaining > 0 && (
             <button className="btn btn-primary" onClick={() => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })}>
               {partial ? 'Pagar restante' : 'Pagar fatura'}
@@ -151,40 +167,28 @@ export default function Invoice() {
         </div>
       </section>
 
-      <section className="tiles" aria-label="Resumo da fatura">
-        <div className="tile"><span>Fatura anterior</span><b>{formatBRL(previous.total)}</b></div>
-        <div className="tile pink"><span><Receipt size={15} /> Fatura atual</span><b>{formatBRL(invoice.total)}</b></div>
-        <div className="tile"><span><CalendarClock size={15} /> Fechamento</span><b>{shortDate(invoice.closing).slice(0, 5)}</b></div>
-        <div className="tile sand"><span><CalendarCheck size={15} /> Vencimento</span><b>{shortDate(invoice.due).slice(0, 5)}</b></div>
-        <Popover
-          className="tile-pop"
-          trigger={(_, toggle) => (
-            <button className="tile tile-btn" onClick={toggle} aria-label="Gastos por categoria">
-              <span><PieChart size={15} /> Categorias</span>
-              <div className="stack-bar">
-                {breakdown.length === 0 ? null : breakdown.map(([cid, v]) => {
-                  const c = categoryMap.get(cid)
-                  return <div key={cid || 'none'} style={{ width: `${(v / spent) * 100}%`, background: c ? pastel(c.color) : 'var(--field)' }} />
-                })}
-              </div>
-            </button>
-          )}
-        >
-          {() => breakdown.length === 0 ? <div className="picker-group">Nenhuma despesa nesta fatura.</div> : breakdown.map(([cid, v]) => {
-            const c = categoryMap.get(cid)
-            return (
-              <div key={cid || 'none'} className="picker-item" style={{ cursor: 'default' }}>
-                <CategoryAvatar category={c} size={28} />
-                <span style={{ flex: 1 }}>{c?.name ?? 'Sem categoria'}</span>
-                <span className="muted small">{Math.round((v / spent) * 100)}%</span>
-                <b className="money">{formatBRL(v)}</b>
-              </div>
-            )
-          })}
-        </Popover>
-      </section>
+      {breakdown.length > 0 && (
+        <section className="card card-pad inv-cats desk-only" aria-label="Gastos por categoria">
+          <div className="stack-bar">
+            {breakdown.map(([cid, v]) => {
+              const c = categoryMap.get(cid)
+              return <div key={cid || 'none'} style={{ width: `${(v / spent) * 100}%`, background: c ? pastel(c.color) : 'var(--field)' }} />
+            })}
+          </div>
+          <div className="inv-cats-legend">
+            {breakdown.map(([cid, v]) => {
+              const c = categoryMap.get(cid)
+              return (
+                <span key={cid || 'none'}>
+                  <i style={{ background: c ? pastel(c.color) : 'var(--field)' }} />{c?.name ?? 'Sem categoria'} <b className="money">{formatCents(v)}</b>
+                </span>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
-      {(invoice.payments.length > 0 || invoice.total > 0) && (
+      {invoice.payments.length > 0 && (
         <section className={`card card-pad payments ${sorted.length ? 'has-pay' : ''}`}>
           <div className="section-title">
             <h3>Pagamento</h3>
@@ -281,9 +285,6 @@ export default function Invoice() {
         if (t?.invoice_month && t.card_id === card.id) setParams({ fatura: t.invoice_month.slice(0, 7) }, { replace: true })
         setSelectedId(nid)
       }} />}
-      <div className="desk-only" style={{ textAlign: 'center' }}>
-        <button className="link" onClick={() => navigate('/configuracoes/contas#cartoes')}>Gerenciar cartões</button>
-      </div>
     </main>
   )
 }

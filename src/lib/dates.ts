@@ -49,5 +49,5 @@ export function shortDate(iso: string): string {
 /** "2026-10-01" → "01 de Outubro de 2026" */
 export function longDate(iso: string): string {
   const [y, mo, d] = iso.split('-')
-  return `${d} de ${MONTHS[Number(mo) - 1]} de ${y}`
+  return `${Number(d)} de ${MONTHS[Number(mo) - 1].toLowerCase()} de ${y}`
 }

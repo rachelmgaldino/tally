@@ -2,7 +2,7 @@ import { CirclePlus, CreditCard, Image, Info, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AccountIconPicker, type IconChoice } from '../../components/AccountIconPicker'
-import { AccountIcon, CardArt } from '../../components/Avatars'
+import { AccountIcon, CardArt, pastel } from '../../components/Avatars'
 import { AccountSelect } from '../../components/Selects'
 import { useToast } from '../../components/Toast'
 import { Modal, MoneyInput } from '../../components/ui'
@@ -41,17 +41,21 @@ export default function Cards() {
         </div>
       ) : sorted.map((c) => {
         const payer = c.payment_account_id ? accounts.get(c.payment_account_id) : undefined
+        const avail = availableLimit(c, txs)
+        const used = c.limit_cents > 0 ? Math.min(100, Math.max(0, ((c.limit_cents - avail) / c.limit_cents) * 100)) : 0
         return (
           <div key={c.id} className="card-block" style={{ opacity: c.archived ? 0.5 : 1 }}>
             <button onClick={() => setEditing(c)} aria-label={`Editar ${c.name}`} style={{ display: 'block' }}>
               <CardArt card={c} sub={c.archived ? 'Arquivado' : `Fecha dia ${c.closing_day} · vence dia ${c.due_day}`} />
             </button>
             <div className="stack" style={{ gap: 12 }}>
-              <div className="card-grid">
-                <div><span>Limite disponível</span><b>{formatBRL(availableLimit(c, txs))}</b></div>
-                <div><span>Conta de pagamento</span><b style={{ fontFamily: 'inherit', fontWeight: 800, fontSize: 15 }}>{payer?.name ?? '--'}</b></div>
-                <div><span>Fecha</span><b>dia {c.closing_day}</b></div>
-                <div><span>Vence</span><b>dia {c.due_day}</b></div>
+              <div className="card-limit">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <span className="muted small" style={{ fontWeight: 800 }}>Limite disponível</span>
+                  <b className="money">{formatBRL(avail)} <span className="muted small">de {formatBRL(c.limit_cents)}</span></b>
+                </div>
+                <div className="limit-bar"><div style={{ width: `${used}%`, background: pastel(c.color, 0.4) }} /></div>
+                <span className="muted small" style={{ fontWeight: 700 }}>Paga com {payer?.name ?? '--'}</span>
               </div>
               <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
                 {!c.archived && <Link to={`/cartoes/${c.id}`} className="btn btn-primary">Ver fatura</Link>}

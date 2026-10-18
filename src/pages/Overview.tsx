@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowDown, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt, ThumbsDown } from 'lucide-react'
+import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
@@ -67,37 +67,8 @@ export default function Overview({ name }: { name: string }) {
   const accountMap = byId(accounts)
   const toPay = ledger.filter((tx) => tx.kind === 'expense' && !tx.paid && tx.date < to && (tx.date >= from || tx.date < t)).sort((a, b) => a.date.localeCompare(b.date))
   const overdue = toPay.filter((tx) => tx.date < t)
-  const upcomingPay = toPay.filter((tx) => tx.date >= t)
-  const toReceive = ledger.filter((tx) => tx.kind === 'income' && !tx.paid && tx.date < to && (tx.date >= from || tx.date < t)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5)
 
   const cardMap = byId(allCards)
-  const billRow = (tx: Transaction, late: boolean) => {
-    const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
-    const parent = c?.parent_id ? categoryMap.get(c.parent_id) : undefined
-    const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
-    const where = card?.name ?? (tx.account_id ? accountMap.get(tx.account_id)?.name : '')
-    const when = tx.date === t ? 'hoje' : late ? `venceu ${shortDate(tx.date).slice(0, 5)}` : shortDate(tx.date).slice(0, 5)
-    return (
-      <div
-        key={tx.id}
-        className={`bill-line ${card ? 'click' : ''}`}
-        onClick={card ? () => navigate(`/cartoes/${card.id}?fatura=${tx.invoice_month!.slice(0, 7)}`) : undefined}
-      >
-        {card ? (
-          <span className="avatar cat" style={{ width: 40, height: 40, background: 'var(--invoice)' }}><Receipt size={18} /></span>
-        ) : (
-          <CategoryAvatar category={parent ?? c} />
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800 }}>{tx.description || c?.name}</div>
-          <div className={late ? 'expense small' : 'muted small'} style={{ fontWeight: 700 }}>{when}{where ? ` · ${where}` : ''}</div>
-        </div>
-        <span className={`money ${tx.kind === 'income' ? 'income' : late ? 'expense' : ''}`}>
-          {hidden ? 'R$ •••••' : `${tx.kind === 'income' ? '+' : '−'}${formatBRL(tx.amount_cents)}`}
-        </span>
-      </div>
-    )
-  }
 
   // Open invoices right now, one per card.
   // The open invoices this month, or for another month the invoices due in it.
@@ -112,6 +83,11 @@ export default function Overview({ name }: { name: string }) {
     .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t : tx.date >= from && tx.date < to))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 4)
+  // Desktop: the same list, a little longer, with the late ones on top.
+  const upcoming = ledger
+    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t : tx.date >= from && tx.date < to))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 6)
   const kept = active.filter((a) => a.exclude_from_total)
   const keptTotal = kept.reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
   const entryName = (tx: Transaction) => {
@@ -123,11 +99,11 @@ export default function Overview({ name }: { name: string }) {
     if (tx.virtual && tx.card_id) open({ kind: 'payment', cardId: tx.card_id, invoiceMonth: tx.invoice_month! })
     else update.mutate({ id: tx.id, patch: { paid: true } })
   }
-  const nextRow = (tx: Transaction) => {
+  const nextRow = (tx: Transaction, late = false) => {
     const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
     const parent = c?.parent_id ? categoryMap.get(c.parent_id) : undefined
     const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
-    const when = tx.date === t ? 'hoje' : card ? `vence ${shortDate(tx.date).slice(0, 5)}` : shortDate(tx.date).slice(0, 5)
+    const when = tx.date === t ? 'hoje' : late ? `venceu ${shortDate(tx.date).slice(0, 5)}` : card ? `vence ${shortDate(tx.date).slice(0, 5)}` : shortDate(tx.date).slice(0, 5)
     const where = card ? '' : tx.account_id ? accountMap.get(tx.account_id)?.name : ''
     return (
       <div key={tx.id} className="ph-next-row">
@@ -138,7 +114,7 @@ export default function Overview({ name }: { name: string }) {
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <b>{entryName(tx)}</b>
-          <small>{when}{where ? ` · ${where}` : ''}</small>
+          <small className={late ? 'expense' : ''}>{when}{where ? ` · ${where}` : ''}</small>
         </div>
         <span className={`money ${tx.kind === 'income' ? 'income' : 'expense'}`}>
           {hidden ? '•••••' : `${tx.kind === 'income' ? '+' : '−'}${formatCents(tx.amount_cents)}`}
@@ -193,7 +169,7 @@ export default function Overview({ name }: { name: string }) {
         <div className="card stat hero" style={{ background: 'var(--yellow)' }}>
           <div className="hero-in">
             <div className="k">Saldo geral</div>
-            <div className="v" style={{ fontSize: 34 }}>{money(total)}</div>
+            <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
             <div className="s">{!included.length ? 'Nenhuma conta ainda' : isCurrent ? included.map((a) => a.name).join(' + ') : `no fim de ${monthLabel(m).split(' ')[0].toLowerCase()}`}</div>
             <div className="hero-pills">
               <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
@@ -222,6 +198,8 @@ export default function Overview({ name }: { name: string }) {
         </button>
         </div>
       </section>
+
+      {(active.length === 0 || txs.length === 0) && <Welcome hasAccount={active.length > 0} hasCard={cards.length > 0} hasEntry={txs.length > 0} />}
 
       <div className="ph-home phone-only">
         <section className="ph-tiles" aria-label="Resumo">
@@ -260,7 +238,7 @@ export default function Overview({ name }: { name: string }) {
 
         <section className="card card-pad" aria-label="Próximos">
           <div className="section-title"><h3>Próximos</h3><Link to="/lancamentos" className="link">Ver tudo</Link></div>
-          {nextUp.length === 0 ? <p className="muted small" style={{ margin: 0 }}>Nada pendente por aqui.</p> : nextUp.map(nextRow)}
+          {nextUp.length === 0 ? <AllClear /> : nextUp.map((tx) => nextRow(tx))}
         </section>
 
         <section className="card card-pad" aria-label="Minhas contas">
@@ -269,7 +247,7 @@ export default function Overview({ name }: { name: string }) {
             <div key={a.id} className="account-line" style={{ background: pastel(a.color, 0.82) }}>
               <AccountAvatar account={a} />
               <b style={{ flex: 1, minWidth: 0 }}>{a.name}</b>
-              <span className="money">{money(balances.get(a.id) ?? 0)}</span>
+              <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
             </div>
           ))}
         </section>
@@ -283,6 +261,12 @@ export default function Overview({ name }: { name: string }) {
 
       <div className="ov-grid">
         <div className="stack" style={{ gap: 20 }}>
+          <section className="card card-pad" aria-label="Próximos">
+            <div className="section-title"><h3>Próximos</h3><Link to="/lancamentos" className="link">Ver tudo</Link></div>
+            {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {overdue.length === 1 ? '1 atrasada' : `${overdue.length} atrasadas`}</div>}
+            {overdue.map((tx) => nextRow(tx, true))}
+            {upcoming.length === 0 && overdue.length === 0 ? <AllClear /> : upcoming.map((tx) => nextRow(tx))}
+          </section>
           <section className="card card-pad">
             <div className="section-title"><h3>Minhas contas</h3>{active.length > 0 && <Link to="/configuracoes/contas" className="link">Gerenciar</Link>}</div>
             {active.length === 0 ? (
@@ -301,11 +285,14 @@ export default function Overview({ name }: { name: string }) {
                   <b>{a.name}</b>
                   <div className="muted small">{a.exclude_from_total ? 'fora do saldo geral' : 'conta manual'}</div>
                 </div>
-                <span className="money">{money(balances.get(a.id) ?? 0)}</span>
+                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
               </div>
             ))}
           </section>
 
+        </div>
+
+        <div className="stack" style={{ gap: 20 }}>
           <section className="card card-pad">
             <div className="section-title"><h3>Meus cartões</h3>{cards.length > 0 && <Link to="/configuracoes/contas#cartoes" className="link">Gerenciar</Link>}</div>
             {cards.length === 0 ? (
@@ -341,23 +328,45 @@ export default function Overview({ name }: { name: string }) {
           </section>
         </div>
 
-        <div className="stack" style={{ gap: 20 }}>
-          <section className="card card-pad">
-            <div className="section-title"><h3>Contas a pagar</h3></div>
-            {toPay.length === 0 && <p className="muted small" style={{ margin: 0 }}>Nenhuma despesa pendente este mês.</p>}
-            {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {overdue.length === 1 ? '1 atrasada' : `${overdue.length} atrasadas`}</div>}
-            {overdue.map((tx) => billRow(tx, true))}
-            {upcomingPay.map((tx) => billRow(tx, false))}
-          </section>
-
-          <section className="card card-pad">
-            <div className="section-title"><h3>Contas a receber</h3></div>
-            {toReceive.length === 0 ? (
-              <p className="muted small" style={{ margin: 0 }}>Nenhuma receita pendente.</p>
-            ) : toReceive.map((tx) => billRow(tx, false))}
-          </section>
-        </div>
       </div>
     </main>
+  )
+}
+
+/** Nothing waiting to be paid or received: the coin says so. */
+function AllClear() {
+  return (
+    <div className="all-clear">
+      <Mascot size={52} />
+      <div><b>Tudo em dia!</b><small>Nenhuma conta pendente por aqui.</small></div>
+    </div>
+  )
+}
+
+/** First login: three steps to get going, ticked off as they're done. */
+function Welcome({ hasAccount, hasCard, hasEntry }: { hasAccount: boolean; hasCard: boolean; hasEntry: boolean }) {
+  const navigate = useNavigate()
+  const { open } = useTxForm()
+  const steps = [
+    { done: hasAccount, title: 'Crie sua primeira conta', text: 'O banco onde seu dinheiro fica, com o saldo de hoje.', action: () => navigate('/configuracoes/contas?nova=1'), label: 'Criar conta' },
+    { done: hasCard, title: 'Adicione um cartão', text: 'Se você usa cartão de crédito. Dá pra pular.', action: () => navigate('/configuracoes/cartoes?novo=1'), label: 'Adicionar cartão' },
+    { done: hasEntry, title: 'Lance o primeiro gasto', text: 'Pode ser o café de hoje.', action: () => open({ kind: 'expense' }), label: 'Novo lançamento', locked: !hasAccount },
+  ]
+  return (
+    <section className="card welcome" aria-label="Primeiros passos">
+      <div className="welcome-head">
+        <Mascot size={64} />
+        <div><h2>Que bom ter você aqui!</h2><p>Três passos e o Tally já começa a contar pra você.</p></div>
+      </div>
+      <ol className="welcome-steps">
+        {steps.map((st, i) => (
+          <li key={st.title} className={st.done ? 'done' : ''}>
+            <span className="num">{st.done ? <Check size={18} strokeWidth={3} /> : i + 1}</span>
+            <div><b>{st.title}</b><small>{st.text}</small></div>
+            {!st.done && <button className={`btn ${i === steps.findIndex((x) => !x.done) ? 'btn-primary' : ''}`} onClick={st.action} disabled={st.locked}>{st.label}</button>}
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }

@@ -6,7 +6,7 @@ import { today } from './dates'
 // Demo mode keeps everything in localStorage so the UI can be tried without a
 // database. It is only reachable through `npm run demo` in development.
 
-const KEY = 'tally-demo-3'
+const KEY = 'tally-demo-4'
 type Store = Record<string, Record<string, unknown>[]>
 
 function load(): Store {
@@ -36,6 +36,8 @@ function seed(): Store {
     categories.push({ id: id(), parent_id: null, archived: false, created_at: now(), ...c })
   }
   const cat = (name: string) => categories.find((c) => c.name === name)!.id
+  const subs = cat('Assinaturas e serviços')
+  for (const name of ['Streaming', 'Celular']) categories.push({ id: id(), name, kind: 'expense', icon: '', color: '', parent_id: subs, archived: false, created_at: now() })
   const nu = { id: id(), name: 'Nuconta', icon: 'bank:nubank', color: '#820ad1', initial_balance_cents: 0, exclude_from_total: false, archived: false, created_at: now() }
   const inter = { id: id(), name: 'Inter', icon: 'bank:inter', color: '#ff7a00', initial_balance_cents: 0, exclude_from_total: false, archived: false, created_at: now() }
   const savings = { id: id(), name: 'Nuconta Poupança', icon: 'bank:nubank', color: '#820ad1', initial_balance_cents: 60000, exclude_from_total: true, archived: false, created_at: now() }

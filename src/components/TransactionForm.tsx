@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
 import { monthLabel, today } from '../lib/dates'
-import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
+import { applyToNext, convertEntry, createEntry, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
 import { centsFromTyping, formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import { PERIOD_ORDER, PERIODS, seriesChanges, splitInstallments } from '../lib/series'
@@ -13,8 +13,9 @@ import { Popover } from './Picker'
 import { AccountSelect, CategorySelect, SourceSelect } from './Selects'
 import { TagInput } from './TagInput'
 import { useToast } from './Toast'
+import { useUndoDelete } from './useUndoDelete'
 import { useTxForm } from './TxFormContext'
-import { Modal, MoneyInput, Segmented, Toggle } from './ui'
+import { Modal, Segmented, Toggle } from './ui'
 
 export type FormKind = Exclude<TxKind, 'payment'>
 
@@ -60,6 +61,7 @@ export function TransactionForm({
   const { ask } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
+  const undoDelete = useUndoDelete()
   const active = accounts.filter((a) => !a.archived)
   const source = editing ?? copyOf
   const inSeries = !!editing?.series_id
@@ -203,16 +205,14 @@ export function TransactionForm({
         title: 'Excluir lançamento recorrente',
         text: 'Este lançamento faz parte de uma repetição. O que você deseja excluir?',
         options: [
-          { label: 'Apenas este', onClick: async () => { await refresh(deleteEntries([editing])); toast('Lançamento excluído.') } },
+          { label: 'Apenas este', onClick: () => undoDelete([editing], 'Lançamento excluído.') },
           { label: 'Este e os próximos', primary: true, onClick: async () => { await refresh(deleteFromHere(editing, allTxs, series)); toast('Lançamentos excluídos.') } },
         ],
       })
       return
     }
-    if (!confirm('Excluir este lançamento?')) return
-    await refresh(deleteEntries([editing]))
-    toast('Lançamento excluído.')
     onClose()
+    await undoDelete([editing], 'Lançamento excluído.')
   }
 
   function addFiles(list: FileList | null) {
@@ -246,7 +246,7 @@ export function TransactionForm({
             ))}
           </div>
         )}
-        <div className={`ph-amount phone-only ${kind}`}>
+        <div className={`ph-amount ${kind}`}>
           <label htmlFor="ph-amount">Valor</label>
           <div className="row">
             <span className="prefix">R$</span>
@@ -273,16 +273,12 @@ export function TransactionForm({
           <input id="desc" className="input" placeholder="Adicione uma descrição para o lançamento" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
         </div>
         <div className="grid-2" style={{ gap: 10 }}>
-          <div className="field desk-only">
-            <label>Valor</label>
-            <MoneyInput value={amount} onChange={setAmount} />
-          </div>
           <div className="field f-date">
             <span className="f-ico phone-only"><Calendar size={20} /></span>
             <label htmlFor="date">Data</label>
             <div className="f-date-in">
               {[[today(), 'Hoje'], [yesterday(), 'Ontem']].map(([d, l]) => (
-                <button type="button" key={l} className={`phone-only day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
+                <button type="button" key={l} className={`day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
               ))}
               <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
             </div>
@@ -456,7 +452,9 @@ export function TransactionForm({
 
         {error && <div className="error">{error}</div>}
         <div className={`form-actions ${editing ? 'editing' : ''}`}>
-          <button type="button" className="mini-btn" onClick={del} title={editing ? 'Excluir' : 'Descartar'} aria-label={editing ? 'Excluir' : 'Descartar'} disabled={busy}><Trash2 size={18} /></button>
+          {editing
+            ? <button type="button" className="mini-btn" onClick={del} title="Excluir" aria-label="Excluir" disabled={busy}><Trash2 size={18} /></button>
+            : <button type="button" className="btn cancel-btn desk-only" onClick={onClose} disabled={busy}>Cancelar</button>}
           <div className="row" style={{ gap: 14 }}>
             {!editing && (
               <button type="button" className="btn save-again" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} className="desk-only" /> <span className="desk-only">Salvar e criar outro</span><span className="phone-only">Salvar e novo</span></button>
