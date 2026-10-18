@@ -25,7 +25,7 @@ export function AccountIconPicker({
   const genericKey = choice.icon.startsWith('icon:') ? choice.icon.slice(5) : 'bank'
   return (
     <Modal title="Selecione o ícone" subtitle={`Escolha o ícone que representa esta ${noun}`} onClose={onBack} wide>
-      <Segmented value={tab} onChange={setTab} options={[['banks', 'Instituições financeiras'], ['custom', 'Ícones personalizados']]} />
+      <div className="icon-tabs"><Segmented value={tab} onChange={setTab} options={[['banks', 'Instituições financeiras'], ['custom', 'Ícones personalizados']]} /></div>
       <div style={{ height: 14 }} />
       {tab === 'banks' ? (
         <>

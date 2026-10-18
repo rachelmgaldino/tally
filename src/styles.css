@@ -481,6 +481,10 @@ select.input { appearance: auto; }
 .login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .login .card { width: 100%; max-width: 380px; padding: 32px 28px; box-shadow: 6px 6px 0 var(--ink); }
 .login .logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; font-family: var(--display); font-size: 32px; font-weight: 600; text-decoration: none; }
+.login-title { margin: 0; text-align: center; font-family: var(--display); font-size: 22px; }
+.login-note { margin: 0; text-align: center; color: var(--muted); line-height: 1.5; }
+.login-switch { margin: 4px 0 0; text-align: center; font-size: 14px; color: var(--muted); }
+.login-switch .link { font-size: inherit; }
 
 .toast { position: fixed; right: 16px; top: 24px; display: flex; align-items: stretch; background: var(--card); border: var(--border); border-radius: 18px; box-shadow: var(--shadow); z-index: 70; font-size: 14px; max-width: 320px; overflow: hidden; }
 .toast .ok { background: var(--green); border-right: var(--border); width: 46px; display: flex; align-items: center; justify-content: center; }
@@ -856,6 +860,6 @@ select.input { appearance: auto; }
 /* Phone: icon picker fits the sheet */
 @media (max-width: 760px) {
   .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .segmented button { min-width: 0; padding: 4px 8px; white-space: normal; line-height: 1.15; font-size: 13px; }
+  .icon-tabs .segmented button { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: clamp(11px, 3.3vw, 13px); letter-spacing: -0.01em; }
   .cat-icons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
