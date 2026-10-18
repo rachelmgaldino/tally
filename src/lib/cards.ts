@@ -1,4 +1,5 @@
 import { addMonths, monthLabel, today, type Month } from './dates'
+import { t } from './i18n'
 import type { Card, Transaction } from './types'
 
 // Credit card invoices (faturas). An invoice is named after the month it is
@@ -46,9 +47,9 @@ export function dueDate(card: Pick<Card, 'due_day'>, invoice: string): string {
   return dayIn(toMonth(invoice), card.due_day)
 }
 
-/** "Fatura Outubro 2026" */
+/** "Fatura Outubro 2026" / "October 2026 bill" */
 export function invoiceName(invoice: string): string {
-  return `Fatura ${monthLabel(toMonth(invoice))}`
+  return t().common.invoiceName(monthLabel(toMonth(invoice)))
 }
 
 /** Purchases add to an invoice; a refund (receita on the card) takes away. */
@@ -60,13 +61,10 @@ export function cardEffect(tx: Transaction): number {
 
 export type InvoiceStatus = 'paid' | 'late' | 'current' | 'closed' | 'future'
 
-export const STATUS_LABEL: Record<InvoiceStatus, string> = {
-  paid: 'Fatura paga',
-  late: 'Fatura atrasada',
-  current: 'Fatura atual',
-  closed: 'Fatura fechada',
-  future: 'Fatura futura',
-}
+/** "Fatura paga" / "Bill paid" */
+export const statusLabel = (status: InvoiceStatus) => t().common.invoiceStatus[status]
+/** "Paga" / "Paid" */
+export const statusShort = (status: InvoiceStatus) => t().common.invoiceStatusShort[status]
 
 export interface Invoice {
   card: Card

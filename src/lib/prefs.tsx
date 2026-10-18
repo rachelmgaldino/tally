@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, Fragment, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { DEMO } from './config'
+import { browserLanguage, isLanguage, setLanguage, type Language } from './i18n'
 import type { PeriodKind } from './periods'
 import { supabase } from './supabase'
 
@@ -15,10 +16,27 @@ export interface Prefs {
   dailyBalance: boolean
   /** How many days ahead Próximos looks on Início. */
   nextDays: 7 | 14 | 30
+  /** "Idioma / Language". Português unless the account was made on an English sign-up screen. */
+  language: Language
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7 }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR' }
 const KEY = 'tally-prefs'
+/** The last language used on this device, for the login screen. */
+const LANGUAGE_KEY = 'tally-language'
+
+/** The login and sign-up screens: the language last used here, or the browser's. */
+export function deviceLanguage(): Language {
+  try {
+    const saved = localStorage.getItem(LANGUAGE_KEY)
+    if (isLanguage(saved)) return saved
+  } catch { /* ignore */ }
+  return browserLanguage()
+}
+
+function rememberLanguage(lang: Language) {
+  try { localStorage.setItem(LANGUAGE_KEY, lang) } catch { /* ignore */ }
+}
 
 function local(): Partial<Prefs> {
   try {
@@ -34,7 +52,18 @@ const PrefsContext = createContext<{ prefs: Prefs; setPrefs: (patch: Partial<Pre
 })
 
 export function PrefsProvider({ saved, children }: { saved?: Partial<Prefs>; children: ReactNode }) {
-  const [prefs, setState] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...local(), ...saved }))
+  const [prefs, setState] = useState<Prefs>(() => {
+    const cached = local()
+    // The demo has no account, so it starts in the visitor's language. A real
+    // account only takes the language from its own saved prefs (the demo
+    // shares this browser's storage).
+    const language = DEMO ? (cached.language ?? deviceLanguage()) : (saved?.language ?? DEFAULT_PREFS.language)
+    return { ...DEFAULT_PREFS, ...cached, ...saved, language }
+  })
+  const lang = isLanguage(prefs.language) ? prefs.language : DEFAULT_PREFS.language
+  // Set before the children render, so everything below reads the right strings.
+  setLanguage(lang)
+  useEffect(() => { if (!DEMO) rememberLanguage(lang) }, [lang])
 
   const setPrefs = useCallback(async (patch: Partial<Prefs>) => {
     let next = DEFAULT_PREFS
@@ -46,7 +75,12 @@ export function PrefsProvider({ saved, children }: { saved?: Partial<Prefs>; chi
     }
   }, [])
 
-  return <PrefsContext.Provider value={{ prefs, setPrefs }}>{children}</PrefsContext.Provider>
+  // A new language redraws everything, so no screen keeps text in the old one.
+  return (
+    <PrefsContext.Provider value={{ prefs, setPrefs }}>
+      <Fragment key={lang}>{children}</Fragment>
+    </PrefsContext.Provider>
+  )
 }
 
 export const usePrefs = () => useContext(PrefsContext)
