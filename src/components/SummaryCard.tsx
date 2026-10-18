@@ -1,4 +1,4 @@
-import { Minus, Plus } from 'lucide-react'
+import { Minus, Plus, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { PeriodSummary } from '../lib/balances'
 import { formatBRL, formatCents } from '../lib/money'
@@ -81,10 +81,10 @@ export function SummaryCard({
         <div className="sum-side">
           <div className="sum-side-head">
             <span className="k">Dinheiro do {word}</span>
-            <small className="sum-sum">{formatBRL(previous)} que já tinha + {formatBRL(incomeAll)} de receitas<span className="sum-sum-eq"> = <b>{formatBRL(previous + incomeAll)}</b></span></small>
+            <small className="sum-sum">{formatBRL(previous)} que já tinha + {formatBRL(incomeAll)} de receitas = <b>{formatBRL(previous + incomeAll)}</b></small>
             <b className="sum-sum-short">{formatBRL(previous + incomeAll)}</b>
           </div>
-          <div className="sum-bar" role="img" aria-label={`Já pago ${formatBRL(expensePaid)}, a pagar ${formatBRL(toPay)}, ${short ? `faltam ${formatBRL(short)}` : `sobra ${formatBRL(left)}`}`}>
+          <div className="sum-bar" role="img" aria-label={`Já pago ${formatBRL(expensePaid)}, a pagar ${formatBRL(toPay)}, ${short ? `${formatBRL(short)} negativo` : `sobra ${formatBRL(left)}`}`}>
             {whole === 0 ? <i style={{ flex: 1 }} /> : (
               <>
                 {expensePaid > 0 && <i className="paid" style={{ flex: expensePaid }} />}
@@ -97,7 +97,7 @@ export function SummaryCard({
             <span><b className="sw paid" /><span className="lbl">já pago</span> <b className="v">{formatCents(expensePaid)}</b><span className="lbl-after">pago</span></span>
             <span><b className="sw topay" /><span className="lbl">a pagar</span> <b className="v">{formatCents(toPay)}</b><span className="lbl-after">a pagar</span></span>
             {short > 0
-              ? <span className="expense"><b className="sw short" /><span className="lbl">faltam</span> <b className="v">{formatCents(short)}</b><span className="lbl-after">faltam</span></span>
+              ? <span className="sum-neg"><TriangleAlert size={14} strokeWidth={2.5} aria-hidden="true" /><b className="v">{formatCents(short)}</b> negativo</span>
               : <span><b className="sw left" /><span className="lbl">sobra</span> <b className="v">{formatCents(left)}</b><span className="lbl-after">sobra</span></span>}
           </div>
         </div>
