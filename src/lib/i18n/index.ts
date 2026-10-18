@@ -16,7 +16,7 @@ import * as settings from './settings'
 export type Language = 'pt-BR' | 'en'
 
 export const LANGUAGES: { id: Language; name: string }[] = [
-  { id: 'pt-BR', name: 'Português (Brasil)' },
+  { id: 'pt-BR', name: 'Português' },
   { id: 'en', name: 'English' },
 ]
 

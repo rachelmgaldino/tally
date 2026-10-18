@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceName, invoiceOf } from '../lib/cards'
 import { today } from '../lib/dates'
+import { t } from '../lib/i18n'
 import { createEntry, deleteEntries, updateEntry, useRefresh } from '../lib/entries'
 import { useAccounts, useCards, useTransactions } from '../lib/queries'
 import type { Attachment, NewTransaction, Transaction } from '../lib/types'
@@ -20,6 +21,8 @@ export function PayInvoiceModal({
   editing?: Transaction
   onClose: () => void
 }) {
+  const s = t().form
+  const common = t().common
   const { data: accounts = [] } = useAccounts()
   const { data: cards = [] } = useCards()
   const { data: txs = [] } = useTransactions()
@@ -43,12 +46,12 @@ export function PayInvoiceModal({
   if (!card) return null
 
   async function save() {
-    if (amount <= 0) return setError('Informe um valor.')
-    if (!date) return setError('Informe a data.')
-    if (!accountId) return setError('Escolha a conta.')
+    if (amount <= 0) return setError(s.enterAmount)
+    if (!date) return setError(s.enterDate)
+    if (!accountId) return setError(s.pickAccount)
     const row: NewTransaction = {
       kind: 'payment',
-      description: 'Pagamento de fatura',
+      description: common.kinds.payment,
       amount_cents: amount,
       date,
       paid: true,
@@ -69,10 +72,10 @@ export function PayInvoiceModal({
       const upload = show.files ? files : []
       if (editing) await refresh(updateEntry(editing, row, upload))
       else await refresh(createEntry(row, null, upload))
-      toast(editing ? 'Pagamento atualizado.' : 'Pagamento registrado com sucesso.')
+      toast(editing ? s.paymentUpdated : s.paymentSaved)
       onClose()
     } catch (e) {
-      setError(`Não foi possível salvar: ${(e as Error).message}`)
+      setError(s.couldNotSave((e as Error).message))
     } finally {
       setBusy(false)
     }
@@ -80,9 +83,9 @@ export function PayInvoiceModal({
 
   async function del() {
     if (!editing) return onClose()
-    if (!confirm('Excluir este pagamento?')) return
+    if (!confirm(s.deletePayment)) return
     await refresh(deleteEntries([editing]))
-    toast('Pagamento excluído.')
+    toast(s.paymentDeleted)
     onClose()
   }
 
@@ -90,60 +93,60 @@ export function PayInvoiceModal({
     if (!list) return
     const picked = Array.from(list)
     const tooBig = picked.find((f) => f.size > MAX_ATTACHMENT_BYTES)
-    if (tooBig) setError(`${tooBig.name} passa de ${Math.round(MAX_ATTACHMENT_BYTES / 1_000_000)} MB.`)
+    if (tooBig) setError(s.fileTooBig(tooBig.name, Math.round(MAX_ATTACHMENT_BYTES / 1_000_000)))
     setFiles((f) => [...f, ...picked.filter((p) => p.size <= MAX_ATTACHMENT_BYTES)])
   }
 
   return (
-    <Modal title={editing ? 'Editar pagamento' : 'Pagar fatura'} subtitle={`${card.name} · ${invoiceName(invoiceMonth)}`} onClose={onClose}>
+    <Modal title={editing ? s.editPayment : s.payInvoice} subtitle={`${card.name} · ${invoiceName(invoiceMonth)}`} onClose={onClose}>
       <form className="tx-form" onSubmit={(e) => { e.preventDefault(); save() }}>
         <div className="grid-2" style={{ gap: 10 }}>
           <div className="field">
-            <label>Valor</label>
+            <label>{s.amount}</label>
             <MoneyInput value={amount} onChange={setAmount} autoFocus />
           </div>
           <div className="field">
-            <label htmlFor="pay-date">Data</label>
+            <label htmlFor="pay-date">{s.date}</label>
             <input id="pay-date" className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         </div>
         <div className="field">
-          <label>Conta</label>
+          <label>{s.account}</label>
           <AccountSelect accounts={active} value={accountId} onChange={setAccountId} />
         </div>
         <div className="option-icons">
-          <button type="button" className={show.files ? 'on' : ''} onClick={() => setShow((s) => ({ ...s, files: !s.files }))}><span><Paperclip size={20} /></span>Anexo</button>
-          <button type="button" className={show.tags ? 'on' : ''} onClick={() => setShow((s) => ({ ...s, tags: !s.tags }))}><span><TagIcon size={20} /></span>Tags</button>
+          <button type="button" className={show.files ? 'on' : ''} onClick={() => setShow((v) => ({ ...v, files: !v.files }))}><span><Paperclip size={20} /></span>{s.attachment}</button>
+          <button type="button" className={show.tags ? 'on' : ''} onClick={() => setShow((v) => ({ ...v, tags: !v.tags }))}><span><TagIcon size={20} /></span>{s.tags}</button>
         </div>
         {show.tags && (
           <div className="form-section">
-            <h4>Tags</h4>
+            <h4>{s.tags}</h4>
             <TagInput value={tagIds} onChange={setTagIds} />
           </div>
         )}
         {show.files && (
           <div className="form-section">
-            <h4>Anexos</h4>
+            <h4>{s.attachments}</h4>
             {kept.map((a) => (
               <div key={a.path} className="file-line">
                 <Paperclip size={13} /> <span>{a.name}</span> <small>{formatSize(a.size)}</small>
-                <button type="button" onClick={() => setKept((k) => k.filter((x) => x !== a))} aria-label={`Remover ${a.name}`}><X size={13} /></button>
+                <button type="button" onClick={() => setKept((k) => k.filter((x) => x !== a))} aria-label={s.remove(a.name)}><X size={13} /></button>
               </div>
             ))}
             {files.map((f, i) => (
               <div key={`${f.name}-${i}`} className="file-line">
                 <Paperclip size={13} /> <span>{f.name}</span> <small>{formatSize(f.size)}</small>
-                <button type="button" onClick={() => setFiles((list) => list.filter((x) => x !== f))} aria-label={`Remover ${f.name}`}><X size={13} /></button>
+                <button type="button" onClick={() => setFiles((list) => list.filter((x) => x !== f))} aria-label={s.remove(f.name)}><X size={13} /></button>
               </div>
             ))}
             <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-            <button type="button" className="add-file" style={{ alignSelf: 'flex-start' }} onClick={() => fileInput.current?.click()}>+ Adicionar anexo</button>
+            <button type="button" className="add-file" style={{ alignSelf: 'flex-start' }} onClick={() => fileInput.current?.click()}>{s.addAttachmentPlus}</button>
           </div>
         )}
         {error && <div className="error">{error}</div>}
         <div className="form-actions">
-          {editing ? <button type="button" className="mini-btn" onClick={del} title="Excluir" disabled={busy}><Trash2 size={18} /></button> : <span />}
-          <button type="submit" className="save-btn" disabled={busy} title="Salvar" aria-label="Salvar"><Check size={30} strokeWidth={2.5} /></button>
+          {editing ? <button type="button" className="mini-btn" onClick={del} title={common.delete} disabled={busy}><Trash2 size={18} /></button> : <span />}
+          <button type="submit" className="save-btn" disabled={busy} title={common.save} aria-label={common.save}><Check size={30} strokeWidth={2.5} /></button>
           <span style={{ width: 32 }} />
         </div>
       </form>
