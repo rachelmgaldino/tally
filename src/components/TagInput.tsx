@@ -1,6 +1,7 @@
 import { Plus, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { byId, useTagMutations, useTags } from '../lib/queries'
+import { t } from '../lib/i18n'
 
 /** Pick tags by searching; typing a new name and pressing Enter creates it. */
 export function TagInput({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
@@ -27,7 +28,7 @@ export function TagInput({ value, onChange }: { value: string[]; onChange: (ids:
           {value.map((id) => tagMap.get(id) && (
             <span key={id} className="chip">
               {tagMap.get(id)!.name}
-              <button type="button" onClick={() => onChange(value.filter((v) => v !== id))} aria-label={`Remover ${tagMap.get(id)!.name}`}><X size={12} /></button>
+              <button type="button" onClick={() => onChange(value.filter((v) => v !== id))} aria-label={t().form.remove(tagMap.get(id)!.name)}><X size={12} /></button>
             </span>
           ))}
         </div>
@@ -36,7 +37,7 @@ export function TagInput({ value, onChange }: { value: string[]; onChange: (ids:
         <div className="input">
           <Search size={15} className="muted" />
           <input
-            placeholder="Pesquisar tags"
+            placeholder={t().form.searchTags}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
@@ -56,7 +57,7 @@ export function TagInput({ value, onChange }: { value: string[]; onChange: (ids:
             ))}
             {q && !exact && (
               <button type="button" className="picker-item" onMouseDown={(e) => e.preventDefault()} onClick={() => pick(q)}>
-                <Plus size={14} /> Criar tag “{q}”
+                <Plus size={14} /> {t().form.createTag(q)}
               </button>
             )}
           </div>

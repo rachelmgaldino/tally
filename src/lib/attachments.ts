@@ -1,4 +1,5 @@
 import { DEMO } from './config'
+import { t } from './i18n'
 import { supabase } from './supabase'
 import type { Attachment } from './types'
 
@@ -16,12 +17,12 @@ function readAsDataUrl(file: File): Promise<string> {
 
 export async function uploadAttachment(transactionId: string, file: File): Promise<Attachment> {
   if (file.size > MAX_ATTACHMENT_BYTES) {
-    throw new Error(`${file.name} passa de ${Math.round(MAX_ATTACHMENT_BYTES / 1_000_000)} MB.`)
+    throw new Error(t().settings.attachments.tooBig(file.name, Math.round(MAX_ATTACHMENT_BYTES / 1_000_000)))
   }
   if (DEMO) return { path: await readAsDataUrl(file), name: file.name, size: file.size }
   const { data } = await supabase.auth.getSession()
   const userId = data.session?.user.id
-  if (!userId) throw new Error('Sessão expirada.')
+  if (!userId) throw new Error(t().settings.sessionExpired)
   // Storage keys can't hold every character; the original name is kept in `name`.
   const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_')
   const path = `${userId}/${transactionId}/${Date.now()}-${safe}`
@@ -59,5 +60,5 @@ export async function removeAttachments(list: Attachment[]) {
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', t().settings.attachments.decimal)} MB`
 }

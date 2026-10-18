@@ -2,6 +2,7 @@ import { ChevronLeft, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useEffect, type ReactNode } from 'react'
 import { centsFromTyping, formatCents } from '../lib/money'
+import { t } from '../lib/i18n'
 
 export function Modal({
   title, subtitle, onClose, children, wide, className,
@@ -21,7 +22,7 @@ export function Modal({
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal ${wide ? 'modal-wide' : ''} ${className ?? ''}`} role="dialog" aria-modal="true">
-        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+        <button className="modal-close" onClick={onClose} aria-label={t().common.close}><X size={20} /></button>
         <div className="modal-head">
           <h2>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
@@ -68,5 +69,5 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
 
 /** Phone only: the way back to the Mais tab from the pages it opens. */
 export function BackToMore() {
-  return <Link to="/mais" className="back-link phone-only"><ChevronLeft size={18} /> Mais</Link>
+  return <Link to="/mais" className="back-link phone-only"><ChevronLeft size={18} /> {t().common.nav.more}</Link>
 }

@@ -1,5 +1,6 @@
 import { Repeat2, X } from 'lucide-react'
 import { useEffect } from 'react'
+import { t } from '../lib/i18n'
 
 export interface PromptOption {
   label: string
@@ -23,7 +24,7 @@ export function PromptCard({ prompt, onClose }: { prompt: PromptConfig; onClose:
   return (
     <div className="overlay confirm-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
     <div className="modal confirm-box prompt-card" role="alertdialog" aria-modal="true" aria-label={prompt.title}>
-      <button className="prompt-close" onClick={onClose} aria-label="Fechar"><X size={14} /></button>
+      <button className="prompt-close" onClick={onClose} aria-label={t().common.close}><X size={14} /></button>
       <span className="prompt-icon"><Repeat2 size={18} /></span>
       <h3>{prompt.title}</h3>
       <p>{prompt.text}</p>

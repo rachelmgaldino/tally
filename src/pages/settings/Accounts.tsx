@@ -8,12 +8,14 @@ import { Modal, MoneyInput, Toggle } from '../../components/ui'
 import { accountBalance } from '../../lib/balances'
 import { findBank } from '../../lib/banks'
 import { ACCOUNT_ICONS } from '../../lib/icons'
+import { t, locale } from '../../lib/i18n'
 import { formatBRL } from '../../lib/money'
 import { useAccountMutations, useAccounts, useTransactions } from '../../lib/queries'
 import type { Account } from '../../lib/types'
 import { tone } from '../../lib/theme'
 
 export default function Accounts() {
+  const s = t().settings.accounts
   const { data: accounts = [] } = useAccounts()
   const { data: txs = [] } = useTransactions()
   const [params, setParams] = useSearchParams()
@@ -24,12 +26,12 @@ export default function Accounts() {
     if (params.has('nova')) setParams({}, { replace: true })
   }
 
-  const sorted = [...accounts].sort((a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, 'pt-BR'))
+  const sorted = [...accounts].sort((a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, locale()))
 
   return (
     <>
       <div className="settings-head">
-        <h2>Contas</h2>
+        <h2>{s.title}</h2>
       </div>
       <div className="acc-grid">
         {sorted.map((a) => {
@@ -44,13 +46,13 @@ export default function Accounts() {
             <div>
               <div className={`v ${balance < 0 ? 'expense' : ''}`}>{formatBRL(balance)}</div>
               {balance < 0 && !a.archived
-                ? <small className="neg-note"><AlertTriangle size={13} /> Saldo negativo</small>
-                : <small>{a.archived ? 'Arquivada' : a.exclude_from_total ? 'Fora do saldo geral' : 'Conta manual'}</small>}
+                ? <small className="neg-note"><AlertTriangle size={13} /> {s.negative}</small>
+                : <small>{a.archived ? s.archived : a.exclude_from_total ? s.excluded : s.manual}</small>}
             </div>
           </button>
           )
         })}
-        <button className="acc-new" onClick={() => setEditing('new')}><CirclePlus size={18} /> Nova conta</button>
+        <button className="acc-new" onClick={() => setEditing('new')}><CirclePlus size={18} /> {s.add}</button>
       </div>
       {editing && <AccountModal account={editing === 'new' ? undefined : editing} onClose={close} />}
     </>
@@ -64,6 +66,8 @@ function iconLabel(icon: string): string {
 }
 
 function AccountModal({ account, onClose }: { account?: Account; onClose: () => void }) {
+  const s = t().settings.accounts
+  const cm = t().common
   const { insert, update, remove } = useAccountMutations()
   const toast = useToast()
   const [icon, setIcon] = useState<IconChoice | null>(account ? { icon: account.icon, color: account.color } : null)
@@ -99,7 +103,7 @@ function AccountModal({ account, onClose }: { account?: Account; onClose: () => 
     try {
       if (account) await update.mutateAsync({ id: account.id, patch: row })
       else await insert.mutateAsync([{ ...row, archived: false }])
-      toast(account ? 'Conta atualizada.' : 'Conta criada.')
+      toast(account ? s.updated : s.created)
       onClose()
     } catch (e) {
       setError((e as Error).message)
@@ -109,22 +113,22 @@ function AccountModal({ account, onClose }: { account?: Account; onClose: () => 
   async function archive() {
     if (!account) return
     await update.mutateAsync({ id: account.id, patch: { archived: !account.archived } })
-    toast(account.archived ? 'Conta reativada.' : 'Conta arquivada.')
+    toast(account.archived ? s.reactivated : s.archivedToast)
     onClose()
   }
 
   async function del() {
     if (!account) return
-    if (!confirm(`Excluir "${account.name}" e todos os lançamentos dela? Isso não pode ser desfeito. Para só esconder a conta, use Arquivar.`)) return
+    if (!confirm(s.deleteConfirm(account.name))) return
     await remove.mutateAsync(account.id)
-    toast('Conta excluída.')
+    toast(s.deleted)
     onClose()
   }
 
   return (
     <Modal
-      title={account ? 'Editar conta' : 'Nova conta manual'}
-      subtitle={account ? undefined : 'Preencha os dados da conta que você deseja criar'}
+      title={account ? s.editTitle : s.newTitle}
+      subtitle={account ? undefined : s.newSubtitle}
       onClose={onClose}
     >
       <div className="stack">
@@ -134,33 +138,33 @@ function AccountModal({ account, onClose }: { account?: Account; onClose: () => 
           ) : (
             <span className="avatar" style={{ width: 46, height: 46, background: 'var(--field)', border: '1px solid var(--line)' }}><Image size={18} /></span>
           )}
-          <span className="muted small">{icon ? iconLabel(icon.icon) : 'Selecione um ícone'}</span>
+          <span className="muted small">{icon ? iconLabel(icon.icon) : s.pickIcon}</span>
         </button>
         <div className="field">
-          <label className="required" htmlFor="acc-name">Nome da conta</label>
-          <input id="acc-name" className="input" placeholder="Insira um nome para identificar esta conta" value={name} onChange={(e) => setName(e.target.value)} autoFocus={!account} />
+          <label className="required" htmlFor="acc-name">{s.name}</label>
+          <input id="acc-name" className="input" placeholder={s.namePlaceholder} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!account} />
         </div>
         <div className="field">
-          <label>{account ? 'Saldo inicial' : 'Saldo da conta'}</label>
+          <label>{account ? s.initialBalance : s.balance}</label>
           <MoneyInput value={balance} onChange={setBalance} />
         </div>
         <div className="row">
-          <Toggle checked={exclude} onChange={setExclude} label="Não somar no Saldo Geral" />
-          <span title="Marque esta opção para que o saldo desta conta não seja somado no seu Saldo Geral. O saldo continua sendo contabilizado na tela de lançamentos. Use para contas que representem seu dinheiro guardado, como Conta Poupança ou Conta Investimento." className="muted" style={{ display: 'flex' }}>
+          <Toggle checked={exclude} onChange={setExclude} label={s.exclude} />
+          <span title={s.excludeHelp} className="muted" style={{ display: 'flex' }}>
             <Info size={14} />
           </span>
         </div>
         {account && (
           <div className="row" style={{ gap: 18 }}>
-            <button className="link" onClick={archive} disabled={busy}>{account.archived ? 'Reativar conta' : 'Arquivar conta'}</button>
-            <button className="link" style={{ color: 'var(--expense)' }} onClick={del} disabled={busy}>Excluir conta</button>
+            <button className="link" onClick={archive} disabled={busy}>{account.archived ? s.reactivate : s.archive}</button>
+            <button className="link" style={{ color: 'var(--expense)' }} onClick={del} disabled={busy}>{s.delete}</button>
           </div>
         )}
         {error && <div className="error">{error}</div>}
       </div>
       <div className="modal-foot">
-        <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" disabled={!name.trim() || busy} onClick={save}>{account ? 'Salvar' : 'Criar nova conta'}</button>
+        <button className="btn btn-outline" onClick={onClose}>{cm.cancel}</button>
+        <button className="btn btn-primary" disabled={!name.trim() || busy} onClick={save}>{account ? cm.save : s.create}</button>
       </div>
     </Modal>
   )
