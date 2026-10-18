@@ -30,10 +30,12 @@ function todayLabel(iso: string): string {
 }
 
 export default function Overview({ name }: { name: string }) {
-  const { data: accounts = [] } = useAccounts()
+  const { data: accounts = [], isSuccess: accountsLoaded } = useAccounts()
   const { data: categories = [] } = useCategories()
-  const { data: txs = [] } = useTransactions()
-  const { data: allCards = [] } = useCards()
+  const { data: txs = [], isSuccess: txsLoaded } = useTransactions()
+  const { data: allCards = [], isSuccess: cardsLoaded } = useCards()
+  // Until the data arrives the lists are empty, which would look like a brand-new user.
+  const loaded = accountsLoaded && txsLoaded && cardsLoaded
   const cards = allCards.filter((c) => !c.archived)
   const { open } = useTxForm()
   const { update } = useTransactionMutations()
@@ -222,7 +224,7 @@ export default function Overview({ name }: { name: string }) {
         </div>
       </section>
 
-      {(active.length === 0 || txs.length === 0) && <Welcome hasAccount={active.length > 0} hasCard={cards.length > 0} hasEntry={txs.length > 0} />}
+      {loaded && (active.length === 0 || txs.length === 0) && <Welcome hasAccount={active.length > 0} hasCard={cards.length > 0} hasEntry={txs.length > 0} />}
 
       <div className="ph-home phone-only">
         <section className="ph-tiles" aria-label="Resumo">
