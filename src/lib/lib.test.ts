@@ -86,7 +86,12 @@ describe('balances', () => {
     expect(nov.forecast).toBe(oct.forecast + 180000)
   })
   it('computes account balances', () => {
-    expect(accountBalance(accounts[1], txs)).toEqual({ current: -20000, forecast: -20000 })
-    expect(accountBalance(accounts[0], txs).forecast).toBe(383150)
+    expect(accountBalance(accounts[1], txs, undefined, '2026-10-18')).toEqual({ current: -20000, forecast: -20000 })
+    expect(accountBalance(accounts[0], txs, undefined, '2026-10-18').forecast).toBe(383150)
+  })
+  it('leaves transfers dated later out of the current balance', () => {
+    const later = [...txs, tx({ kind: 'transfer', amount_cents: 50000, date: '2026-11-06', account_id: 'nu', to_account_id: 'inter' })]
+    expect(accountBalance(accounts[1], later, undefined, '2026-10-18')).toEqual({ current: -20000, forecast: 30000 })
+    expect(accountBalance(accounts[1], later, undefined, '2026-11-06').current).toBe(30000)
   })
 })
