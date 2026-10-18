@@ -16,7 +16,7 @@ export function DemoBanner() {
   }
   return (
     <div className="demo-banner" role="note">
-      <span><b>Demonstração</b> com dados de exemplo.<span className="demo-banner-more"> O que você mudar fica só neste navegador.</span></span>
+      <span><b>Demonstração</b><span className="demo-banner-mid"> com dados de exemplo.</span><span className="demo-banner-more"> O que você mudar fica só neste navegador.</span></span>
       <button type="button" onClick={reset}><RotateCcw size={14} /> Recomeçar</button>
     </div>
   )

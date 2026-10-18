@@ -12,7 +12,12 @@
   font: inherit; font-weight: 800; cursor: pointer;
 }
 @media (max-width: 760px) {
-  .demo-banner { margin: max(10px, env(safe-area-inset-top)) 12px 0; padding: 6px 6px 6px 14px; justify-content: space-between; text-align: left; font-size: 12px; gap: 8px; }
+  .demo-banner { margin: max(10px, env(safe-area-inset-top)) 12px 0; padding: 6px 6px 6px 14px; justify-content: space-between; text-align: left; font-size: 12px; gap: 8px; flex-wrap: nowrap; }
+  .demo-banner > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .demo-banner button { flex: none; white-space: nowrap; padding: 4px 10px; }
   .demo-banner + .app { padding-top: 10px; }
   .demo-banner-more { display: none; }
+}
+@media (max-width: 379px) {
+  .demo-banner-mid { display: none; }
 }

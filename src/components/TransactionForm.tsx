@@ -108,7 +108,13 @@ export function TransactionForm({
 
   const titleIndex = editing ? 1 : 0
   const repeat: RepeatOptions | null = show.repeat && !inSeries ? { kind: repeatKind, period, installments } : null
-  const toggle = (k: keyof typeof show) => setShow((s) => ({ ...s, [k]: !s[k] }))
+  const formRef = useRef<HTMLFormElement>(null)
+  const toggle = (k: keyof typeof show) => {
+    const opening = !show[k]
+    setShow((s) => ({ ...s, [k]: !s[k] }))
+    // On short screens the section opens below the fold; bring it into view.
+    if (opening) requestAnimationFrame(() => formRef.current?.querySelector(`[data-section="${k}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+  }
 
   function validate(): NewTransaction | null {
     if (amount <= 0) return fail('Informe um valor.')
@@ -238,7 +244,7 @@ export function TransactionForm({
       onClose={onClose}
       className="modal-form"
     >
-      <form className="tx-form" onSubmit={(e) => { e.preventDefault(); save(false) }}>
+      <form ref={formRef} className="tx-form" onSubmit={(e) => { e.preventDefault(); save(false) }}>
         {onKind && !editing && (
           <div className="segmented kind-tabs" role="tablist" aria-label="Tipo de lançamento">
             {(['expense', 'income', 'transfer'] as const).map((k) => (
@@ -375,14 +381,14 @@ export function TransactionForm({
         </div>
 
         {show.tags && (
-          <div className="form-section">
+          <div className="form-section" data-section="tags">
             <h4>Tags</h4>
             <TagInput value={tagIds} onChange={setTagIds} />
           </div>
         )}
 
         {show.notes && (
-          <div className="form-section">
+          <div className="form-section" data-section="notes">
             <h4>Observação</h4>
             <div className="field">
               <textarea id="notes" className="input" placeholder="Adicione uma observação…" value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -391,7 +397,7 @@ export function TransactionForm({
         )}
 
         {show.files && (
-          <div className="form-section">
+          <div className="form-section" data-section="files">
             <h4>Anexos</h4>
             {kept.map((a) => (
               <div key={a.path} className="file-line">
@@ -411,7 +417,7 @@ export function TransactionForm({
         )}
 
         {show.repeat && !inSeries && (
-          <div className="form-section repeat">
+          <div className="form-section repeat" data-section="repeat">
             <h4>{REPEAT_TITLE[kind]}</h4>
             <Segmented value={repeatKind} onChange={setRepeatKind} options={[['fixed', 'Fixo'], ['installment', 'Parcelado']]} />
             {repeatKind === 'fixed' ? (
