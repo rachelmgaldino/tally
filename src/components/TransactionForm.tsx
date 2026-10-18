@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
@@ -278,7 +278,13 @@ export function TransactionForm({
         </div>
         {kind !== 'transfer' && (
           <>
-            {!card && <div className="f-paid"><Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'} /></div>}
+            {!card && <div className="f-paid"><Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={
+              <span className="paid-label">
+                <CircleCheck size={20} className="phone-only" />
+                <span className="desk-only">{kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'}</span>
+                <span className="phone-only">{kind === 'income' ? 'Já foi recebido' : 'Já foi pago'}</span>
+              </span>
+            } /></div>}
             <div className="grid-2" style={{ gap: 10 }}>
               <div className="field f-src">
                 <label>{usableCards.length ? 'Conta/Cartão' : 'Conta'}</label>
