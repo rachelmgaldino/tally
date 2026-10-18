@@ -1,5 +1,5 @@
 import {
-  ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Minus, Plus, Search, ThumbsDown, ThumbsUp, X,
+  ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Minus, Paperclip, Plus, Repeat2, Search, ThumbsDown, ThumbsUp, X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -9,9 +9,10 @@ import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { periodSummary } from '../lib/balances'
+import { useSeriesUpkeep } from '../lib/entries'
 import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
 import { formatCents, formatSigned } from '../lib/money'
-import { byId, useAccounts, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
+import { byId, useAccounts, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction, TxKind } from '../lib/types'
 
 const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'Receitas'], ['transfer', 'Transferências']]
@@ -20,6 +21,8 @@ export default function Transactions() {
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts()
   const { data: categories = [] } = useCategories()
   const { data: txs = [], isLoading } = useTransactions()
+  const { data: tags = [] } = useTags()
+  const seriesMap = byId(useSeries().data)
   const { update } = useTransactionMutations()
   const { open } = useTxForm()
 
@@ -27,6 +30,7 @@ export default function Transactions() {
   const [accountFilter, setAccountFilter] = useState<string | null>(null)
   const [kindFilter, setKindFilter] = useState<TxKind | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [searching, setSearching] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -37,6 +41,7 @@ export default function Transactions() {
   const from = monthStart(month)
   const to = monthEnd(month)
   const t = today()
+  useSeriesUpkeep(to)
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -49,9 +54,10 @@ export default function Transactions() {
         const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
         return !!c && (c.id === categoryFilter || c.parent_id === categoryFilter)
       })
+      .filter((tx) => !tagFilter || tx.tag_ids.includes(tagFilter))
       .filter((tx) => !needle || tx.description.toLowerCase().includes(needle))
       .sort((a, b) => (a.date === b.date ? b.created_at.localeCompare(a.created_at) : b.date.localeCompare(a.date)))
-  }, [txs, from, to, accountFilter, kindFilter, categoryFilter, search, categoryMap])
+  }, [txs, from, to, accountFilter, kindFilter, categoryFilter, tagFilter, search, categoryMap])
 
   const groups = useMemo(() => {
     const out: { date: string; items: Transaction[] }[] = []
@@ -67,12 +73,13 @@ export default function Transactions() {
   const summary = periodSummary(summaryAccounts, txs, from, to)
   const filteredAccount = accountFilter ? accountMap.get(accountFilter) : undefined
   const selected = selectedId ? txs.find((tx) => tx.id === selectedId) : undefined
-  const hasFilters = accountFilter || kindFilter || categoryFilter || search
+  const hasFilters = accountFilter || kindFilter || categoryFilter || tagFilter || search
 
   function clearFilters() {
     setAccountFilter(null)
     setKindFilter(null)
     setCategoryFilter(null)
+    setTagFilter(null)
     setSearch('')
     setSearching(false)
   }
@@ -153,6 +160,13 @@ export default function Transactions() {
               value={categoryFilter}
               onChange={setCategoryFilter}
             />
+            <FilterMenu
+              label={tagFilter ? tags.find((tg) => tg.id === tagFilter)?.name ?? 'Tags' : 'Tags'}
+              on={!!tagFilter}
+              items={[{ id: null, label: 'Todas as tags' }, ...tags.map((tg) => ({ id: tg.id, label: tg.name }))]}
+              value={tagFilter}
+              onChange={setTagFilter}
+            />
             {searching ? (
               <input autoFocus placeholder="Buscar pela descrição" value={search} onChange={(e) => setSearch(e.target.value)} />
             ) : (
@@ -184,6 +198,7 @@ export default function Transactions() {
                   const parent = category?.parent_id ? categoryMap.get(category.parent_id) : undefined
                   const account = accountMap.get(tx.account_id)
                   const amount = signedAmount(tx)
+                  const series = tx.series_id ? seriesMap.get(tx.series_id) : undefined
                   return (
                     <div key={tx.id} className={`tx-row ${tx.id === selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(tx.id)}>
                       {tx.kind === 'transfer' ? (
@@ -193,9 +208,12 @@ export default function Transactions() {
                       )}
                       <div className="tx-desc">
                         {tx.description || (tx.kind === 'transfer' ? 'Transferência' : category?.name ?? 'Sem descrição')}
+                        {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
+                        {tx.attachments.length > 0 && <Paperclip size={11} className="clip" />}
                         {category && parent && <span className="sub">{category.name}</span>}
                       </div>
                       <div className="tx-where">
+                        {series?.kind === 'fixed' && <Repeat2 size={13} aria-label="Lançamento fixo" />}
                         {tx.kind === 'transfer' ? (
                           <>
                             <AccountAvatar account={account} size={18} />
@@ -252,7 +270,17 @@ export default function Transactions() {
           </button>
         </footer>
       </div>
-      {selected && <TransactionPanel tx={selected} onClose={() => setSelectedId(null)} />}
+      {selected && (
+        <TransactionPanel
+          tx={selected}
+          onClose={() => setSelectedId(null)}
+          onNavigate={(id) => {
+            const target = txs.find((tx) => tx.id === id)
+            if (target) setMonth({ year: Number(target.date.slice(0, 4)), month: Number(target.date.slice(5, 7)) })
+            setSelectedId(id)
+          }}
+        />
+      )}
     </main>
   )
 }
