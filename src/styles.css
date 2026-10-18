@@ -441,6 +441,7 @@ select.input { appearance: auto; }
 .card-line { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 16px; border-bottom: 1.5px dashed var(--line); margin-bottom: 14px; }
 .card-line:last-of-type { border-bottom: 0; margin-bottom: 0; }
 .card-line .ccard { max-width: 280px; }
+.card-line .money { white-space: nowrap; }
 .card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .card-stats > div { display: flex; flex-direction: column; gap: 2px; }
 .card-stats span { font-size: 13px; font-weight: 800; color: var(--muted); }
@@ -546,7 +547,7 @@ select.input { appearance: auto; }
 
 @media print {
   body, :root { background: #fff; }
-  .side, .filters, .head-actions > :not(.month-nav), .month-nav button, .bulk-bar, .drawer, .drawer-overlay, .paid-btn, .paid-spacer, .toast, .prompt-card, .confirm-overlay { display: none !important; }
+  .side, .filters, .head-actions > :not(.month-nav), .month-nav button, .bulk-bar, .sum-pill, .drawer, .drawer-overlay, .paid-btn, .paid-spacer, .toast, .prompt-card, .confirm-overlay { display: none !important; }
   .app { display: block; padding: 0; }
   .card { break-inside: auto; }
   .tx-row { break-inside: avoid; padding: 6px 12px; }
@@ -1101,3 +1102,69 @@ select.input { appearance: auto; }
 :root[data-theme='dark'] .btn-dark:hover:not(:disabled) { background: var(--line); }
 :root[data-theme='dark'] :is(.overlay, .drawer-overlay) { background: rgb(26 21 46 / 62%); background-image: none; }
 :root[data-theme='dark'] :is(.sum-bar .topay, .sw.topay) { background: repeating-linear-gradient(135deg, var(--pink) 0 6px, color-mix(in oklch, var(--pink) 45%, white) 6px 12px); }
+
+/* Laptops: 14-inch screens at 125–150% scaling leave only 600–700px of height. Dialogs never run
+   past the bottom (they scroll inside, with their buttons pinned), and the sidebar tightens up. */
+@media (min-width: 761px) {
+  .overlay { padding: clamp(12px, 4vh, 40px) 16px; }
+  .modal { max-height: calc(100dvh - 2 * clamp(12px, 4vh, 40px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .modal .form-actions, .modal > .modal-foot { position: sticky; bottom: -26px; z-index: 2; background: var(--card); margin-bottom: -26px; padding-bottom: 26px; }
+  .modal > .modal-foot { padding-top: 14px; border-top: 1.5px dashed var(--line-strong); }
+  .modal .form-section { scroll-margin-bottom: 100px; }
+  .side { max-height: calc(100vh - 48px); overflow-y: auto; scrollbar-width: none; }
+}
+@media (min-width: 761px) and (max-height: 820px) {
+  .modal { padding: 20px 24px; border-radius: 28px; }
+  .modal .form-actions, .modal > .modal-foot { bottom: -20px; margin-bottom: -20px; padding-bottom: 20px; }
+  .modal-close { top: 16px; right: 16px; }
+  .modal-head { margin-bottom: 14px; }
+  .modal-head h2 { font-size: 24px; }
+  .tx-form { gap: 12px; }
+  .ph-amount input { font-size: 40px; }
+  .input { min-height: 42px; }
+  input[type='date'].input { line-height: 39px; }
+  .day-chip { min-height: 42px; }
+  .option-icons button > span { width: 42px; height: 42px; }
+  .form-actions { padding-top: 12px; }
+  .save-btn { width: 54px; height: 54px; }
+  .form-section { padding: 12px 14px; gap: 10px; }
+  textarea.input { min-height: 72px; }
+
+  .side { gap: 12px; padding: 16px; }
+  .side nav { gap: 2px; }
+  .side nav a, .side nav .soon { min-height: 38px; }
+  .side .lbl { padding: 6px 14px 2px; }
+  .side .profile { padding-top: 12px; }
+}
+@media (min-width: 761px) and (max-height: 700px) {
+  .modal { padding-top: 16px; padding-bottom: 16px; }
+  .modal .form-actions, .modal > .modal-foot { bottom: -16px; margin-bottom: -16px; padding-bottom: 16px; }
+  .modal-close { top: 12px; }
+  .modal-head { margin-bottom: 8px; }
+  .tx-form { gap: 10px; }
+  .ph-amount { flex-direction: row; justify-content: center; align-items: baseline; gap: 14px; }
+  .ph-amount input { font-size: 36px; }
+  .input, .day-chip { min-height: 40px; }
+  input[type='date'].input { line-height: 37px; }
+  .option-icons { gap: 18px; padding: 0; }
+  .option-icons button { flex-direction: row; gap: 8px; }
+  .option-icons button > span { width: 36px; height: 36px; }
+  .option-icons button > span svg { width: 18px; height: 18px; }
+  .save-btn { width: 50px; height: 50px; }
+  .form-actions { padding-top: 10px; }
+}
+
+/* Lançamentos (desktop): the same period pill, centred under the list column. The main column's
+   middle sits 132px right of the window's middle (sidebar 240 + gaps), 200px less with the panel open. */
+@media (min-width: 761px) {
+  .sum-pill { bottom: 24px; left: calc(50% + 132px); }
+  .sum-pill:hover { background: color-mix(in oklch, var(--sand) 85%, white); }
+  .tx-page:has(.bulk-bar) .sum-pill { display: none; }
+}
+@media (min-width: 761px) and (max-width: 860px) { .sum-pill { left: 50%; } }
+@media (min-width: 1200px) { .tx-page.with-panel .sum-pill { left: calc(50% - 68px); } }
+:root[data-theme='dark'] .sum-pill:hover { background: color-mix(in oklch, var(--tone) 88%, white); }
+/* With the details panel open on a laptop the list column is narrow: the period summary stacks. */
+@media (min-width: 1200px) and (max-width: 1600px) {
+  .tx-page.with-panel .sum-body { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-right: 0; }
+}
