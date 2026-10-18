@@ -1,11 +1,12 @@
 import {
-  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Minus, Paperclip, Plus, Printer, Receipt,
+  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Paperclip, Plus, Printer, Receipt,
   Repeat2, Search, Tag, ThumbsDown, ThumbsUp, Trash2, Undo2, X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, AccountIcon, CategoryAvatar } from '../components/Avatars'
 import { FilterMenu } from '../components/FilterMenu'
+import { SummaryCard } from '../components/SummaryCard'
 import { Popover } from '../components/Picker'
 import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
@@ -126,7 +127,6 @@ export default function Transactions() {
   // A plain total (income minus expenses, transfers left out) when asked for, or when a card is filtered,
   // since account balances say nothing about a card.
   const simpleTotal = totalsOnly || !!filteredCard
-  const total = rows.reduce((s, tx) => s + (tx.kind === 'income' ? tx.amount_cents : tx.kind === 'expense' ? -tx.amount_cents : 0), 0)
   const filteredAccount = accountFilter ? accountMap.get(accountFilter) : undefined
 
   // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
@@ -437,30 +437,22 @@ export default function Transactions() {
         )}
         </section>
 
-        <section className="card summary-card" aria-label="Resumo">
-          {!filteredCard && (
-            <button className="summary-toggle" onClick={() => setTotalsOnly(!totalsOnly)} aria-pressed={totalsOnly} title={totalsOnly ? 'Mostrar saldos' : 'Mostrar só entradas e saídas'} aria-label={totalsOnly ? 'Mostrar saldos' : 'Mostrar só entradas e saídas'}>
-              {totalsOnly ? <Plus size={16} /> : <Minus size={16} />}
-            </button>
-          )}
-          {filteredAccount && <div><div className="k">Conta</div><div className="row" style={{ marginTop: 6, fontWeight: 800 }}><AccountAvatar account={filteredAccount} size={24} />{filteredAccount.name}</div></div>}
-          {filteredCard && <div><div className="k">Cartão</div><div className="row" style={{ marginTop: 6, fontWeight: 800 }}><AccountIcon icon={filteredCard.icon} color={filteredCard.color} size={24} />{filteredCard.name}</div></div>}
-          {simpleTotal ? (
-            <>
-              <div><div className="k">Entradas</div><div className="v income">{formatBRL(rows.filter((tx) => tx.kind === 'income').reduce((s, tx) => s + tx.amount_cents, 0))}</div></div>
-              <div><div className="k">Saídas</div><div className="v expense">{formatBRL(rows.filter((tx) => tx.kind === 'expense').reduce((s, tx) => s + tx.amount_cents, 0))}</div></div>
-              <div className="boxed"><div className="k">Total</div><div className="v">{formatCents(total)}</div></div>
-            </>
-          ) : (
-            <>
-              <div><div className="k">Saldo anterior</div><div className="v">{formatBRL(summary.previous)}</div></div>
-              <div><div className="k">Receitas</div><div className="v income">{formatBRL(summary.incomePaid)}</div><small>previsto {formatBRL(summary.incomeAll)}</small></div>
-              <div><div className="k">Despesas</div><div className="v expense">{formatBRL(summary.expensePaid)}</div><small>previsto {formatBRL(summary.expenseAll)}</small></div>
-              <div><div className="k">Saldo</div><div className="v">{formatBRL(summary.balance)}</div></div>
-              <div className="boxed"><div className="k">Previsto</div><div className="v">{formatBRL(summary.forecast)}</div></div>
-            </>
-          )}
-        </section>
+        <SummaryCard
+          summary={summary}
+          totals={{
+            income: rows.filter((tx) => tx.kind === 'income').reduce((s, tx) => s + tx.amount_cents, 0),
+            expense: rows.filter((tx) => tx.kind === 'expense').reduce((s, tx) => s + tx.amount_cents, 0),
+          }}
+          totalsOnly={simpleTotal}
+          onToggle={filteredCard ? undefined : () => setTotalsOnly(!totalsOnly)}
+          title={span.kind === 'month' ? `Resumo de ${spanLabel(span)}` : `Resumo · ${spanLabel(span)}`}
+          isMonth={span.kind === 'month'}
+          filter={
+            filteredAccount ? <span className="sum-filter"><AccountAvatar account={filteredAccount} size={20} />{filteredAccount.name}</span>
+            : filteredCard ? <span className="sum-filter"><AccountIcon icon={filteredCard.icon} color={filteredCard.color} size={20} />{filteredCard.name}</span>
+            : undefined
+          }
+        />
       {selecting && (
         <div className="bulk-bar" role="toolbar" aria-label="Ações em lote">
           <b>{picked.size === 0 ? 'Toque nos lançamentos' : picked.size === 1 ? '1 selecionado' : `${picked.size} selecionados`}</b>
