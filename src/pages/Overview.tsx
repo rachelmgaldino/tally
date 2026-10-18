@@ -1,12 +1,12 @@
-import { AlertCircle, ArrowDown, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt } from 'lucide-react'
+import { AlertCircle, ArrowDown, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
 import { Mascot } from '../components/Sidebar'
 import { useTxForm } from '../components/TxFormContext'
 import { accountBalance } from '../lib/balances'
-import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf } from '../lib/cards'
-import { currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
+import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey } from '../lib/cards'
+import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
 import { formatBRL } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
@@ -38,7 +38,8 @@ export default function Overview({ name }: { name: string }) {
   }
 
   const money = (cents: number) => (hidden ? 'R$ •••••' : formatBRL(cents))
-  const m = currentMonth()
+  const [m, setM] = useState(currentMonth)
+  const isCurrent = monthKey(m) === monthKey(currentMonth())
   const from = monthStart(m)
   const to = monthEnd(m)
   const t = today()
@@ -49,15 +50,16 @@ export default function Overview({ name }: { name: string }) {
   const active = accounts.filter((a) => !a.archived)
   // Account-side money: open invoices stand in for the card purchases.
   const ledger = cashFlow(allCards, txs)
-  const balances = new Map(active.map((a) => [a.id, accountBalance(a, ledger).current]))
+  // Today's balance; looking at another month, what the accounts hold (or should hold) when it ends.
+  const balances = new Map(active.map((a) => [a.id, isCurrent ? accountBalance(a, ledger).current : accountBalance(a, ledger, to).forecast]))
   const total = active.filter((a) => !a.exclude_from_total).reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
 
   const categoryMap = byId(categories)
   const accountMap = byId(accounts)
-  const toPay = ledger.filter((tx) => tx.kind === 'expense' && !tx.paid && tx.date < to).sort((a, b) => a.date.localeCompare(b.date))
+  const toPay = ledger.filter((tx) => tx.kind === 'expense' && !tx.paid && tx.date < to && (tx.date >= from || tx.date < t)).sort((a, b) => a.date.localeCompare(b.date))
   const overdue = toPay.filter((tx) => tx.date < t)
   const upcomingPay = toPay.filter((tx) => tx.date >= t)
-  const toReceive = ledger.filter((tx) => tx.kind === 'income' && !tx.paid).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5)
+  const toReceive = ledger.filter((tx) => tx.kind === 'income' && !tx.paid && tx.date < to && (tx.date >= from || tx.date < t)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5)
 
   const cardMap = byId(allCards)
   const billRow = (tx: Transaction, late: boolean) => {
@@ -89,7 +91,8 @@ export default function Overview({ name }: { name: string }) {
   }
 
   // Open invoices right now, one per card.
-  const currentInvoices = cards.map((c) => invoiceOf(c, txs, invoiceFor(c, t)))
+  // The open invoices this month, or for another month the invoices due in it.
+  const currentInvoices = cards.map((c) => invoiceOf(c, txs, isCurrent ? invoiceFor(c, t) : monthKey(m)))
   const invoicesTotal = currentInvoices.reduce((s, inv) => s + inv.remaining, 0)
   const incomePending = inMonth.filter((tx) => tx.kind === 'income' && !tx.paid).reduce((s, tx) => s + tx.amount_cents, 0)
   const expensePending = toPay.reduce((s, tx) => s + tx.amount_cents, 0)
@@ -103,7 +106,12 @@ export default function Overview({ name }: { name: string }) {
           <p>Seu mês até agora, num olhar só.</p>
         </div>
         <div className="head-actions">
-          <div className="month-nav"><span>{monthLabel(m).toLowerCase()}</span></div>
+          <div className="month-nav">
+            <button onClick={() => setM(addMonths(m, -1))} aria-label="Mês anterior"><ChevronLeft size={20} /></button>
+            <span>{monthLabel(m).toLowerCase()}</span>
+            <button onClick={() => setM(addMonths(m, 1))} aria-label="Próximo mês"><ChevronRight size={20} /></button>
+          </div>
+          {!isCurrent && <button className="btn" onClick={() => setM(currentMonth())}>Hoje</button>}
           <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? 'Mostrar valores' : 'Esconder valores'} title={hidden ? 'Mostrar valores' : 'Esconder valores'}>
             {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
@@ -114,7 +122,7 @@ export default function Overview({ name }: { name: string }) {
         <div className="card stat" style={{ background: 'var(--yellow)' }}>
           <div className="k">Saldo geral</div>
           <div className="v" style={{ fontSize: 34 }}>{money(total)}</div>
-          <div className="s">{included.length ? included.map((a) => a.name).join(' + ') : 'Nenhuma conta ainda'}</div>
+          <div className="s">{!included.length ? 'Nenhuma conta ainda' : isCurrent ? included.map((a) => a.name).join(' + ') : `no fim de ${monthLabel(m).split(' ')[0].toLowerCase()}`}</div>
           <span className="mascot"><Mascot size={72} plain /></span>
         </div>
         <div className="card stat" style={{ background: 'var(--green)' }}>
@@ -128,7 +136,7 @@ export default function Overview({ name }: { name: string }) {
           <div className="s">{expensePending ? `${money(expensePending)} ainda a pagar` : expense ? 'tudo pago' : 'nada lançado ainda'}</div>
         </div>
         <button className="card stat" style={{ background: 'var(--lavender)' }} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
-          <div className="k">Faturas atuais <span className="ico"><CreditCard size={16} /></span></div>
+          <div className="k">{isCurrent ? 'Faturas atuais' : `Faturas de ${monthLabel(m).split(' ')[0].toLowerCase()}`} <span className="ico"><CreditCard size={16} /></span></div>
           <div className="v">{money(invoicesTotal)}</div>
           <div className="s">
             {cards.length === 0 ? 'Adicionar cartão' : cards.length === 1 ? `vence ${shortDate(currentInvoices[0].due).slice(0, 5)}` : `${cards.length} cartões`}

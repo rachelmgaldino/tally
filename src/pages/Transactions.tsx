@@ -1,5 +1,6 @@
 import {
-  ArrowLeftRight, ArrowRight, ChevronLeft, ChevronRight, CreditCard, Info, Paperclip, Plus, Receipt, Repeat2, Search, ThumbsUp, X,
+  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Paperclip, Plus, Printer, Receipt,
+  Repeat2, Search, Tag, ThumbsUp, Trash2, Undo2, X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -10,10 +11,14 @@ import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { Modal, Segmented } from '../components/ui'
-import { periodSummary } from '../lib/balances'
+import { effectOnSet, periodSummary } from '../lib/balances'
+import { transactionsTable } from '../lib/api'
 import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
-import { useSeriesUpkeep } from '../lib/entries'
-import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
+import { deleteEntries, useRefresh, useSeriesUpkeep } from '../lib/entries'
+import { useToast } from '../components/Toast'
+import { monthLabel, shortDate, today } from '../lib/dates'
+import { shiftSpan, spanAt, spanLabel, spanRange, type Span } from '../lib/periods'
+import { usePrefs } from '../lib/prefs'
 
 const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
 /** "sábado, 18/10" */
@@ -23,7 +28,9 @@ function dayLabel(iso: string): string {
 }
 import { formatBRL, formatCents, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
-import type { Transaction, TxKind } from '../lib/types'
+import type { CategoryKind, Transaction, TxKind } from '../lib/types'
+
+const KIND_NAME: Record<TxKind, string> = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência', payment: 'Pagamento de fatura' }
 
 const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'Receitas'], ['transfer', 'Transferências'], ['payment', 'Pagamentos de fatura']]
 
@@ -41,8 +48,15 @@ export default function Transactions() {
   const seriesMap = byId(useSeries().data)
   const { update } = useTransactionMutations()
   const { open } = useTxForm()
+  const refresh = useRefresh()
+  const toast = useToast()
 
-  const [month, setMonth] = useState(currentMonth)
+  const { prefs } = usePrefs()
+  const [spanState, setSpan] = useState<Span>(() => spanAt(prefs.period, today()))
+  // A change of "Período padrão" keeps the same moment in view.
+  const span = spanState.kind === prefs.period ? spanState : spanAt(prefs.period, spanState.start)
+  const [selecting, setSelecting] = useState(false)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
   const [accountFilter, setAccountFilter] = useState<string | null>(null)
   const [kindFilter, setKindFilter] = useState<TxKind | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
@@ -66,8 +80,7 @@ export default function Transactions() {
   const ledger = useMemo(() => cashFlow(cards, txs), [cards, txs])
   const source = useMemo(() => (mode === 'cash' ? ledger : txs.filter((tx) => tx.kind !== 'payment')), [mode, ledger, txs])
   const categoryMap = byId(categories)
-  const from = monthStart(month)
-  const to = monthEnd(month)
+  const { from, to } = spanRange(span)
   const t = today()
   useSeriesUpkeep(to)
 
@@ -86,8 +99,8 @@ export default function Transactions() {
       })
       .filter((tx) => !tagFilter || tx.tag_ids.includes(tagFilter))
       .filter((tx) => !needle || tx.description.toLowerCase().includes(needle))
-      .sort((a, b) => (a.date === b.date ? b.created_at.localeCompare(a.created_at) : b.date.localeCompare(a.date)))
-  }, [source, from, to, accountFilter, filteredCard, kindFilter, categoryFilter, tagFilter, search, categoryMap])
+      .sort((a, b) => (a.date === b.date ? b.created_at.localeCompare(a.created_at) : b.date.localeCompare(a.date)) * (prefs.order === 'asc' ? -1 : 1))
+  }, [source, from, to, accountFilter, filteredCard, kindFilter, categoryFilter, tagFilter, search, categoryMap, prefs.order])
 
   const groups = useMemo(() => {
     const out: { date: string; items: Transaction[] }[] = []
@@ -105,6 +118,80 @@ export default function Transactions() {
   const simpleTotal = mode === 'all' || !!filteredCard
   const total = rows.reduce((s, tx) => s + (tx.kind === 'income' ? tx.amount_cents : tx.kind === 'expense' ? -tx.amount_cents : 0), 0)
   const filteredAccount = accountFilter ? accountMap.get(accountFilter) : undefined
+
+  // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
+  const dayBalance = useMemo(() => {
+    const out = new Map<string, number>()
+    if (!prefs.dailyBalance || simpleTotal) return out
+    const ids = new Set(summaryAccounts.map((a) => a.id))
+    const base = summaryAccounts.reduce((s, a) => s + a.initial_balance_cents, 0)
+    for (const g of groups) {
+      out.set(g.date, ledger.reduce((s, tx) => (tx.date <= g.date ? s + effectOnSet(tx, ids) : s), base))
+    }
+    return out
+  }, [prefs.dailyBalance, simpleTotal, summaryAccounts, groups, ledger])
+
+  const pickedRows = rows.filter((tx) => picked.has(tx.id))
+  const payable = pickedRows.filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.card_id)
+  const pickedKinds = new Set(pickedRows.map((tx) => tx.kind))
+  const categoryKind = pickedKinds.size === 1 && (pickedKinds.has('expense') || pickedKinds.has('income')) ? pickedRows[0].kind as CategoryKind : null
+
+  function stopSelecting() {
+    setSelecting(false)
+    setPicked(new Set())
+  }
+
+  function togglePick(id: string) {
+    setPicked((p) => {
+      const next = new Set(p)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function bulk(job: Promise<unknown>, message: string) {
+    try {
+      await refresh(job)
+      toast(message)
+      stopSelecting()
+    } catch (e) {
+      toast(`Não foi possível concluir: ${(e as Error).message}`)
+    }
+  }
+
+  function bulkDelete() {
+    const n = pickedRows.length
+    if (!confirm(n === 1 ? 'Excluir 1 lançamento?' : `Excluir ${n} lançamentos?`)) return
+    bulk(deleteEntries(pickedRows), n === 1 ? 'Lançamento excluído.' : `${n} lançamentos excluídos.`)
+  }
+
+  function exportCsv() {
+    const lines = [['Data', 'Descrição', 'Tipo', 'Categoria', 'Conta/Cartão', 'Valor', 'Situação']]
+    for (const tx of rows) {
+      const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
+      const parent = c?.parent_id ? categoryMap.get(c.parent_id) : undefined
+      const where = tx.kind === 'transfer'
+        ? `${accountMap.get(tx.account_id ?? '')?.name ?? ''} > ${accountMap.get(tx.to_account_id ?? '')?.name ?? ''}`
+        : [tx.account_id && accountMap.get(tx.account_id)?.name, tx.card_id && cardMap.get(tx.card_id)?.name].filter(Boolean).join(' > ')
+      lines.push([
+        shortDate(tx.date).replace(/\/(\d\d)$/, `/${tx.date.slice(0, 4)}`),
+        tx.description,
+        KIND_NAME[tx.kind],
+        c ? (parent ? `${parent.name} > ${c.name}` : c.name) : '',
+        where,
+        formatCents(signedAmount(tx)),
+        tx.paid ? 'Pago' : 'Pendente',
+      ])
+    }
+    const csv = lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n')
+    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `lancamentos-${from}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   const selected = selectedId ? txs.find((tx) => tx.id === selectedId) : undefined
   const hasFilters = accountFilter || kindFilter || categoryFilter || tagFilter || search
 
@@ -127,7 +214,7 @@ export default function Transactions() {
   if (!loadingAccounts && accounts.length === 0) {
     return (
       <main className="page page-narrow">
-        <header className="page-head"><h1>Lançamentos</h1><MonthNav month={month} setMonth={setMonth} /></header>
+        <header className="page-head"><h1>Lançamentos</h1><PeriodNav span={span} setSpan={setSpan} /></header>
         <div className="card">
           <div className="empty">
             <div className="empty-ghost"><div /><div /><div /></div>
@@ -145,12 +232,23 @@ export default function Transactions() {
       <header className="page-head">
         <h1>Lançamentos</h1>
         <div className="head-actions">
-          <MonthNav month={month} setMonth={setMonth} />
+          <PeriodNav span={span} setSpan={setSpan} />
           <div className="segmented" role="group" aria-label="Modo de visualização">
             <button className={mode === 'cash' ? 'on' : ''} aria-pressed={mode === 'cash'} onClick={() => setMode('cash')}>Fluxo de caixa</button>
             <button className={mode === 'all' ? 'on' : ''} aria-pressed={mode === 'all'} onClick={() => setMode('all')}>Todos os lançamentos</button>
           </div>
           <button className="icon-btn" onClick={() => setChoosingMode(true)} aria-label="Sobre os modos de visualização" title="Sobre os modos de visualização"><Info size={20} /></button>
+          <Popover
+            className="more-menu"
+            trigger={(_, toggle) => <button className="icon-btn" onClick={toggle} aria-label="Mais opções" title="Imprimir ou exportar"><EllipsisVertical size={20} /></button>}
+          >
+            {(close) => (
+              <>
+                <button className="picker-item" onClick={() => { close(); window.print() }}><Printer size={18} /> Imprimir ou salvar em PDF</button>
+                <button className="picker-item" onClick={() => { close(); exportCsv() }} disabled={rows.length === 0}><Download size={18} /> Exportar planilha (CSV)</button>
+              </>
+            )}
+          </Popover>
           <Popover
             popClassName="menu-dark"
             className="new-menu"
@@ -217,6 +315,9 @@ export default function Transactions() {
             {search && <button onClick={() => setSearch('')} aria-label="Limpar busca"><X size={16} /></button>}
           </label>
           {hasFilters && <button className="fil" onClick={clearFilters}><X size={16} /> Limpar</button>}
+          <button className={`fil ${selecting ? 'on' : ''}`} onClick={() => (selecting ? stopSelecting() : setSelecting(true))} aria-pressed={selecting}>
+            <CircleCheck size={18} /> {selecting ? 'Cancelar seleção' : 'Selecionar'}
+          </button>
         </div>
 
         <section className="card list-card" aria-label="Lista de lançamentos">
@@ -234,7 +335,16 @@ export default function Transactions() {
           <div className="tx-list">
             {groups.map((g) => (
               <section key={g.date}>
-                <div className={`day-head ${g.date === t ? 'today' : ''}`}>{g.date === t ? `Hoje · ${dayLabel(g.date)}` : dayLabel(g.date)}</div>
+                <div className={`day-head ${g.date === t ? 'today' : ''}`}>
+                  {g.date === t ? `Hoje · ${dayLabel(g.date)}` : dayLabel(g.date)}
+                  {selecting && (
+                    <button className="day-pick" onClick={() => {
+                      const ids = g.items.filter((tx) => !tx.virtual).map((tx) => tx.id)
+                      const all = ids.every((id) => picked.has(id))
+                      setPicked((p) => { const next = new Set(p); for (const id of ids) { if (all) next.delete(id); else next.add(id) } return next })
+                    }}>{g.items.filter((tx) => !tx.virtual).every((tx) => picked.has(tx.id)) ? 'desmarcar dia' : 'marcar dia'}</button>
+                  )}
+                </div>
                 {g.items.map((tx) => {
                   const category = tx.category_id ? categoryMap.get(tx.category_id) : undefined
                   const parent = category?.parent_id ? categoryMap.get(category.parent_id) : undefined
@@ -243,7 +353,9 @@ export default function Transactions() {
                   const amount = signedAmount(tx)
                   const series = tx.series_id ? seriesMap.get(tx.series_id) : undefined
                   const cardIcon = card && <AccountIcon icon={card.icon} color={card.color} size={22} />
+                  const isPicked = picked.has(tx.id)
                   const openRow = () => {
+                    if (selecting) { if (!tx.virtual) togglePick(tx.id); return }
                     if (tx.virtual && tx.card_id && tx.invoice_month) navigate(`/cartoes/${tx.card_id}?fatura=${tx.invoice_month.slice(0, 7)}`)
                     else setSelectedId(tx.id)
                   }
@@ -251,7 +363,12 @@ export default function Transactions() {
                     : tx.kind === 'payment' || tx.virtual ? `${card?.name ?? 'Cartão'} · ${monthLabel(toMonth(tx.invoice_month!)).split(' ')[0].toLowerCase()}`
                     : category ? (parent ? `${parent.name} › ${category.name}` : category.name) : 'Sem categoria'
                   return (
-                    <div key={tx.id} className={`tx-row ${tx.id === selectedId ? 'selected' : ''}`} onClick={openRow}>
+                    <div key={tx.id} className={`tx-row ${tx.id === selectedId || isPicked ? 'selected' : ''} ${selecting && tx.virtual ? 'dim' : ''}`} onClick={openRow}>
+                      {selecting && (
+                        <span className={`pick ${isPicked ? 'on' : ''}`} role="checkbox" aria-checked={isPicked} aria-label={`Selecionar ${tx.description}`} aria-disabled={!!tx.virtual}>
+                          {isPicked && <Check size={16} strokeWidth={3} />}
+                        </span>
+                      )}
                       {tx.kind === 'transfer' ? (
                         <span className="avatar cat" style={{ width: 40, height: 40, background: 'var(--blue)' }}><ArrowLeftRight size={18} /></span>
                       ) : tx.virtual || tx.kind === 'payment' ? (
@@ -289,6 +406,7 @@ export default function Transactions() {
                           aria-label={tx.virtual ? 'Pagar fatura' : tx.paid ? 'Pago. Desmarcar' : 'Marcar como pago'}
                           onClick={(e) => {
                             e.stopPropagation()
+                            if (selecting) return openRow()
                             if (tx.virtual) open({ kind: 'payment', cardId: tx.card_id!, invoiceMonth: tx.invoice_month! })
                             else update.mutate({ id: tx.id, patch: { paid: !tx.paid } })
                           }}
@@ -300,6 +418,9 @@ export default function Transactions() {
                     </div>
                   )
                 })}
+                {dayBalance.has(g.date) && (
+                  <div className="day-balance">Saldo do dia <b className={dayBalance.get(g.date)! < 0 ? 'expense' : ''}>{formatBRL(dayBalance.get(g.date)!)}</b></div>
+                )}
               </section>
             ))}
           </div>
@@ -325,6 +446,33 @@ export default function Transactions() {
             </>
           )}
         </section>
+      {selecting && (
+        <div className="bulk-bar" role="toolbar" aria-label="Ações em lote">
+          <b>{picked.size === 0 ? 'Toque nos lançamentos' : picked.size === 1 ? '1 selecionado' : `${picked.size} selecionados`}</b>
+          <button className="btn" disabled={payable.length === 0} onClick={() => bulk(transactionsTable.updateMany(payable.map((tx) => tx.id), { paid: true }), 'Marcados como pagos.')}>
+            <ThumbsUp size={18} /> Pago
+          </button>
+          <button className="btn" disabled={payable.length === 0} onClick={() => bulk(transactionsTable.updateMany(payable.map((tx) => tx.id), { paid: false }), 'Marcados como pendentes.')}>
+            <Undo2 size={18} /> Pendente
+          </button>
+          <Popover
+            trigger={(_, toggle) => (
+              <button className="btn" disabled={!categoryKind} onClick={toggle} title={categoryKind ? undefined : 'Selecione só despesas ou só receitas'}><Tag size={18} /> Categoria</button>
+            )}
+          >
+            {(close) => categoryKind && orderedCategories(categories, categoryKind).map(({ category, depth }) => (
+              <button key={category.id} className={`picker-item ${depth ? 'sub' : ''}`} onClick={() => {
+                close()
+                bulk(transactionsTable.updateMany(pickedRows.map((tx) => tx.id), { category_id: category.id }), `Categoria trocada para ${category.name}.`)
+              }}>
+                {!depth && <CategoryAvatar category={category} size={26} />} {category.name}
+              </button>
+            ))}
+          </Popover>
+          <button className="btn btn-pink" disabled={picked.size === 0} onClick={bulkDelete}><Trash2 size={18} /> Excluir</button>
+          <button className="icon-btn" onClick={stopSelecting} aria-label="Cancelar seleção"><X size={18} /></button>
+        </div>
+      )}
       {choosingMode && <ModeModal mode={mode} onChange={setMode} onClose={() => setChoosingMode(false)} />}
       {selected && (
         <TransactionPanel
@@ -332,7 +480,7 @@ export default function Transactions() {
           onClose={() => setSelectedId(null)}
           onNavigate={(id) => {
             const target = txs.find((tx) => tx.id === id)
-            if (target) setMonth({ year: Number(target.date.slice(0, 4)), month: Number(target.date.slice(5, 7)) })
+            if (target) setSpan(spanAt(prefs.period, target.date))
             setSelectedId(id)
           }}
         />
@@ -367,12 +515,13 @@ function ModeModal({ mode, onChange, onClose }: { mode: ViewMode; onChange: (m: 
   )
 }
 
-function MonthNav({ month, setMonth }: { month: ReturnType<typeof currentMonth>; setMonth: (m: ReturnType<typeof currentMonth>) => void }) {
+function PeriodNav({ span, setSpan }: { span: Span; setSpan: (s: Span) => void }) {
+  const [prev, next] = { day: ['Dia anterior', 'Próximo dia'], week: ['Semana anterior', 'Próxima semana'], month: ['Mês anterior', 'Próximo mês'] }[span.kind]
   return (
     <div className="month-nav">
-      <button onClick={() => setMonth(addMonths(month, -1))} aria-label="Mês anterior"><ChevronLeft size={20} /></button>
-      <span>{monthLabel(month).toLowerCase()}</span>
-      <button onClick={() => setMonth(addMonths(month, 1))} aria-label="Próximo mês"><ChevronRight size={20} /></button>
+      <button onClick={() => setSpan(shiftSpan(span, -1))} aria-label={prev}><ChevronLeft size={20} /></button>
+      <span>{spanLabel(span)}</span>
+      <button onClick={() => setSpan(shiftSpan(span, 1))} aria-label={next}><ChevronRight size={20} /></button>
     </div>
   )
 }
