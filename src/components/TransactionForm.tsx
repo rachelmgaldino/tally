@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { AlignLeft, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, Wallet, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
@@ -8,6 +8,7 @@ import { centsFromTyping, formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import { PERIOD_ORDER, PERIODS, seriesChanges, splitInstallments } from '../lib/series'
 import type { Attachment, NewTransaction, Period, SeriesKind, Transaction, TxKind } from '../lib/types'
+import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { Popover } from './Picker'
 import { AccountSelect, CategorySelect, SourceSelect } from './Selects'
 import { TagInput } from './TagInput'
@@ -222,10 +223,19 @@ export function TransactionForm({
     setFiles((f) => [...f, ...picked.filter((p) => p.size <= MAX_ATTACHMENT_BYTES)])
   }
 
+  // Phone rows show the picked account and category as their icon.
+  const srcAccount = active.find((a) => a.id === accountId)
+  const pickedCategory = categories.find((c) => c.id === categoryId)
+  const pickedParent = pickedCategory?.parent_id ? categories.find((c) => c.id === pickedCategory.parent_id) : undefined
+
   const parts = repeat?.kind === 'installment' ? splitInstallments(amount, installments) : null
 
   return (
-    <Modal title={TITLES[kind][titleIndex]} onClose={onClose} className="modal-form">
+    <Modal
+      title={<><span className="desk-only">{TITLES[kind][titleIndex]}</span><span className="phone-only">{editing ? 'Editar lançamento' : 'Novo lançamento'}</span></>}
+      onClose={onClose}
+      className="modal-form"
+    >
       <form className="tx-form" onSubmit={(e) => { e.preventDefault(); save(false) }}>
         {onKind && !editing && (
           <div className="segmented kind-tabs" role="tablist" aria-label="Tipo de lançamento">
@@ -258,6 +268,7 @@ export function TransactionForm({
           </>
         ) : null}
         <div className="field f-desc">
+          <span className="f-ico phone-only"><AlignLeft size={20} /></span>
           <label htmlFor="desc">Descrição</label>
           <input id="desc" className="input" placeholder="Adicione uma descrição para o lançamento" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
         </div>
@@ -267,6 +278,7 @@ export function TransactionForm({
             <MoneyInput value={amount} onChange={setAmount} />
           </div>
           <div className="field f-date">
+            <span className="f-ico phone-only"><Calendar size={20} /></span>
             <label htmlFor="date">Data</label>
             <div className="f-date-in">
               {[[today(), 'Hoje'], [yesterday(), 'Ontem']].map(([d, l]) => (
@@ -287,12 +299,22 @@ export function TransactionForm({
             } /></div>}
             <div className="grid-2" style={{ gap: 10 }}>
               <div className="field f-src">
-                <label>{usableCards.length ? 'Conta/Cartão' : 'Conta'}</label>
+                <span className="f-ico phone-only">
+                  {card ? <AccountIcon icon={card.icon} color={card.color} size={40} square />
+                    : srcAccount ? <AccountAvatar account={srcAccount} size={40} />
+                    : <Wallet size={20} />}
+                </span>
+                <label><span className="desk-only">{usableCards.length ? 'Conta/Cartão' : 'Conta'}</span><span className="phone-only">{usableCards.length ? 'Conta ou cartão' : 'Conta'}</span></label>
                 <SourceSelect accounts={active} cards={usableCards} value={accountId} onChange={setAccountId} />
+                <ChevronRight size={18} className="f-chev phone-only" />
               </div>
               <div className="field f-cat">
+                <span className="f-ico phone-only">
+                  {pickedCategory ? <CategoryAvatar category={pickedParent ?? pickedCategory} size={40} /> : <TagIcon size={20} />}
+                </span>
                 <label>Categoria</label>
                 <CategorySelect categories={categories} kind={kind} value={categoryId} onChange={setCategoryId} />
+                <ChevronRight size={18} className="f-chev phone-only" />
               </div>
             </div>
             {card && invoice && (

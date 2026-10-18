@@ -775,7 +775,7 @@ select.input { appearance: auto; }
   .form-group .f-desc { order: 1; }
   .form-group .f-cat { order: 2; }
   .form-group .f-src { order: 3; }
-  .form-group .f-date { order: 4; flex-direction: row; align-items: center; justify-content: space-between; }
+  .form-group .f-date { order: 4; }
   .form-group .f-paid { order: 5; display: flex; }
   .form-group .f-paid .toggle { flex-direction: row-reverse; justify-content: space-between; width: 100%; }
   .form-group .invoice-banner { order: 6; margin-bottom: 12px; }
@@ -827,4 +827,19 @@ select.input { appearance: auto; }
   .ph-more button:disabled { opacity: 0.5; }
   .ph-more .turned { transform: rotate(90deg); }
   .ph-more .flipped { transform: rotate(180deg); }
+}
+@media (max-width: 760px) {
+  /* Novo lançamento rows: icon, label over value, chevron */
+  .form-group .field { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 0; align-items: center; }
+  .form-group .field > label, .form-group .field > :not(.f-ico):not(.f-chev):not(label) { grid-column: 2; }
+  .form-group > .field, .form-group .grid-2 > .field { column-gap: 12px; row-gap: 0; }
+  .form-group .f-ico { grid-column: 1; grid-row: 1 / span 2; display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); }
+  .form-group .f-chev { grid-column: 3; grid-row: 1 / span 2; color: var(--muted); }
+  .form-group .f-src .input > .avatar, .form-group .f-cat .input > .avatar, .form-group .f-cat .input > svg { display: none; }
+  .form-group .field.f-date > label { grid-row: 1 / span 2; }
+  .form-group .field.f-date > div.f-date-in { grid-column: 3; grid-row: 1 / span 2; }
+  .form-group .paid-label svg { margin: 0 10px; }
+  .modal-form .modal-head { text-align: center; padding: 0 48px; margin-bottom: 14px; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+  .modal-form .modal-head h2 { font-size: 20px; font-weight: 500; }
+  .modal-form .modal-close { left: 16px; right: auto; }
 }
