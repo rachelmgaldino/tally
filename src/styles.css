@@ -843,3 +843,8 @@ select.input { appearance: auto; }
   .modal-form .modal-head h2 { font-size: 20px; font-weight: 500; }
   .modal-form .modal-close { left: 16px; right: auto; }
 }
+@media (max-width: 760px) {
+  /* Behind sheets: the mockup's muted purple-grey, and the sheet itself on the page colour */
+  .overlay, .drawer-overlay { background: rgb(110 104 114 / 88%); background-image: none; }
+  .modal-form { background: var(--bg); }
+}
