@@ -1,5 +1,6 @@
 import { findBank } from '../lib/banks'
 import { ACCOUNT_ICONS, categoryIcon } from '../lib/icons'
+import { useAvatarUrl, useProfile } from '../lib/profile'
 import type { Account, Card, Category } from '../lib/types'
 
 /** The user's colour softened towards the card colour, so icons sit on pastel fills with ink lines. */
@@ -66,5 +67,16 @@ export function CardArt({ card, sub, tilt, style }: { card: Pick<Card, 'name' | 
         {sub && <div className="sub">{sub}</div>}
       </div>
     </div>
+  )
+}
+
+/** Rachel's profile photo, or her initial on rose when there's none. */
+export function UserAvatar({ size = 40, fontSize }: { size?: number; fontSize?: number }) {
+  const { name, avatarPath } = useProfile()
+  const url = useAvatarUrl(avatarPath)
+  return (
+    <span className="avatar" style={{ width: size, height: size, background: 'var(--rose)', fontSize }}>
+      {url ? <img src={url} alt="" width={size} height={size} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
+    </span>
   )
 }

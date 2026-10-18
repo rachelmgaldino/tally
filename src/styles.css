@@ -606,3 +606,11 @@ select.input { appearance: auto; }
   .list-row { flex-wrap: wrap; }
   .pref-row .segmented { min-width: 0; width: 100%; }
 }
+
+/* Profile photo */
+.avatar-picker { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.avatar-edit { position: relative; border-radius: 50%; }
+.avatar-edit > .avatar { font-family: var(--display); font-weight: 600; }
+.avatar-edit .cam { position: absolute; right: -2px; bottom: -2px; width: 34px; height: 34px; border-radius: 50%; border: var(--border); background: var(--yellow); display: grid; place-items: center; box-shadow: 2px 2px 0 var(--ink); }
+.avatar-edit:hover .cam { background: #f2d077; }
+.avatar-edit:disabled { opacity: 0.6; }
