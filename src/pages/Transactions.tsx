@@ -1,11 +1,12 @@
 import {
-  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Paperclip, Plus, Printer, Receipt,
+  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, ChevronUp, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Paperclip, Plus, Printer, Receipt,
   Repeat2, Search, Tag, ThumbsDown, ThumbsUp, Trash2, Undo2, X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, AccountIcon, CategoryAvatar } from '../components/Avatars'
 import { FilterMenu } from '../components/FilterMenu'
+import { Mascot } from '../components/Sidebar'
 import { SummaryCard } from '../components/SummaryCard'
 import { Popover } from '../components/Picker'
 import { orderedCategories } from '../components/Selects'
@@ -17,6 +18,7 @@ import { transactionsTable } from '../lib/api'
 import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
 import { deleteEntries, useRefresh, useSeriesUpkeep } from '../lib/entries'
 import { useToast } from '../components/Toast'
+import { useConfirm } from '../components/Confirm'
 import { monthLabel, shortDate, today } from '../lib/dates'
 import { shiftSpan, spanAt, spanLabel, spanRange, type Span } from '../lib/periods'
 import { usePrefs } from '../lib/prefs'
@@ -53,6 +55,7 @@ export default function Transactions() {
   const { open } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
+  const confirmDelete = useConfirm()
 
   const { prefs } = usePrefs()
   const [spanState, setSpan] = useState<Span>(() => spanAt(prefs.period, today()))
@@ -172,9 +175,13 @@ export default function Transactions() {
     }
   }
 
-  function bulkDelete() {
+  async function bulkDelete() {
     const n = pickedRows.length
-    if (!confirm(n === 1 ? 'Excluir 1 lançamento?' : `Excluir ${n} lançamentos?`)) return
+    const ok = await confirmDelete({
+      title: n === 1 ? 'Excluir 1 lançamento?' : `Excluir ${n} lançamentos?`,
+      text: 'Eles saem da lista e dos saldos. Isso não pode ser desfeito.',
+    })
+    if (!ok) return
     bulk(deleteEntries(pickedRows), n === 1 ? 'Lançamento excluído.' : `${n} lançamentos excluídos.`)
   }
 
@@ -225,7 +232,7 @@ export default function Transactions() {
 
   if (!loadingAccounts && accounts.length === 0) {
     return (
-      <main className="page page-narrow">
+      <main className="page">
         <header className="page-head"><h1>Lançamentos</h1><PeriodNav span={span} setSpan={setSpan} /></header>
         <div className="card">
           <div className="empty">
@@ -240,7 +247,7 @@ export default function Transactions() {
   }
 
   return (
-    <main className="page page-narrow tx-page">
+    <main className={`page tx-page ${selected ? 'with-panel' : ''}`}>
       <header className="page-head">
         <h1>Lançamentos</h1>
         <div className="head-actions">
@@ -350,7 +357,7 @@ export default function Transactions() {
           <div className="empty"><p>Carregando…</p></div>
         ) : rows.length === 0 ? (
           <div className="empty">
-            <div className="empty-ghost"><div /><div /><div /></div>
+            <div className="empty-mascot"><Mascot size={64} /></div>
             <h3>Nenhum lançamento no período</h3>
             <p>Adicione um lançamento ou escolha outro mês</p>
             <button className="btn btn-ghost-green" onClick={() => open({ kind: 'expense', accountId: accountFilter ?? undefined })}>Adicionar lançamento</button>
@@ -409,9 +416,9 @@ export default function Transactions() {
                         {series?.kind === 'fixed' && <Repeat2 size={15} className="fixed" aria-label="Lançamento fixo" />}
                         {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
                         {tx.attachments.length > 0 && <Paperclip size={13} className="clip" aria-label="Com anexo" />}
-                        <span className="sub">{sub}{(tx.kind === 'expense' || tx.kind === 'income') && !tx.virtual && (card ?? account) && <span className="phone-only"> · {(card ?? account)!.name}</span>}</span>
+                        <span className="sub">{sub}{(tx.kind === 'expense' || tx.kind === 'income') && !tx.virtual && (card ?? account) && <> · {(card ?? account)!.name}</>}</span>
                       </div>
-                      <div className="tx-where">
+                      {(tx.kind === 'transfer' || tx.kind === 'payment' || tx.virtual) && <div className="tx-where">
                         {tx.kind === 'transfer' ? (
                           <>
                             <AccountAvatar account={account} size={22} />
@@ -420,10 +427,8 @@ export default function Transactions() {
                           </>
                         ) : tx.kind === 'payment' || tx.virtual ? (
                           <><AccountAvatar account={account} size={22} /><ArrowRight size={14} />{cardIcon}</>
-                        ) : card ? cardIcon : (
-                          <AccountAvatar account={account} size={22} />
-                        )}
-                      </div>
+                        ) : null}
+                      </div>}
                       <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''} ${tx.kind === 'transfer' && !accountFilter ? 'transfer' : ''}`}>
                         {tx.kind === 'transfer' && !accountFilter ? formatCents(amount) : formatSigned(amount)}
                       </div>
@@ -456,6 +461,7 @@ export default function Transactions() {
         )}
         </section>
 
+        <div id="tx-summary">
         <SummaryCard
           summary={summary}
           totals={{
@@ -474,6 +480,13 @@ export default function Transactions() {
             : undefined
           }
         />
+        </div>
+        {rows.length > 0 && (
+          <SummaryPill
+            label={simpleTotal ? 'Saldo do período' : 'Previsto'}
+            cents={simpleTotal ? rows.filter((tx) => tx.kind === 'income' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0) - rows.filter((tx) => tx.kind === 'expense' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0) : summary.forecast}
+          />
+        )}
       {selecting && (
         <div className="bulk-bar" role="toolbar" aria-label="Ações em lote">
           <b>{picked.size === 0 ? 'Toque nos lançamentos' : picked.size === 1 ? '1 selecionado' : `${picked.size} selecionados`}</b>
@@ -549,5 +562,25 @@ function PeriodNav({ span, setSpan }: { span: Span; setSpan: (s: Span) => void }
       <span>{spanLabel(span)}</span>
       <button onClick={() => setSpan(shiftSpan(span, 1))} aria-label={next}><ChevronRight size={20} /></button>
     </div>
+  )
+}
+
+/** Phone: the period's total floating above the tab bar until the summary card itself scrolls into view; a tap goes there. */
+function SummaryPill({ label, cents }: { label: string; cents: number }) {
+  const [cardVisible, setCardVisible] = useState(false)
+  useEffect(() => {
+    const el = document.getElementById('tx-summary')
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setCardVisible(e.isIntersecting), { threshold: 0.2 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  if (cardVisible) return null
+  return (
+    <button className="sum-pill phone-only" onClick={() => document.getElementById('tx-summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+      <span>{label}</span>
+      <b className={cents < 0 ? 'expense' : ''}>{formatBRL(cents)}</b>
+      <ChevronUp size={18} />
+    </button>
   )
 }

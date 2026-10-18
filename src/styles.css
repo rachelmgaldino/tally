@@ -366,11 +366,10 @@ select.input { appearance: auto; }
 .series-nav button:disabled { opacity: 0.3; }
 
 /* Prompt card */
-.prompt-card { position: fixed; right: 16px; bottom: 16px; width: min(300px, calc(100% - 32px)); background: var(--card); border: var(--border); border-radius: 24px; box-shadow: 6px 6px 0 var(--ink); padding: 20px 16px 16px; text-align: center; z-index: 80; }
-.prompt-card h3 { font-size: 20px; font-weight: 500; margin: 8px 0 4px; }
+.prompt-card h3 { font-size: 24px; margin: 4px 0 6px; }
 .prompt-card p { font-size: 14px; color: var(--muted); margin: 0 0 14px; }
-.prompt-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--lavender); border: var(--border); display: inline-flex; align-items: center; justify-content: center; }
-.prompt-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: var(--border); display: flex; align-items: center; justify-content: center; }
+.prompt-icon { width: 52px; height: 52px; margin-bottom: 8px; border-radius: 50%; background: var(--lavender); border: var(--border); display: inline-flex; align-items: center; justify-content: center; }
+.prompt-close { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 50%; border: var(--border); display: flex; align-items: center; justify-content: center; }
 .prompt-option { display: block; width: 100%; min-height: 44px; border-radius: 999px; border: var(--border); background: var(--card); font-size: 14px; font-weight: 800; margin-top: 8px; }
 .prompt-option:hover { background: var(--hover); }
 .prompt-option.primary { background: var(--yellow); box-shadow: var(--shadow); }
@@ -544,7 +543,7 @@ select.input { appearance: auto; }
 
 @media print {
   body, :root { background: #fff; }
-  .side, .filters, .head-actions > :not(.month-nav), .month-nav button, .bulk-bar, .drawer, .drawer-overlay, .paid-btn, .paid-spacer, .toast, .prompt-card { display: none !important; }
+  .side, .filters, .head-actions > :not(.month-nav), .month-nav button, .bulk-bar, .drawer, .drawer-overlay, .paid-btn, .paid-spacer, .toast, .prompt-card, .confirm-overlay { display: none !important; }
   .app { display: block; padding: 0; }
   .card { break-inside: auto; }
   .tx-row { break-inside: avoid; padding: 6px 12px; }
@@ -655,7 +654,6 @@ select.input { appearance: auto; }
   .drawer h2 { font-size: 24px; }
   .drawer-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toast { top: max(16px, env(safe-area-inset-top)); left: 16px; right: 16px; max-width: none; }
-  .prompt-card { bottom: calc(96px + env(safe-area-inset-bottom)); }
 
   /* Fatura */
   .invoice-head { padding: 18px; gap: 16px; }
@@ -867,3 +865,149 @@ select.input { appearance: auto; }
   .icon-tabs .segmented button { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: clamp(11px, 3.3vw, 13px); letter-spacing: -0.01em; }
   .cat-icons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
+
+/* Next up (Início, both layouts) */
+.ph-next-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.ph-next-row + .ph-next-row { border-top: 1.5px dashed var(--line); }
+.ph-next-row > div { flex: 1; min-width: 0; }
+.ph-next-row b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-next-row small { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
+.ph-next-row small.expense { color: var(--expense); }
+.ph-next-row .money { font-size: 16px; }
+.all-clear { display: flex; align-items: center; gap: 14px; padding: 6px 0; }
+.all-clear b { display: block; font-family: var(--display); font-weight: 500; font-size: 18px; }
+.all-clear small { display: block; color: var(--muted); font-size: 13px; font-weight: 700; }
+
+/* First login */
+.welcome { padding: 22px; background: var(--gold); display: flex; flex-direction: column; gap: 16px; box-shadow: 5px 5px 0 var(--ink); }
+.welcome-head { display: flex; align-items: center; gap: 14px; }
+.welcome-head h2 { font-size: 26px; }
+.welcome-head p { margin: 4px 0 0; color: var(--muted); font-weight: 700; }
+.welcome-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.welcome-steps li { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; background: var(--card); border: var(--border); border-radius: 20px; padding: 14px; }
+.welcome-steps li > div { flex: 1; }
+.welcome-steps b { display: block; font-weight: 800; }
+.welcome-steps small { display: block; color: var(--muted); font-size: 13px; font-weight: 700; margin-top: 2px; }
+.welcome-steps .num { width: 32px; height: 32px; border-radius: 50%; border: var(--border); display: grid; place-items: center; font-family: var(--display); font-weight: 600; background: var(--card); }
+.welcome-steps li.done { background: var(--green-tint); }
+.welcome-steps li.done .num { background: var(--green); }
+.welcome-steps li.done b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.welcome-steps .btn { min-height: 38px; font-size: 14px; }
+@media (max-width: 760px) {
+  .welcome { padding: 16px; box-shadow: none; }
+  .welcome-head h2 { font-size: 21px; }
+  .welcome-steps { grid-template-columns: 1fr; }
+  .welcome-steps li { flex-direction: row; align-items: center; }
+  .welcome-steps .btn { padding: 0 12px; }
+  .welcome-steps small { display: none; }
+}
+
+/* Detalhes: only filled fields, then chips for what's missing */
+.add-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 0 4px; }
+.add-chips button { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 12px; border-radius: 999px; border: 1.5px dashed var(--faint); font-size: 13px; font-weight: 800; color: var(--muted); background: var(--card); }
+.add-chips button:hover { border-style: solid; border-color: var(--ink); color: var(--ink); }
+
+/* Lançamentos: on wide screens the details sit beside the list instead of covering it */
+@media (min-width: 1200px) {
+  .tx-page.with-panel { padding-right: 400px; }
+  .tx-page.with-panel .drawer-overlay { display: none; }
+  .tx-page.with-panel .drawer { box-shadow: 4px 4px 0 var(--ink); }
+}
+
+/* Novo lançamento: the value first on desktop too */
+.ph-amount { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ph-amount label { font-size: 13px; font-weight: 800; color: var(--muted); }
+.ph-amount .row { gap: 10px; align-items: baseline; }
+.ph-amount .prefix { font-family: var(--display); font-size: 22px; font-weight: 500; color: var(--muted); }
+.ph-amount input { border: 0; background: none; outline: none; font-family: var(--display); font-weight: 500; font-size: 48px; min-width: 2ch; max-width: 75vw; text-align: left; font-variant-numeric: tabular-nums; padding: 0; color: var(--ink); }
+.ph-amount.expense input { color: var(--expense); }
+.ph-amount.income input { color: var(--income); }
+.day-chip { min-height: 48px; padding: 0 18px; border-radius: 999px; border: var(--border); background: var(--card); font-weight: 800; font-size: 14px; flex: none; }
+.day-chip:hover:not(.on) { background: var(--hover); }
+.day-chip.on { background: var(--yellow); }
+@media (min-width: 761px) {
+  .tx-form .f-date { grid-column: 1 / -1; }
+  .cancel-btn { min-height: 44px; }
+}
+@media (max-width: 760px) {
+  .day-chip { min-height: 36px; padding: 0 14px; }
+}
+
+/* Faturas (desktop): limit and dates in the hero, categories as a legend */
+.inv-limit { display: flex; flex-direction: column; gap: 6px; max-width: 420px; margin-top: 4px; }
+.inv-limit .row { font-size: 12px; font-weight: 800; color: var(--muted); }
+.paid-note { font-size: 13px; font-weight: 800; color: var(--muted); }
+.inv-paid { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; background: var(--green); border: var(--border); border-radius: 999px; padding: 4px 14px 4px 6px; }
+.inv-cats { display: flex; flex-direction: column; gap: 12px; }
+.inv-cats .stack-bar { height: 16px; margin: 0; }
+.inv-cats-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; font-weight: 700; }
+.inv-cats-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.inv-cats-legend i { width: 12px; height: 12px; border-radius: 4px; border: var(--border); }
+.inv-cats-legend b { font-size: 15px; }
+
+/* Contas e cartões */
+.acc .v.expense { color: var(--expense); }
+.neg-note { display: inline-flex; align-items: center; gap: 4px; color: var(--expense); font-weight: 800; }
+.card-limit { display: flex; flex-direction: column; gap: 8px; }
+
+/* Categorias: one ⋯ per row */
+.list-row > button:not(.icon-btn) { text-align: left; }
+.list-row .row-menu { margin-left: auto; }
+.list-row .row-menu .icon-btn { border-color: transparent; background: none; }
+.list-row .row-menu .icon-btn:hover { border-color: var(--ink); background: var(--card); }
+.list-row .row-menu .picker-pop { left: auto; right: 0; min-width: 190px; }
+
+/* Perfil */
+.profile-card { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding: 24px; }
+.profile-who { flex: 1; min-width: 180px; }
+.profile-who h2 { font-size: 28px; }
+.profile-acts { gap: 10px; flex-wrap: wrap; }
+
+/* Phone: the way back to Mais */
+.back-link { display: inline-flex; align-items: center; gap: 2px; align-self: flex-start; font-weight: 800; font-size: 15px; text-decoration: none; color: var(--muted); margin-bottom: -10px; }
+
+/* Mais: three tiles, the last one full width */
+.more-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 0; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; }
+
+/* Lançamentos (phone): the period total above the tab bar */
+.sum-pill { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 82px); z-index: 29; display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-radius: 999px; border: var(--border); background: var(--sand); box-shadow: 3px 3px 0 var(--ink); white-space: nowrap; }
+.sum-pill span { font-size: 13px; font-weight: 800; color: var(--muted); }
+.sum-pill b { font-family: var(--display); font-weight: 500; font-size: 17px; font-variant-numeric: tabular-nums; }
+.empty-mascot { display: flex; justify-content: center; margin-bottom: 10px; }
+
+/* Delete confirmation popup */
+.confirm-overlay { align-items: center; z-index: 70; }
+.confirm-box { max-width: 360px; text-align: center; padding: 28px 24px 22px; }
+.confirm-icon { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: var(--border); background: var(--pink); margin-bottom: 12px; }
+.confirm-box h2 { font-size: 24px; }
+.confirm-box p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+.confirm-foot { display: flex; gap: 10px; margin-top: 22px; }
+.confirm-foot .btn { flex: 1; }
+.btn-danger { background: var(--pink); box-shadow: var(--shadow); }
+.btn-danger:hover:not(:disabled) { background: var(--rose); }
+.btn-danger:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+@media (max-width: 760px) {
+  .confirm-overlay { align-items: flex-end; }
+  .confirm-box { max-width: none; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+}
+
+/* Próximos rows open the entry (or the card's invoice) */
+.ph-next-row { cursor: pointer; border-radius: 14px; margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.ph-next-row:hover, .ph-next-row.selected { background: var(--hover); }
+.ph-next-row:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.next-head h3 { flex: 1; }
+.days-pick { padding: 2px; }
+.days-pick button { min-height: 30px; padding: 0 10px; font-size: 13px; }
+/* Início: Próximos and cartões share a row at the same height; contas run full width underneath */
+.ov-grid { align-items: stretch; }
+.ov-grid .ov-wide { grid-column: 1 / -1; }
+.acc-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.acc-tiles .account-line { margin-bottom: 0; }
+@media (max-width: 760px) {
+  .next-head { flex-wrap: wrap; }
+  .next-head .days-pick { order: 3; width: 100%; }
+}
+.ov-grid > section[aria-label="Próximos"] { display: flex; flex-direction: column; }
+.ov-grid > section[aria-label="Próximos"] > .all-clear { margin: auto 0; justify-content: center; }
+.acc-tiles { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.acc-tiles .account-line b, .acc-tiles .account-line .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

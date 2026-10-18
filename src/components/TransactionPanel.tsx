@@ -10,6 +10,7 @@ import { PERIODS } from '../lib/series'
 import type { Attachment, Transaction } from '../lib/types'
 import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { useToast } from './Toast'
+import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
 
 const KIND_LABEL = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência', payment: 'Pagamento de fatura' }
@@ -26,6 +27,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
   const { open, ask } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
+  const confirmDelete = useConfirm()
   const fileInput = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const category = tx.category_id ? categories.get(tx.category_id) : undefined
@@ -35,6 +37,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
   const isPayment = tx.kind === 'payment'
   const to = tx.to_account_id ? accounts.get(tx.to_account_id) : undefined
   const series = tx.series_id ? seriesMap.get(tx.series_id) : undefined
+  const hasTags = tx.tag_ids.some((id) => tags.has(id))
 
   // Neighbouring entries of the same series, for the ‹ › arrows.
   const siblings = tx.series_id
@@ -61,10 +64,10 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
       })
       return
     }
-    if (!confirm('Excluir este lançamento?')) return
+    if (!(await confirmDelete({ title: 'Excluir lançamento?', text: 'Ele sai da lista e dos saldos. Isso não pode ser desfeito.' }))) return
+    onClose()
     await refresh(deleteEntries([tx]))
     toast('Lançamento excluído.')
-    onClose()
   }
 
   async function addFiles(list: FileList | null) {
@@ -158,30 +161,34 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
             </>
           )}
           <div className="detail"><span className="k">Data</span><span>{longDate(tx.date)}</span></div>
-          <div className="detail">
-            <span className="k">Tags</span>
-            {tx.tag_ids.filter((id) => tags.has(id)).length === 0 ? <span className="muted">--</span> : (
+          {hasTags && (
+            <div className="detail">
+              <span className="k">Tags</span>
               <span className="chips" style={{ justifyContent: 'flex-end' }}>{tx.tag_ids.map((id) => tags.get(id) && <span key={id} className="chip">{tags.get(id)!.name}</span>)}</span>
-            )}
-          </div>
-          <div className="detail block">
-            <span className="k">Anexos</span>
-            <div>
-              {tx.attachments.map((a) => (
-                <div key={a.path} className="file-line">
-                  <Paperclip size={14} />
-                  <button className="file-name" onClick={() => openAttachment(a).catch((e) => toast(`Não foi possível abrir: ${(e as Error).message}`))}>{a.name}</button>
-                  <small>{formatSize(a.size)}</small>
-                  <button onClick={() => removeFile(a)} aria-label={`Remover ${a.name}`}><X size={14} /></button>
-                </div>
-              ))}
-              <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-              <button className="add-file" onClick={() => fileInput.current?.click()} disabled={uploading}>
-                <Plus size={13} /> {uploading ? 'Enviando…' : 'Adicionar'}
-              </button>
             </div>
+          )}
+          {tx.attachments.length > 0 && (
+            <div className="detail block">
+              <span className="k">Anexos</span>
+              <div>
+                {tx.attachments.map((a) => (
+                  <div key={a.path} className="file-line">
+                    <Paperclip size={14} />
+                    <button className="file-name" onClick={() => openAttachment(a).catch((e) => toast(`Não foi possível abrir: ${(e as Error).message}`))}>{a.name}</button>
+                    <small>{formatSize(a.size)}</small>
+                    <button onClick={() => removeFile(a)} aria-label={`Remover ${a.name}`}><X size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {tx.notes && <div className="detail block"><span className="k">Observação</span><span style={{ fontWeight: 600 }}>{tx.notes}</span></div>}
+          <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+          <div className="add-chips">
+            {!hasTags && <button onClick={() => open({ kind: tx.kind, editing: tx })}><Plus size={13} /> tag</button>}
+            {!tx.notes && <button onClick={() => open({ kind: tx.kind, editing: tx })}><Plus size={13} /> observação</button>}
+            <button onClick={() => fileInput.current?.click()} disabled={uploading}><Plus size={13} /> {uploading ? 'enviando…' : 'anexo'}</button>
           </div>
-          <div className="detail block"><span className="k">Observação</span><span className={tx.notes ? '' : 'muted'} style={{ fontWeight: 600 }}>{tx.notes || 'Nenhuma observação ainda.'}</span></div>
         </div>
 
         <div className="drawer-actions">

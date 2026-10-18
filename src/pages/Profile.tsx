@@ -1,6 +1,7 @@
 import { Camera } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { UserAvatar } from '../components/Avatars'
+import { BackToMore } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { Modal } from '../components/ui'
 import { DEMO } from '../lib/config'
@@ -10,13 +11,16 @@ import { supabase } from '../lib/supabase'
 export default function Profile({ name, email }: { name: string; email: string }) {
   const [editing, setEditing] = useState<'name' | 'password' | null>(null)
   return (
-    <main className="page page-narrow">
+    <main className="page">
+      <BackToMore />
       <header className="page-head"><h1>Meu perfil</h1></header>
-      <div className="card card-pad" style={{ textAlign: 'center', padding: '40px 24px', maxWidth: 520 }}>
+      <div className="card card-pad profile-card">
         <AvatarPicker />
-        <h2 style={{ fontSize: 28, marginTop: 18 }}>{name}</h2>
-        <div className="muted" style={{ marginTop: 4 }}>{email}</div>
-        <div className="row" style={{ justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+        <div className="profile-who">
+          <h2>{name}</h2>
+          <div className="muted">{email}</div>
+        </div>
+        <div className="row profile-acts">
           <button className="btn" onClick={() => setEditing('name')}>Editar perfil</button>
           <button className="btn" onClick={() => setEditing('password')}>Alterar senha</button>
         </div>
