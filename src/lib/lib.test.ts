@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { accountBalance, periodSummary } from './balances'
 import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
-import { centsFromTyping, formatBRL, formatCents, formatSigned } from './money'
+import { centsFromTyping, formatMoney, formatCents, formatSigned } from './money'
 import type { Account, Transaction } from './types'
 
 describe('money', () => {
@@ -10,7 +10,12 @@ describe('money', () => {
     expect(formatCents(-4450)).toBe('-44,50')
     expect(formatSigned(180000)).toBe('+1.800,00')
     expect(formatSigned(-4450)).toBe('\u221244,50')
-    expect(formatBRL(-23900)).toBe('\u2212R$ 239,00')
+    expect(formatMoney(-23900)).toBe('\u2212R$ 239,00')
+  })
+  it('puts the symbol of another currency in front', () => {
+    expect(formatMoney(49730, 'CAD')).toBe('C$ 497,30')
+    expect(formatSigned(-8420, 'CAD')).toBe('\u2212C$ 84,20')
+    expect(formatSigned(-8420, 'BRL')).toBe('\u221284,20')
   })
   it('reads typing from the right like a bank app', () => {
     expect(centsFromTyping('0,001')).toBe(1)
@@ -34,9 +39,9 @@ describe('dates', () => {
   })
 })
 
-const acc = (id: string, initial = 0): Account => ({
+const acc = (id: string, initial = 0, currency = 'BRL'): Account => ({
   id, name: id, icon: 'icon:bank', color: '#000', initial_balance_cents: initial,
-  exclude_from_total: false, archived: false, created_at: '',
+  exclude_from_total: false, currency, archived: false, created_at: '',
 })
 let n = 0
 const tx = (o: Partial<Transaction>): Transaction => ({
@@ -105,5 +110,19 @@ describe('balances', () => {
     expect(s.expenseAll).toBe(plain.expenseAll)
     expect(s.incomeAll).toBe(plain.incomeAll)
     expect(s.forecast).toBe(plain.forecast - 40000)
+  })
+  it('lands a transfer between currencies with the amount that arrived', () => {
+    const wise = acc('wise', 10000, 'CAD')
+    const sent = [tx({ kind: 'transfer', amount_cents: 200000, to_amount_cents: 49730, date: '2026-10-08', account_id: 'nu', to_account_id: 'wise' })]
+    expect(accountBalance(wise, sent, undefined, '2026-10-31').current).toBe(59730)
+    expect(accountBalance(acc('nu'), sent, undefined, '2026-10-31').current).toBe(-200000)
+  })
+  it('keeps money changed into another currency apart from spending', () => {
+    const abroad = [...txs, tx({ kind: 'transfer', amount_cents: 200000, to_amount_cents: 49730, date: '2026-10-08', account_id: 'nu', to_account_id: 'wise' })]
+    const plain = periodSummary(accounts.slice(0, 2), txs, '2026-10-01', '2026-11-01')
+    const s = periodSummary(accounts.slice(0, 2), abroad, '2026-10-01', '2026-11-01', new Set(), new Set(['wise']))
+    expect(s.sent).toBe(200000)
+    expect(s.expenseAll).toBe(plain.expenseAll)
+    expect(s.forecast).toBe(plain.forecast - 200000)
   })
 })

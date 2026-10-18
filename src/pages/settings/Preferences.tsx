@@ -6,6 +6,7 @@ import { seriesTable, transactionsTable } from '../../lib/api'
 import { removeAttachments } from '../../lib/attachments'
 import { DEMO } from '../../lib/config'
 import { LANGUAGES, t, type Language } from '../../lib/i18n'
+import { CURRENCIES, currencyName, symbol, type Currency } from '../../lib/money'
 import type { PeriodKind } from '../../lib/periods'
 import { usePrefs, type Prefs } from '../../lib/prefs'
 import { supabase } from '../../lib/supabase'
@@ -44,6 +45,16 @@ export default function Preferences() {
         <div className="pref-row">
           <div><b>{s.showSaved}</b><small>{s.showSavedNote}</small></div>
           <Toggle checked={prefs.showSaved} onChange={(showSaved) => change({ showSaved })} label={<span className="sr-only">{s.showSaved}</span>} />
+        </div>
+        <div className="pref-row">
+          <div><b>{s.homeCurrency}</b><small>{s.homeCurrencyNote}</small></div>
+          <select className="input pref-select" aria-label={s.homeCurrency} value={prefs.homeCurrency} onChange={(e) => change({ homeCurrency: e.target.value as Currency })}>
+            {CURRENCIES.map((c) => <option key={c} value={c}>{symbol(c)} · {currencyName(c)}</option>)}
+          </select>
+        </div>
+        <div className="pref-row">
+          <div><b>{s.convertTotal}</b><small>{s.convertTotalNote}</small></div>
+          <Toggle checked={prefs.convertTotal} onChange={(convertTotal) => change({ convertTotal })} label={<span className="sr-only">{s.convertTotal}</span>} />
         </div>
       </section>
 

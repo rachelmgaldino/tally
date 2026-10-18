@@ -112,7 +112,7 @@ export function seriesRows(
 }
 
 /** Fields that "Sim, atualizar próximos" copies to the following entries. */
-export const SHARED_FIELDS = ['description', 'amount_cents', 'account_id', 'card_id', 'to_account_id', 'category_id', 'notes', 'tag_ids'] as const
+export const SHARED_FIELDS = ['description', 'amount_cents', 'to_amount_cents', 'account_id', 'card_id', 'to_account_id', 'category_id', 'notes', 'tag_ids'] as const
 
 /** What changed between two versions of an entry, limited to SHARED_FIELDS, plus the date shift in days. */
 export function seriesChanges(before: Transaction, after: Transaction) {

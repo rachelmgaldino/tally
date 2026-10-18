@@ -34,7 +34,7 @@ function shownDescription(tx: Transaction): string {
   if (tx.kind === 'payment' && (tx.description === 'Pagamento de fatura' || tx.description === 'Bill payment')) return t().common.kinds.payment
   return tx.description
 }
-import { formatBRL, formatCents, formatSigned } from '../lib/money'
+import { currencyOf, formatMoney, formatCents, formatSigned, homeCurrency, isForeign, type Currency } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { CategoryKind, Transaction, TxKind } from '../lib/types'
 import { tone } from '../lib/theme'
@@ -135,9 +135,14 @@ export default function Transactions() {
 
   // With no account picked, the summary covers the same accounts as the Saldo geral:
   // the kept ones (savings) stay out, and money moved into them shows as "guardado".
+  // Accounts in other currencies stay out too; money changed into them shows apart.
   const keptIds = useMemo(() => new Set(accountFilter ? [] : accounts.filter((a) => a.exclude_from_total).map((a) => a.id)), [accounts, accountFilter])
-  const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts.filter((a) => !keptIds.has(a.id))
-  const summary = periodSummary(summaryAccounts, ledger, from, to, keptIds)
+  const abroadIds = useMemo(() => new Set(accountFilter ? [] : accounts.filter((a) => !a.exclude_from_total && isForeign(a)).map((a) => a.id)), [accounts, accountFilter])
+  const foreignCardIds = useMemo(() => new Set(accountFilter ? [] : cards.filter(isForeign).map((c) => c.id)), [cards, accountFilter])
+  const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts.filter((a) => !keptIds.has(a.id) && !abroadIds.has(a.id))
+  const summary = periodSummary(summaryAccounts, ledger, from, to, keptIds, abroadIds)
+  // The filtered account's or card's currency, or the Moeda principal.
+  const summaryCurrency: Currency = accountFilter ? currencyOf(accountMap.get(accountFilter) ?? cardMap.get(accountFilter)) : homeCurrency()
   // A plain total (income minus expenses, transfers left out) when asked for, or when a card is filtered,
   // since account balances say nothing about a card.
   const simpleTotal = totalsOnly || !!filteredCard
@@ -146,20 +151,25 @@ export default function Transactions() {
   // In/out totals of the rows in view. An invoice payment is money leaving the account, so in
   // Fluxo de caixa it counts as an expense (the full list hides payments and counts the purchases instead).
   const totals = useMemo(() => {
-    const sum = { income: 0, expense: 0, pendingIncome: 0, pendingExpense: 0, saved: 0 }
+    const sum = { income: 0, expense: 0, pendingIncome: 0, pendingExpense: 0, saved: 0, sent: 0 }
     for (const tx of rows) {
       // A transfer into savings (or back out) is "guardado": it leaves the day-to-day money without being spent.
+      // One into another currency (or back) goes apart the same way, counted on the side in this currency.
       if (tx.kind === 'transfer') {
         const into = keptIds.has(tx.to_account_id ?? ''), outOf = keptIds.has(tx.account_id ?? '')
         if (into !== outOf) sum.saved += into ? tx.amount_cents : -tx.amount_cents
+        const abroad = abroadIds.has(tx.to_account_id ?? ''), back = abroadIds.has(tx.account_id ?? '')
+        if (abroad && !back && !keptIds.has(tx.account_id ?? '')) sum.sent += tx.amount_cents
+        if (back && !abroad && !keptIds.has(tx.to_account_id ?? '')) sum.sent -= tx.to_amount_cents ?? tx.amount_cents
         continue
       }
-      if (tx.account_id && keptIds.has(tx.account_id)) continue
+      if (tx.account_id && (keptIds.has(tx.account_id) || abroadIds.has(tx.account_id))) continue
+      if (tx.card_id && foreignCardIds.has(tx.card_id)) continue
       if (tx.kind === 'income') sum[tx.paid ? 'income' : 'pendingIncome'] += tx.amount_cents
       else if (tx.kind === 'expense' || tx.kind === 'payment') sum[tx.paid ? 'expense' : 'pendingExpense'] += tx.amount_cents
     }
     return sum
-  }, [rows, keptIds])
+  }, [rows, keptIds, abroadIds, foreignCardIds])
 
   // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
   const dayBalance = useMemo(() => {
@@ -227,6 +237,7 @@ export default function Transactions() {
         cat ? (parent ? `${parent.name} > ${cat.name}` : cat.name) : '',
         where,
         formatCents(signedAmount(tx)),
+        rowCurrency(tx),
         tx.paid ? s.csvPaid : s.csvPending,
       ])
     }
@@ -252,9 +263,15 @@ export default function Transactions() {
   function signedAmount(tx: Transaction): number {
     if (tx.kind === 'income') return tx.amount_cents
     if (tx.kind === 'expense' || tx.kind === 'payment') return -tx.amount_cents
-    if (accountFilter === tx.to_account_id) return tx.amount_cents
+    if (accountFilter === tx.to_account_id) return tx.to_amount_cents ?? tx.amount_cents
     if (accountFilter === tx.account_id) return -tx.amount_cents
     return tx.amount_cents
+  }
+
+  /** The currency a row's amount is in: its card's or account's (for a transfer seen from where it landed, that account's). */
+  function rowCurrency(tx: Transaction): Currency {
+    if (tx.kind === 'transfer' && accountFilter && accountFilter === tx.to_account_id) return currencyOf(accountMap.get(tx.to_account_id))
+    return currencyOf((tx.card_id && tx.kind !== 'payment' ? cardMap.get(tx.card_id) : undefined) ?? (tx.account_id ? accountMap.get(tx.account_id) : undefined))
   }
 
   if (!loadingAccounts && accounts.length === 0) {
@@ -396,7 +413,7 @@ export default function Transactions() {
                 <div className={`day-head ${g.date === todayIso ? 'today' : ''}`}>
                   {g.date === todayIso ? s.todayDay(dayLabel(g.date)) : dayLabel(g.date)}
                   {dayBalance.has(g.date) && !selecting && (
-                    <span className={`day-head-bal phone-only ${dayBalance.get(g.date)! < 0 ? 'expense' : ''}`}>{s.dayBalanceShort(formatBRL(dayBalance.get(g.date)!))}</span>
+                    <span className={`day-head-bal phone-only ${dayBalance.get(g.date)! < 0 ? 'expense' : ''}`}>{s.dayBalanceShort(formatMoney(dayBalance.get(g.date)!, summaryCurrency))}</span>
                   )}
                   {selecting && (
                     <button className="day-pick" onClick={() => {
@@ -457,7 +474,12 @@ export default function Transactions() {
                         ) : null}
                       </div>}
                       <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''} ${tx.kind === 'transfer' && !accountFilter ? 'transfer' : ''}`}>
-                        {tx.kind === 'transfer' && !accountFilter ? formatCents(amount) : formatSigned(amount)}
+                        {tx.kind === 'transfer' && !accountFilter
+                          ? (isForeign({ currency: rowCurrency(tx) }) ? formatMoney(amount, rowCurrency(tx)) : formatCents(amount))
+                          : formatSigned(amount, rowCurrency(tx))}
+                        {tx.kind === 'transfer' && !accountFilter && tx.to_amount_cents && (
+                          <small className="tx-landed">→ {formatMoney(tx.to_amount_cents, currencyOf(accountMap.get(tx.to_account_id ?? '')))}</small>
+                        )}
                       </div>
                       {isCardPurchase(tx) ? <span className="paid-spacer" /> : (
                         <button
@@ -480,7 +502,7 @@ export default function Transactions() {
                 })}
                 </div>
                 {dayBalance.has(g.date) && (
-                  <div className="day-balance desk-only">{s.dayBalance} <b className={dayBalance.get(g.date)! < 0 ? 'expense' : ''}>{formatBRL(dayBalance.get(g.date)!)}</b></div>
+                  <div className="day-balance desk-only">{s.dayBalance} <b className={dayBalance.get(g.date)! < 0 ? 'expense' : ''}>{formatMoney(dayBalance.get(g.date)!, summaryCurrency)}</b></div>
                 )}
               </section>
             ))}
@@ -496,6 +518,7 @@ export default function Transactions() {
           onToggle={filteredCard ? undefined : () => setTotalsOnly(!totalsOnly)}
           title={span.kind === 'month' ? s.summaryMonth(spanLabel(span)) : s.summarySpan(spanLabel(span))}
           isMonth={span.kind === 'month'}
+          currency={summaryCurrency}
           filter={
             filteredAccount ? <span className="sum-filter"><AccountAvatar account={filteredAccount} size={20} />{filteredAccount.name}</span>
             : filteredCard ? <span className="sum-filter"><AccountIcon icon={filteredCard.icon} color={filteredCard.color} size={20} />{filteredCard.name}</span>
@@ -506,7 +529,8 @@ export default function Transactions() {
         {rows.length > 0 && (
           <SummaryPill
             label={simpleTotal ? s.periodBalance : s.forecast}
-            cents={simpleTotal ? totals.income - totals.expense - totals.saved : summary.forecast}
+            cents={simpleTotal ? totals.income - totals.expense - totals.saved - totals.sent : summary.forecast}
+            currency={summaryCurrency}
           />
         )}
       {selecting && (
@@ -577,7 +601,7 @@ function PeriodNav({ span, setSpan }: { span: Span; setSpan: (s: Span) => void }
 }
 
 /** The period's total floating at the bottom (above the tab bar on the phone) until the summary card itself scrolls into view; a tap goes there. */
-function SummaryPill({ label, cents }: { label: string; cents: number }) {
+function SummaryPill({ label, cents, currency }: { label: string; cents: number; currency: Currency }) {
   const [cardVisible, setCardVisible] = useState(false)
   useEffect(() => {
     const el = document.getElementById('tx-summary')
@@ -590,7 +614,7 @@ function SummaryPill({ label, cents }: { label: string; cents: number }) {
   return (
     <button className="sum-pill" onClick={() => document.getElementById('tx-summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
       <span>{label}</span>
-      <b className={cents < 0 ? 'expense' : ''}>{formatBRL(cents)}</b>
+      <b className={cents < 0 ? 'expense' : ''}>{formatMoney(cents, currency)}</b>
       <ChevronUp size={18} />
     </button>
   )

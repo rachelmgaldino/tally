@@ -67,7 +67,7 @@ export function t(): Strings {
   return strings[current]
 }
 
-/** For Intl: number and date formatting follow the language (money stays in R$). */
+/** For Intl: number and date formatting follow the language (the currency symbol comes from the account). */
 export function locale(): string {
   return current === 'en' ? 'en-US' : 'pt-BR'
 }

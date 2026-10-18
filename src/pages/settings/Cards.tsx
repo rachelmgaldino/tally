@@ -10,7 +10,7 @@ import { findBank } from '../../lib/banks'
 import { availableLimit } from '../../lib/cards'
 import { ACCOUNT_ICONS } from '../../lib/icons'
 import { t, locale } from '../../lib/i18n'
-import { formatBRL } from '../../lib/money'
+import { currencyOf, formatMoney, homeCurrency, isForeign, symbol } from '../../lib/money'
 import { byId, useAccounts, useCardMutations, useCards, useTransactions } from '../../lib/queries'
 import type { Card } from '../../lib/types'
 
@@ -54,7 +54,7 @@ export default function Cards() {
               <div className="card-limit">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <span className="muted small" style={{ fontWeight: 800 }}>{s.available}</span>
-                  <b className="money">{formatBRL(avail)} <span className="muted small">{s.of(formatBRL(c.limit_cents))}</span></b>
+                  <b className="money">{formatMoney(avail, currencyOf(c))} <span className="muted small">{s.of(formatMoney(c.limit_cents, currencyOf(c)))}</span></b>
                 </div>
                 <div className="limit-bar"><div style={{ width: `${used}%`, background: pastel(c.color, 0.4) }} /></div>
                 <span className="muted small" style={{ fontWeight: 700 }}>{s.paidWith(payer?.name ?? '--')}</span>
@@ -86,7 +86,10 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
   const { data: accounts = [] } = useAccounts()
   const { insert, update, remove } = useCardMutations()
   const toast = useToast()
-  const active = accounts.filter((a) => !a.archived || a.id === card?.payment_account_id)
+  const { data: txs = [] } = useTransactions()
+  // A card's bill is in the currency of the account that pays it. Once it has entries, only accounts in that currency can.
+  const used = !!card && txs.some((tx) => tx.card_id === card.id)
+  const active = accounts.filter((a) => (!a.archived || a.id === card?.payment_account_id) && (!used || currencyOf(a) === currencyOf(card)))
   const [icon, setIcon] = useState<IconChoice | null>(card ? { icon: card.icon, color: card.color } : null)
   const [picking, setPicking] = useState(false)
   const [name, setName] = useState(card?.name ?? '')
@@ -95,6 +98,8 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
   const [due, setDue] = useState(card?.due_day ?? 1)
   const [accountId, setAccountId] = useState<string | null>(card?.payment_account_id ?? active[0]?.id ?? null)
   const [error, setError] = useState<string | null>(null)
+  const payer = accounts.find((a) => a.id === accountId)
+  const currency = payer ? currencyOf(payer) : card ? currencyOf(card) : homeCurrency()
   const busy = insert.isPending || update.isPending || remove.isPending
 
   if (picking) {
@@ -122,6 +127,7 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
       closing_day: closing,
       due_day: due,
       payment_account_id: accountId,
+      currency,
     }
     try {
       if (card) await update.mutateAsync({ id: card.id, patch: row })
@@ -169,7 +175,7 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
         </div>
         <div className="field">
           <label>{s.limit}</label>
-          <MoneyInput value={limit} onChange={setLimit} />
+          <MoneyInput value={limit} onChange={setLimit} prefix={symbol(currency)} />
         </div>
         <div className="grid-2" style={{ gap: 10 }}>
           <div className="field">
@@ -193,6 +199,7 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
             </span>
           </label>
           <AccountSelect accounts={active} value={accountId} onChange={setAccountId} />
+          {isForeign({ currency }) && <p className="field-hint"><Info size={14} />{s.cardCurrency(symbol(currency))}</p>}
         </div>
         {card && (
           <div className="row" style={{ gap: 18 }}>

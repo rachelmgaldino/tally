@@ -11,7 +11,7 @@ import { useTxForm } from '../components/TxFormContext'
 import { availableLimit, invoiceFor, invoiceOf, shiftInvoice, statusLabel, toMonth } from '../lib/cards'
 import { dayMonth, monthName, monthTitle, shortDate, today } from '../lib/dates'
 import { t } from '../lib/i18n'
-import { formatBRL, formatCents, formatSigned } from '../lib/money'
+import { currencyOf, formatMoney as formatIn, formatCents, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import type { TxKind } from '../lib/types'
 import { tone } from '../lib/theme'
@@ -35,6 +35,8 @@ export default function Invoice() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const card = cards?.find((c) => c.id === id)
+  // The invoice is in the card's currency.
+  const formatMoney = (cents: number) => formatIn(cents, currencyOf(card))
   const categoryMap = byId(categories)
   const param = params.get('fatura')
   const month = param && /^\d{4}-\d{2}$/.test(param) ? `${param}-01` : card ? invoiceFor(card, today()) : ''
@@ -114,13 +116,13 @@ export default function Invoice() {
         </div>
         <div className="ph-inv-mid">
           <span className={`status status-${invoice.status}`}>{s.heroStatus[invoice.status]}</span>
-          <b>{formatBRL(invoice.total)}</b>
+          <b>{formatMoney(invoice.total)}</b>
           <small>{s.dueCloses(dayMonth(invoice.due), dayMonth(invoice.closing))}</small>
         </div>
         {card.limit_cents > 0 && (
           <>
             <div className="ph-inv-limit"><div style={{ width: `${usedPct}%` }} /></div>
-            <div className="ph-inv-limit-legend"><span>{s.limitUsed(formatBRL(card.limit_cents - avail))}</span><span>{s.available(formatBRL(avail))}</span></div>
+            <div className="ph-inv-limit-legend"><span>{s.limitUsed(formatMoney(card.limit_cents - avail))}</span><span>{s.available(formatMoney(avail))}</span></div>
           </>
         )}
       </section>
@@ -133,7 +135,7 @@ export default function Invoice() {
       {previous.remaining > 0 && (
         <div className="ph-alert phone-only">
           <AlertCircle size={20} />
-          <b style={{ flex: 1, fontSize: 13, whiteSpace: 'normal' }}>{s.previousLeft(formatBRL(previous.remaining), monthName(shiftInvoice(month, -1)))}</b>
+          <b style={{ flex: 1, fontSize: 13, whiteSpace: 'normal' }}>{s.previousLeft(formatMoney(previous.remaining), monthName(shiftInvoice(month, -1)))}</b>
         </div>
       )}
 
@@ -151,16 +153,16 @@ export default function Invoice() {
             <div className="inv-limit">
               <div className="limit-bar"><div style={{ width: `${usedPct}%`, background: pastel(card.color, 0.4) }} /></div>
               <div className="row" style={{ justifyContent: 'space-between' }}>
-                <span>{s.limitUsed(formatBRL(card.limit_cents - avail))}</span><span>{s.available(formatBRL(avail))}</span>
+                <span>{s.limitUsed(formatMoney(card.limit_cents - avail))}</span><span>{s.available(formatMoney(avail))}</span>
               </div>
             </div>
           )}
         </div>
         <div className="invoice-totals">
           <span className="k">{s.total}</span>
-          <span className="v">{formatBRL(invoice.total)}</span>
-          {invoice.paid > 0 && <span className="paid-note">{s.paidLeft(formatBRL(invoice.paid), formatBRL(invoice.remaining))}</span>}
-          {previous.remaining > 0 && <span className="paid-note expense">{s.previousShort(formatBRL(previous.remaining))}</span>}
+          <span className="v">{formatMoney(invoice.total)}</span>
+          {invoice.paid > 0 && <span className="paid-note">{s.paidLeft(formatMoney(invoice.paid), formatMoney(invoice.remaining))}</span>}
+          {previous.remaining > 0 && <span className="paid-note expense">{s.previousShort(formatMoney(previous.remaining))}</span>}
           {invoice.remaining === 0 && invoice.total > 0 && <span className="inv-paid"><Mascot size={30} /> {s.invoicePaidCheer}</span>}
           {invoice.remaining > 0 && (
             <button className="btn btn-primary" onClick={() => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })}>
@@ -201,8 +203,8 @@ export default function Invoice() {
           </div>
           <div className="progress"><div style={{ width: `${paidPct}%` }} /></div>
           <div className="progress-legend">
-            <span className="income">{s.paid(formatBRL(invoice.paid))}</span>
-            <span className={invoice.remaining > 0 ? 'expense' : 'muted'}>{s.left(formatBRL(invoice.remaining))}</span>
+            <span className="income">{s.paid(formatMoney(invoice.paid))}</span>
+            <span className={invoice.remaining > 0 ? 'expense' : 'muted'}>{s.left(formatMoney(invoice.remaining))}</span>
           </div>
           {sorted.length > 0 && (
             <table>
@@ -213,7 +215,7 @@ export default function Invoice() {
                   return (
                     <tr key={p.id}>
                       <td>{shortDate(p.date)}</td>
-                      <td className="money">{formatBRL(p.amount_cents)}</td>
+                      <td className="money">{formatMoney(p.amount_cents)}</td>
                       <td><span className="row"><AccountAvatar account={a} size={22} />{a?.name}</span></td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button className="act" onClick={() => open({ kind: 'payment', editing: p })}>{s.edit}</button>
@@ -276,7 +278,7 @@ export default function Invoice() {
                     {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
                     <span className="sub">{dayMonth(tx.date)} · {category ? (parent ? `${parent.name} › ${category.name}` : category.name) : cm.noCategory}</span>
                   </div>
-                  <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''}`}>{formatSigned(tx.kind === 'income' ? tx.amount_cents : -tx.amount_cents)}</div>
+                  <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''}`}>{formatSigned(tx.kind === 'income' ? tx.amount_cents : -tx.amount_cents, currencyOf(card))}</div>
                 </div>
               )
             })}
