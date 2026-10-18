@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { DEMO } from '../lib/config'
 import { useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
+import { UserAvatar } from './Avatars'
 import { useTxForm } from './TxFormContext'
 
 /** The coin mascot. `plain` is the white version without the stem and cheeks, used on the yellow stat card. */
@@ -50,7 +51,7 @@ export function Sidebar({ name }: { name: string }) {
       </nav>
       <div className="profile">
         <Link to="/perfil">
-          <span className="avatar" style={{ width: 40, height: 40, background: 'var(--rose)' }}>{name.charAt(0).toUpperCase()}</span>
+          <UserAvatar size={40} />
           <span style={{ minWidth: 0 }}><b>{name}</b><small>Meu perfil</small></span>
         </Link>
         <button className="icon-btn sm" aria-label="Sair" title="Sair" onClick={() => !DEMO && supabase.auth.signOut()}><LogOut size={16} /></button>

@@ -7,7 +7,7 @@ import { useTxForm } from '../components/TxFormContext'
 import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey } from '../lib/cards'
 import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
-import { formatBRL } from '../lib/money'
+import { formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
 
@@ -118,13 +118,20 @@ export default function Overview({ name }: { name: string }) {
         </div>
       </header>
 
-      <section className="stats-grid" aria-label="Resumo do mês">
-        <div className="card stat" style={{ background: 'var(--yellow)' }}>
-          <div className="k">Saldo geral</div>
-          <div className="v" style={{ fontSize: 34 }}>{money(total)}</div>
-          <div className="s">{!included.length ? 'Nenhuma conta ainda' : isCurrent ? included.map((a) => a.name).join(' + ') : `no fim de ${monthLabel(m).split(' ')[0].toLowerCase()}`}</div>
+      <section className="stats-grid stats" aria-label="Resumo do mês">
+        <div className="card stat hero" style={{ background: 'var(--yellow)' }}>
+          <div className="hero-in">
+            <div className="k">Saldo geral</div>
+            <div className="v" style={{ fontSize: 34 }}>{money(total)}</div>
+            <div className="s">{!included.length ? 'Nenhuma conta ainda' : isCurrent ? included.map((a) => a.name).join(' + ') : `no fim de ${monthLabel(m).split(' ')[0].toLowerCase()}`}</div>
+            <div className="hero-pills">
+              <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
+              <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
+            </div>
+          </div>
           <span className="mascot"><Mascot size={72} plain /></span>
         </div>
+        <div className="stats-rest">
         <div className="card stat" style={{ background: 'var(--green)' }}>
           <div className="k">Receitas do mês <span className="ico"><ArrowUp size={16} /></span></div>
           <div className="v">{money(income)}</div>
@@ -142,6 +149,7 @@ export default function Overview({ name }: { name: string }) {
             {cards.length === 0 ? 'Adicionar cartão' : cards.length === 1 ? `vence ${shortDate(currentInvoices[0].due).slice(0, 5)}` : `${cards.length} cartões`}
           </div>
         </button>
+        </div>
       </section>
 
       <section className="quick" aria-label="Ações rápidas">
