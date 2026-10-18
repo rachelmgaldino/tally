@@ -1,4 +1,5 @@
-export type TxKind = 'expense' | 'income' | 'transfer'
+/** A payment is an invoice payment: money leaves account_id and pays card_id's invoice. */
+export type TxKind = 'expense' | 'income' | 'transfer' | 'payment'
 export type CategoryKind = 'expense' | 'income'
 
 export interface Account {
@@ -31,8 +32,12 @@ export interface Transaction {
   /** ISO date, YYYY-MM-DD, no time zone. */
   date: string
   paid: boolean
-  account_id: string
+  /** Null for card purchases, which have card_id instead. */
+  account_id: string | null
   to_account_id: string | null
+  card_id: string | null
+  /** Card entries: the invoice, as the first day of the month it is due (YYYY-MM-01). */
+  invoice_month: string | null
   category_id: string | null
   notes: string | null
   series_id: string | null
@@ -41,6 +46,8 @@ export interface Transaction {
   tag_ids: string[]
   attachments: Attachment[]
   created_at: string
+  /** Set on the computed "Fatura <mês>" rows, which are not stored. */
+  virtual?: boolean
 }
 
 export interface Attachment {
@@ -64,6 +71,19 @@ export interface Series {
   created_at: string
 }
 
+export interface Card {
+  id: string
+  name: string
+  icon: string
+  color: string
+  limit_cents: number
+  closing_day: number
+  due_day: number
+  payment_account_id: string | null
+  archived: boolean
+  created_at: string
+}
+
 export interface Tag {
   id: string
   name: string
@@ -72,6 +92,7 @@ export interface Tag {
 
 export type NewAccount = Omit<Account, 'id' | 'created_at'>
 export type NewCategory = Omit<Category, 'id' | 'created_at'>
-export type NewTransaction = Omit<Transaction, 'id' | 'created_at'>
+export type NewTransaction = Omit<Transaction, 'id' | 'created_at' | 'virtual'>
+export type NewCard = Omit<Card, 'id' | 'created_at'>
 export type NewSeries = Omit<Series, 'id' | 'created_at'>
 export type NewTag = Omit<Tag, 'id' | 'created_at'>

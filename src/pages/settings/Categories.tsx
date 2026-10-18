@@ -1,6 +1,6 @@
 import { ChevronDown, CirclePlus, Image } from 'lucide-react'
 import { useState } from 'react'
-import { CategoryAvatar, CategoryIcon } from '../../components/Avatars'
+import { CategoryAvatar, CategoryIcon, pastel } from '../../components/Avatars'
 import { Popover } from '../../components/Picker'
 import { useToast } from '../../components/Toast'
 import { Modal, Segmented } from '../../components/ui'
@@ -32,13 +32,17 @@ export default function Categories() {
 
   return (
     <>
-      <div className="settings-head">
-        <h2>Categorias</h2>
-        <button className="btn btn-soft" onClick={() => setEditing({ mode: 'category' })}>
-          <CirclePlus size={15} /> Categoria de {KIND_NAME[kind].toLowerCase()}
+      <header className="page-head">
+        <div>
+          <h1>Categorias</h1>
+          <p>Como você separa o que entra e o que sai.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setEditing({ mode: 'category' })}>
+          <CirclePlus size={18} /> Categoria de {KIND_NAME[kind].toLowerCase()}
         </button>
-      </div>
-      <div className="tabs">
+      </header>
+      <section className="card card-pad">
+      <div className="tabs" style={{ maxWidth: 360 }}>
         <button className={kind === 'expense' ? 'on' : ''} onClick={() => setKind('expense')}>Despesas</button>
         <button className={kind === 'income' ? 'on' : ''} onClick={() => setKind('income')}>Receitas</button>
       </div>
@@ -49,15 +53,16 @@ export default function Categories() {
             <CategoryAvatar category={p} />
             <button onClick={() => setEditing({ mode: 'category', category: p })}>{p.name}</button>
             <span className="actions">
-              <button className="link" onClick={() => toggleArchive(p)}>{p.archived ? 'reativar' : 'arquivar'}</button>
-              {!p.archived && <button className="link" onClick={() => setEditing({ mode: 'sub', parentId: p.id })}>+ sub-categoria</button>}
+              {!p.archived && <button onClick={() => setEditing({ mode: 'sub', parentId: p.id })}>+ subcategoria</button>}
+              <button onClick={() => toggleArchive(p)}>{p.archived ? 'reativar' : 'arquivar'}</button>
             </span>
           </div>
           {ofKind.filter((c) => c.parent_id === p.id).sort(byName).map((c) => (
             <div key={c.id} className="list-row sub" style={{ opacity: c.archived ? 0.5 : 1 }}>
+              <span className="dot" style={{ background: pastel(p.color, 0.3) }} />
               <button onClick={() => setEditing({ mode: 'sub', parentId: p.id, category: c })}>{c.name}</button>
               <span className="actions">
-                <button className="link" onClick={() => toggleArchive(c)}>{c.archived ? 'reativar' : 'arquivar'}</button>
+                <button onClick={() => toggleArchive(c)}>{c.archived ? 'reativar' : 'arquivar'}</button>
               </span>
             </div>
           ))}
@@ -68,6 +73,7 @@ export default function Categories() {
           {showArchived ? 'Esconder arquivadas' : `Mostrar arquivadas (${archivedCount})`}
         </button>
       )}
+      </section>
       {editing && (
         <CategoryModal
           kind={kind}

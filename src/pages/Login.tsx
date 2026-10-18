@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Mascot } from '../components/Sidebar'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -19,7 +20,7 @@ export default function Login() {
   return (
     <div className="login">
       <form className="card stack" onSubmit={submit}>
-        <div className="logo"><span className="logo-mark" />tally</div>
+        <div className="logo"><Mascot size={52} />tally</div>
         <div className="field">
           <label htmlFor="email">E-mail</label>
           <input id="email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

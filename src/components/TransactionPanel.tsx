@@ -1,24 +1,26 @@
 import { ChevronLeft, ChevronRight, Copy, Paperclip, Pencil, Plus, Repeat2, ThumbsUp, Trash2, Undo2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, openAttachment, removeAttachments, uploadAttachment } from '../lib/attachments'
+import { invoiceName } from '../lib/cards'
 import { longDate } from '../lib/dates'
 import { deleteEntries, deleteFromHere, useRefresh } from '../lib/entries'
 import { formatBRL } from '../lib/money'
-import { byId, useAccounts, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
+import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import { PERIODS } from '../lib/series'
 import type { Attachment, Transaction } from '../lib/types'
-import { AccountAvatar, CategoryAvatar } from './Avatars'
+import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { useToast } from './Toast'
 import { useTxForm } from './TxFormContext'
 
-const KIND_LABEL = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência' }
-const FIXED_LABEL = { expense: 'Despesa fixa', income: 'Receita fixa', transfer: 'Transferência fixa' }
+const KIND_LABEL = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência', payment: 'Pagamento de fatura' }
+const FIXED_LABEL = { expense: 'Despesa fixa', income: 'Receita fixa', transfer: 'Transferência fixa', payment: 'Pagamento fixo' }
 
 export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction; onClose: () => void; onNavigate: (id: string) => void }) {
   const accounts = byId(useAccounts().data)
   const categories = byId(useCategories().data)
   const tags = byId(useTags().data)
   const seriesMap = byId(useSeries().data)
+  const cards = byId(useCards().data)
   const { data: allTxs = [] } = useTransactions()
   const { update } = useTransactionMutations()
   const { open, ask } = useTxForm()
@@ -28,7 +30,9 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
   const [uploading, setUploading] = useState(false)
   const category = tx.category_id ? categories.get(tx.category_id) : undefined
   const parent = category?.parent_id ? categories.get(category.parent_id) : undefined
-  const account = accounts.get(tx.account_id)
+  const account = tx.account_id ? accounts.get(tx.account_id) : undefined
+  const card = tx.card_id ? cards.get(tx.card_id) : undefined
+  const isPayment = tx.kind === 'payment'
   const to = tx.to_account_id ? accounts.get(tx.to_account_id) : undefined
   const series = tx.series_id ? seriesMap.get(tx.series_id) : undefined
 
@@ -94,73 +98,90 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
     <>
       <div className="drawer-overlay" onClick={onClose} />
       <aside className="drawer" aria-label="Detalhes do lançamento">
-        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
-        <span className="badge">{KIND_LABEL[tx.kind]}</span>
-        <h2 style={{ fontSize: 15, margin: '8px 0 14px' }}>{tx.description || KIND_LABEL[tx.kind]}</h2>
+        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={18} /></button>
+        <span className={`chip-kind ${tx.kind}`}>{KIND_LABEL[tx.kind]}</span>
+        <h2>{tx.description || KIND_LABEL[tx.kind]}</h2>
 
         {seriesLabel && (
           <div className="series-nav">
-            <button onClick={() => prev && onNavigate(prev.id)} disabled={!prev} aria-label="Anterior"><ChevronLeft size={15} /></button>
-            <span><Repeat2 size={13} /> {seriesLabel}</span>
-            <button onClick={() => next && onNavigate(next.id)} disabled={!next} aria-label="Próximo"><ChevronRight size={15} /></button>
+            <button onClick={() => prev && onNavigate(prev.id)} disabled={!prev} aria-label="Ocorrência anterior"><ChevronLeft size={18} /></button>
+            <span><Repeat2 size={15} /> {seriesLabel}</span>
+            <button onClick={() => next && onNavigate(next.id)} disabled={!next} aria-label="Próxima ocorrência"><ChevronRight size={18} /></button>
           </div>
         )}
 
-        {tx.kind !== 'transfer' && (
+        <div className="details">
+          {(tx.kind === 'expense' || tx.kind === 'income') && (
+            <div className="detail">
+              <span className="k">Categoria</span>
+              <span className="row">
+                <CategoryAvatar category={parent ?? category} size={24} />
+                {category ? (parent ? `${parent.name} › ${category.name}` : category.name) : 'Sem categoria'}
+              </span>
+            </div>
+          )}
+          <div className="detail"><span className="k">Valor</span><span className={`value ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>{formatBRL(tx.amount_cents)}</span></div>
+          {tx.kind === 'transfer' ? (
+            <>
+              <div className="detail"><span className="k">Saiu da conta</span><span className="row"><AccountAvatar account={account} size={24} />{account?.name}</span></div>
+              <div className="detail"><span className="k">Entrou na conta</span><span className="row"><AccountAvatar account={to} size={24} />{to?.name}</span></div>
+            </>
+          ) : (
+            <>
+              {account && <div className="detail"><span className="k">{isPayment ? 'Paga com' : 'Conta'}</span><span className="row"><AccountAvatar account={account} size={24} />{account.name}</span></div>}
+              {card && (
+                <div className="detail">
+                  <span className="k">Cartão</span>
+                  <span>
+                    <span className="row"><AccountIcon icon={card.icon} color={card.color} size={24} />{card.name}</span>
+                    {tx.invoice_month && <span className="muted small" style={{ display: 'block', marginTop: 2 }}>{invoiceName(tx.invoice_month)}</span>}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+          <div className="detail"><span className="k">Data</span><span>{longDate(tx.date)}</span></div>
           <div className="detail">
-            <div className="k">Categoria</div>
-            <div className="row">
-              <CategoryAvatar category={parent ?? category} size={20} />
-              {category ? (parent ? `${parent.name} › ${category.name}` : category.name) : 'Sem categoria'}
+            <span className="k">Tags</span>
+            {tx.tag_ids.filter((id) => tags.has(id)).length === 0 ? <span className="muted">--</span> : (
+              <span className="chips" style={{ justifyContent: 'flex-end' }}>{tx.tag_ids.map((id) => tags.get(id) && <span key={id} className="chip">{tags.get(id)!.name}</span>)}</span>
+            )}
+          </div>
+          <div className="detail block">
+            <span className="k">Anexos</span>
+            <div>
+              {tx.attachments.map((a) => (
+                <div key={a.path} className="file-line">
+                  <Paperclip size={14} />
+                  <button className="file-name" onClick={() => openAttachment(a).catch((e) => toast(`Não foi possível abrir: ${(e as Error).message}`))}>{a.name}</button>
+                  <small>{formatSize(a.size)}</small>
+                  <button onClick={() => removeFile(a)} aria-label={`Remover ${a.name}`}><X size={14} /></button>
+                </div>
+              ))}
+              <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+              <button className="add-file" onClick={() => fileInput.current?.click()} disabled={uploading}>
+                <Plus size={13} /> {uploading ? 'Enviando…' : 'Adicionar'}
+              </button>
             </div>
           </div>
-        )}
-        <div className="detail"><div className="k">Valor</div>{formatBRL(tx.amount_cents)}</div>
-        {tx.kind === 'transfer' ? (
-          <>
-            <div className="detail"><div className="k">Saiu da conta</div><div className="row"><AccountAvatar account={account} size={20} />{account?.name}</div></div>
-            <div className="detail"><div className="k">Entrou na conta</div><div className="row"><AccountAvatar account={to} size={20} />{to?.name}</div></div>
-          </>
-        ) : (
-          <div className="detail"><div className="k">Conta</div><div className="row"><AccountAvatar account={account} size={20} />{account?.name}</div></div>
-        )}
-        <div className="detail"><div className="k">Data</div>{longDate(tx.date)}</div>
-        <div className="detail">
-          <div className="k">Tags</div>
-          {tx.tag_ids.filter((id) => tags.has(id)).length === 0 ? '--' : (
-            <div className="chips">{tx.tag_ids.map((id) => tags.get(id) && <span key={id} className="chip">{tags.get(id)!.name}</span>)}</div>
-          )}
+          <div className="detail block"><span className="k">Observação</span><span className={tx.notes ? '' : 'muted'} style={{ fontWeight: 600 }}>{tx.notes || 'Nenhuma observação ainda.'}</span></div>
         </div>
-        <div className="detail">
-          <div className="k">Anexos</div>
-          {tx.attachments.map((a) => (
-            <div key={a.path} className="file-line">
-              <Paperclip size={13} />
-              <button className="file-name" onClick={() => openAttachment(a).catch((e) => toast(`Não foi possível abrir: ${(e as Error).message}`))}>{a.name}</button>
-              <small>{formatSize(a.size)}</small>
-              <button onClick={() => removeFile(a)} aria-label={`Remover ${a.name}`}><X size={13} /></button>
-            </div>
-          ))}
-          <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-          <button className="add-file" onClick={() => fileInput.current?.click()} disabled={uploading}>
-            <Plus size={13} /> {uploading ? 'Enviando…' : 'Adicionar anexo'}
-          </button>
-        </div>
-        <div className="detail"><div className="k">Observação</div>{tx.notes || '--'}</div>
 
         <div className="drawer-actions">
-          <button onClick={() => open({ kind: tx.kind, editing: tx })}><span className="circle"><Pencil size={14} /></span>Editar</button>
-          <button onClick={() => open({ kind: tx.kind, editing: tx, repeat: true })} disabled={!!tx.series_id} title={tx.series_id ? 'Este lançamento já se repete' : undefined}>
-            <span className="circle"><Repeat2 size={14} /></span>Repetir
-          </button>
-          {tx.kind !== 'transfer' && (
-            <button onClick={togglePaid}>
-              <span className="circle">{tx.paid ? <Undo2 size={14} /> : <ThumbsUp size={14} />}</span>
+          <button className="btn btn-primary" onClick={() => open({ kind: tx.kind, editing: tx })}><Pencil size={18} /> Editar</button>
+          {!isPayment && (
+            <button className="btn btn-blue" onClick={() => open({ kind: tx.kind, editing: tx, repeat: true })} disabled={!!tx.series_id} title={tx.series_id ? 'Este lançamento já se repete' : undefined}>
+              <Repeat2 size={18} /> Repetir
+            </button>
+          )}
+          {tx.kind !== 'transfer' && !isPayment && !card && (
+            <button className="btn" onClick={togglePaid}>
+              {tx.paid ? <Undo2 size={18} /> : <ThumbsUp size={18} />}
               {tx.paid ? 'Desfazer' : 'Pagar'}
             </button>
           )}
-          <button onClick={() => open({ kind: tx.kind, copyOf: tx })}><span className="circle"><Copy size={14} /></span>Copiar</button>
-          <button onClick={del}><span className="circle"><Trash2 size={14} /></span>Excluir</button>
+          {!isPayment && <button className="btn" onClick={() => open({ kind: tx.kind, copyOf: tx })}><Copy size={18} /> Copiar</button>}
+          <button className="btn btn-pink" onClick={del}><Trash2 size={18} /> Excluir</button>
         </div>
       </aside>
     </>
