@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { BottomTabs } from './components/BottomTabs'
 import { Sidebar } from './components/Sidebar'
 import { TxFormProvider } from './components/TxFormContext'
 import { ToastProvider } from './components/Toast'
@@ -11,6 +12,7 @@ import { PrefsProvider } from './lib/prefs'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Invoice from './pages/Invoice'
+import More from './pages/More'
 import Overview from './pages/Overview'
 import Profile from './pages/Profile'
 import Transactions from './pages/Transactions'
@@ -51,6 +53,7 @@ export default function App() {
           <Route path="/" element={<Overview name={name} />} />
           <Route path="/lancamentos" element={<Transactions />} />
           <Route path="/cartoes/:id" element={<Invoice />} />
+          <Route path="/mais" element={<More name={name} />} />
           <Route path="/perfil" element={<Profile name={name} email={email} />} />
           <Route path="/configuracoes" element={<SettingsLayout />}>
             <Route index element={<Navigate to="categorias" replace />} />
@@ -62,6 +65,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </div>
+        <BottomTabs />
         </div>
       </TxFormProvider>
     </ToastProvider>

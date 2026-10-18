@@ -23,3 +23,7 @@ npm run build
 ```
 
 Database changes ship as numbered files in `supabase/migrations/`. Run each new one once in the SQL Editor.
+
+## On the phone
+
+Below 760px wide Tally switches to its phone layout: a bottom tab bar (Início, Lançamentos, +, Faturas, Mais) and forms that slide up from the bottom. To install it on an iPhone, open the site in Safari, tap Share, then "Adicionar à Tela de Início". It then opens full screen with the coin icon. `public/sw.js` keeps the app shell so it opens without signal; money data always comes from Supabase.
