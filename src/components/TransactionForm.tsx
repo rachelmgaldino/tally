@@ -1,25 +1,31 @@
-import { Check, CopyPlus, Info, MessageSquare, Paperclip, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
-import { today } from '../lib/dates'
+import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
+import { monthLabel, today } from '../lib/dates'
 import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
 import { formatBRL } from '../lib/money'
-import { byId, useAccounts, useCategories, useSeries, useTransactions } from '../lib/queries'
+import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import { PERIOD_ORDER, PERIODS, seriesChanges, splitInstallments } from '../lib/series'
 import type { Attachment, NewTransaction, Period, SeriesKind, Transaction, TxKind } from '../lib/types'
-import { AccountSelect, CategorySelect } from './Selects'
+import { Popover } from './Picker'
+import { AccountSelect, CategorySelect, SourceSelect } from './Selects'
 import { TagInput } from './TagInput'
 import { useToast } from './Toast'
 import { useTxForm } from './TxFormContext'
-import { Modal, MoneyInput, Toggle } from './ui'
+import { Modal, MoneyInput, Segmented, Toggle } from './ui'
 
-const TITLES: Record<TxKind, [string, string]> = {
+export type FormKind = Exclude<TxKind, 'payment'>
+
+const TITLES: Record<FormKind, [string, string]> = {
   expense: ['Nova despesa', 'Editar despesa'],
   income: ['Nova receita', 'Editar receita'],
   transfer: ['Transferência entre contas', 'Editar transferência'],
 }
 
-const REPEAT_TITLE: Record<TxKind, string> = {
+const KIND_TAB: Record<FormKind, string> = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência' }
+
+const REPEAT_TITLE: Record<FormKind, string> = {
   expense: 'Repetir despesas',
   income: 'Repetir receitas',
   transfer: 'Repetir transferências',
@@ -28,18 +34,21 @@ const REPEAT_TITLE: Record<TxKind, string> = {
 const INSTALLMENT_COUNTS = Array.from({ length: 71 }, (_, i) => i + 2)
 
 export function TransactionForm({
-  kind, editing, copyOf, defaultAccountId, startRepeat, onClose,
+  kind, editing, copyOf, defaultAccountId, startRepeat, onClose, onKind,
 }: {
-  kind: TxKind
+  kind: FormKind
   editing?: Transaction
   copyOf?: Transaction
   defaultAccountId?: string
   startRepeat?: boolean
   onClose: () => void
+  /** Switches between despesa, receita and transferência while creating. */
+  onKind?: (kind: FormKind) => void
 }) {
   const { data: accounts = [] } = useAccounts()
   const { data: categories = [] } = useCategories()
   const { data: allTxs = [] } = useTransactions()
+  const { data: cards = [] } = useCards()
   const seriesMap = byId(useSeries().data)
   const { ask } = useTxForm()
   const refresh = useRefresh()
@@ -53,7 +62,16 @@ export function TransactionForm({
   const [amount, setAmount] = useState(source?.amount_cents ?? 0)
   const [date, setDate] = useState(editing?.date ?? today())
   const [paid, setPaid] = useState(editing?.paid ?? true)
-  const [accountId, setAccountId] = useState<string | null>(source?.account_id ?? defaultAccountId ?? active[0]?.id ?? null)
+  // Account or, for expenses and income, a card.
+  const [accountId, setAccountId] = useState<string | null>(source?.account_id ?? source?.card_id ?? defaultAccountId ?? active[0]?.id ?? null)
+  const card = kind === 'transfer' ? undefined : cards.find((c) => c.id === accountId)
+  const usableCards = cards.filter((c) => !c.archived || c.id === source?.card_id)
+  // "Fatura de …": months away from the invoice the date falls into.
+  const [invoiceShift, setInvoiceShift] = useState(() => {
+    const c = cards.find((x) => x.id === source?.card_id)
+    return c && source?.invoice_month ? monthsBetween(invoiceFor(c, source.date), source.invoice_month) : 0
+  })
+  const invoice = card ? shiftInvoice(invoiceFor(card, date || today()), invoiceShift) : null
   const [toAccountId, setToAccountId] = useState<string | null>(source?.to_account_id ?? null)
   const [categoryId, setCategoryId] = useState<string | null>(source?.category_id ?? null)
   const [notes, setNotes] = useState(source?.notes ?? '')
@@ -91,9 +109,11 @@ export function TransactionForm({
       description: description.trim(),
       amount_cents: amount,
       date,
-      paid: kind === 'transfer' ? true : paid,
-      account_id: accountId,
+      paid: kind === 'transfer' || card ? true : paid,
+      account_id: card ? null : accountId,
       to_account_id: kind === 'transfer' ? toAccountId : null,
+      card_id: card?.id ?? null,
+      invoice_month: invoice,
       category_id: kind === 'transfer' ? null : categoryId,
       notes: show.notes ? notes.trim() || null : null,
       series_id: editing?.series_id ?? null,
@@ -116,9 +136,9 @@ export function TransactionForm({
     setBusy(true)
     try {
       if (!editing) {
-        await refresh(createEntry(row, repeat, upload))
+        await refresh(createEntry(row, repeat, upload, cards))
       } else if (repeat) {
-        await refresh(convertEntry(editing, row, repeat, upload))
+        await refresh(convertEntry(editing, row, repeat, upload, cards))
       } else {
         const after = await refresh(updateEntry(editing, row, upload))
         if (inSeries) offerApplyToNext(editing, after)
@@ -154,7 +174,7 @@ export function TransactionForm({
           label: 'Sim, atualizar próximos',
           primary: true,
           onClick: async () => {
-            await refresh(applyToNext(before, after, allTxs, series))
+            await refresh(applyToNext(before, after, allTxs, series, cards))
             toast('Próximos lançamentos atualizados.')
           },
         },
@@ -193,8 +213,17 @@ export function TransactionForm({
   const parts = repeat?.kind === 'installment' ? splitInstallments(amount, installments) : null
 
   return (
-    <Modal title={TITLES[kind][titleIndex]} onClose={onClose}>
+    <Modal title={TITLES[kind][titleIndex]} onClose={onClose} className="modal-form">
       <form className="tx-form" onSubmit={(e) => { e.preventDefault(); save(false) }}>
+        {onKind && !editing && (
+          <div className="segmented kind-tabs" role="tablist" aria-label="Tipo de lançamento">
+            {(['expense', 'income', 'transfer'] as const).map((k) => (
+              <button type="button" role="tab" aria-selected={k === kind} key={k} className={`${k} ${k === kind ? 'on' : ''}`} onClick={() => k !== kind && onKind(k)}>
+                {KIND_TAB[k]}
+              </button>
+            ))}
+          </div>
+        )}
         {kind === 'transfer' ? (
           <>
             <div className="field">
@@ -223,17 +252,37 @@ export function TransactionForm({
         </div>
         {kind !== 'transfer' && (
           <>
-            <Toggle checked={paid} onChange={setPaid} label={kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'} />
+            {!card && <Toggle checked={paid} onChange={setPaid} label={kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'} />}
             <div className="grid-2" style={{ gap: 10 }}>
               <div className="field">
-                <label>Conta</label>
-                <AccountSelect accounts={active} value={accountId} onChange={setAccountId} />
+                <label>{usableCards.length ? 'Conta/Cartão' : 'Conta'}</label>
+                <SourceSelect accounts={active} cards={usableCards} value={accountId} onChange={setAccountId} />
               </div>
               <div className="field">
                 <label>Categoria</label>
                 <CategorySelect categories={categories} kind={kind} value={categoryId} onChange={setCategoryId} />
               </div>
             </div>
+            {card && invoice && (
+              <div className="invoice-banner">
+                <CreditCard size={18} /> Entra na fatura de
+                <Popover
+                  className="invoice-pick"
+                  trigger={(_, toggle) => (
+                    <button type="button" onClick={toggle}>{monthLabel(toMonth(invoice)).toLowerCase()} <ChevronDown size={14} /></button>
+                  )}
+                >
+                  {(close) => [-2, -1, 0, 1, 2, 3].map((d) => {
+                    const m = shiftInvoice(invoiceFor(card, date || today()), d)
+                    return (
+                      <button type="button" key={d} className={`picker-item ${d === invoiceShift ? 'on' : ''}`} onClick={() => { setInvoiceShift(d); close() }}>
+                        {invoiceName(m)}
+                      </button>
+                    )
+                  })}
+                </Popover>
+              </div>
+            )}
           </>
         )}
         <div className="option-icons">
@@ -242,18 +291,18 @@ export function TransactionForm({
             className={show.repeat ? 'on' : ''}
             onClick={() => toggle('repeat')}
             disabled={inSeries}
-            title={inSeries ? 'Este lançamento já se repete' : 'Repetir'}
+            title={inSeries ? 'Este lançamento já se repete' : undefined}
           >
-            <Repeat2 size={16} />
+            <span><Repeat2 size={20} /></span>Repetir
           </button>
-          <button type="button" className={show.notes ? 'on' : ''} onClick={() => toggle('notes')} title="Adicionar comentário">
-            <MessageSquare size={16} />
+          <button type="button" className={show.notes ? 'on' : ''} onClick={() => toggle('notes')}>
+            <span><MessageSquare size={20} /></span>Observação
           </button>
-          <button type="button" className={show.files ? 'on' : ''} onClick={() => toggle('files')} title="Anexo">
-            <Paperclip size={16} />
+          <button type="button" className={show.files ? 'on' : ''} onClick={() => toggle('files')}>
+            <span><Paperclip size={20} /></span>Anexo
           </button>
-          <button type="button" className={show.tags ? 'on' : ''} onClick={() => toggle('tags')} title="Tags">
-            <TagIcon size={16} />
+          <button type="button" className={show.tags ? 'on' : ''} onClick={() => toggle('tags')}>
+            <span><TagIcon size={20} /></span>Tags
           </button>
         </div>
 
@@ -266,9 +315,8 @@ export function TransactionForm({
 
         {show.notes && (
           <div className="form-section">
-            <h4>Adicionar comentário</h4>
+            <h4>Observação</h4>
             <div className="field">
-              <label htmlFor="notes">Observação</label>
               <textarea id="notes" className="input" placeholder="Adicione uma observação…" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
@@ -290,15 +338,14 @@ export function TransactionForm({
               </div>
             ))}
             <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-            <button type="button" className="btn-text-green" onClick={() => fileInput.current?.click()}>+ Adicionar anexo</button>
+            <button type="button" className="add-file" style={{ alignSelf: 'flex-start' }} onClick={() => fileInput.current?.click()}><Plus size={13} /> Adicionar anexo</button>
           </div>
         )}
 
         {show.repeat && !inSeries && (
-          <div className="form-section">
+          <div className="form-section repeat">
             <h4>{REPEAT_TITLE[kind]}</h4>
-            <label className="radio"><input type="radio" checked={repeatKind === 'fixed'} onChange={() => setRepeatKind('fixed')} /> Lançamento fixo</label>
-            <label className="radio"><input type="radio" checked={repeatKind === 'installment'} onChange={() => setRepeatKind('installment')} /> Lançamento parcelado</label>
+            <Segmented value={repeatKind} onChange={setRepeatKind} options={[['fixed', 'Fixo'], ['installment', 'Parcelado']]} />
             {repeatKind === 'fixed' ? (
               <div className="field">
                 <label htmlFor="period">Período de lançamento</label>
@@ -339,11 +386,13 @@ export function TransactionForm({
 
         {error && <div className="error">{error}</div>}
         <div className="form-actions">
-          <button type="button" className="mini-btn" onClick={del} title={editing ? 'Excluir' : 'Descartar'} disabled={busy}><Trash2 size={15} /></button>
-          <button type="submit" className="save-btn" disabled={busy} title="Salvar"><Check size={24} /></button>
-          {editing ? <span style={{ width: 32 }} /> : (
-            <button type="button" className="mini-btn" onClick={() => save(true)} disabled={busy} title="Salvar e criar outro"><CopyPlus size={15} /></button>
-          )}
+          <button type="button" className="mini-btn" onClick={del} title={editing ? 'Excluir' : 'Descartar'} aria-label={editing ? 'Excluir' : 'Descartar'} disabled={busy}><Trash2 size={18} /></button>
+          <div className="row" style={{ gap: 14 }}>
+            {!editing && (
+              <button type="button" className="btn" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} /> Salvar e criar outro</button>
+            )}
+            <button type="submit" className="save-btn" disabled={busy} title="Salvar" aria-label="Salvar"><Check size={30} strokeWidth={2.5} /></button>
+          </div>
         </div>
       </form>
     </Modal>

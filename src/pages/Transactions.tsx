@@ -1,27 +1,43 @@
 import {
-  ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Minus, Paperclip, Plus, Repeat2, Search, ThumbsDown, ThumbsUp, X,
+  ArrowLeftRight, ArrowRight, ChevronLeft, ChevronRight, CreditCard, Info, Paperclip, Plus, Receipt, Repeat2, Search, ThumbsUp, X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { AccountAvatar, CategoryAvatar } from '../components/Avatars'
+import { Link, useNavigate } from 'react-router-dom'
+import { AccountAvatar, AccountIcon, CategoryAvatar } from '../components/Avatars'
+import { FilterMenu } from '../components/FilterMenu'
 import { Popover } from '../components/Picker'
 import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
+import { Modal, Segmented } from '../components/ui'
 import { periodSummary } from '../lib/balances'
+import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
 import { useSeriesUpkeep } from '../lib/entries'
 import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
-import { formatCents, formatSigned } from '../lib/money'
-import { byId, useAccounts, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
+
+const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+/** "sábado, 18/10" */
+function dayLabel(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}, ${shortDate(iso).slice(0, 5)}`
+}
+import { formatBRL, formatCents, formatSigned } from '../lib/money'
+import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction, TxKind } from '../lib/types'
 
-const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'Receitas'], ['transfer', 'Transferências']]
+const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'Receitas'], ['transfer', 'Transferências'], ['payment', 'Pagamentos de fatura']]
+
+/** "Fluxo de caixa" shows money moving in accounts; "Todos os lançamentos" every entry, card purchases included. */
+type ViewMode = 'cash' | 'all'
+const MODE_KEY = 'tally-view-mode'
 
 export default function Transactions() {
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts()
   const { data: categories = [] } = useCategories()
   const { data: txs = [], isLoading } = useTransactions()
   const { data: tags = [] } = useTags()
+  const { data: cards = [] } = useCards()
+  const navigate = useNavigate()
   const seriesMap = byId(useSeries().data)
   const { update } = useTransactionMutations()
   const { open } = useTxForm()
@@ -32,11 +48,23 @@ export default function Transactions() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [searching, setSearching] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState(false)
+  const [mode, setModeState] = useState<ViewMode>(() => {
+    try { return localStorage.getItem(MODE_KEY) === 'all' ? 'all' : 'cash' } catch { return 'cash' }
+  })
+  const [choosingMode, setChoosingMode] = useState(false)
+  const setMode = (m: ViewMode) => {
+    setModeState(m)
+    try { localStorage.setItem(MODE_KEY, m) } catch { /* ignore */ }
+  }
 
   const accountMap = byId(accounts)
+  const cardMap = byId(cards)
+  const filteredCard = accountFilter ? cardMap.get(accountFilter) : undefined
+  // Cash flow swaps card purchases for their invoices; the full list hides
+  // invoices and their payments so nothing counts twice.
+  const ledger = useMemo(() => cashFlow(cards, txs), [cards, txs])
+  const source = useMemo(() => (mode === 'cash' ? ledger : txs.filter((tx) => tx.kind !== 'payment')), [mode, ledger, txs])
   const categoryMap = byId(categories)
   const from = monthStart(month)
   const to = monthEnd(month)
@@ -45,9 +73,11 @@ export default function Transactions() {
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase()
-    return txs
+    return source
       .filter((tx) => tx.date >= from && tx.date < to)
-      .filter((tx) => !accountFilter || tx.account_id === accountFilter || tx.to_account_id === accountFilter)
+      .filter((tx) => !accountFilter || (filteredCard
+        ? tx.card_id === accountFilter
+        : (tx.account_id === accountFilter || tx.to_account_id === accountFilter)))
       .filter((tx) => !kindFilter || tx.kind === kindFilter)
       .filter((tx) => {
         if (!categoryFilter) return true
@@ -57,7 +87,7 @@ export default function Transactions() {
       .filter((tx) => !tagFilter || tx.tag_ids.includes(tagFilter))
       .filter((tx) => !needle || tx.description.toLowerCase().includes(needle))
       .sort((a, b) => (a.date === b.date ? b.created_at.localeCompare(a.created_at) : b.date.localeCompare(a.date)))
-  }, [txs, from, to, accountFilter, kindFilter, categoryFilter, tagFilter, search, categoryMap])
+  }, [source, from, to, accountFilter, filteredCard, kindFilter, categoryFilter, tagFilter, search, categoryMap])
 
   const groups = useMemo(() => {
     const out: { date: string; items: Transaction[] }[] = []
@@ -70,7 +100,10 @@ export default function Transactions() {
   }, [rows])
 
   const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts
-  const summary = periodSummary(summaryAccounts, txs, from, to)
+  const summary = periodSummary(summaryAccounts, ledger, from, to)
+  // A plain total (income minus expenses, transfers left out) when the list isn't about account balances.
+  const simpleTotal = mode === 'all' || !!filteredCard
+  const total = rows.reduce((s, tx) => s + (tx.kind === 'income' ? tx.amount_cents : tx.kind === 'expense' ? -tx.amount_cents : 0), 0)
   const filteredAccount = accountFilter ? accountMap.get(accountFilter) : undefined
   const selected = selectedId ? txs.find((tx) => tx.id === selectedId) : undefined
   const hasFilters = accountFilter || kindFilter || categoryFilter || tagFilter || search
@@ -81,12 +114,11 @@ export default function Transactions() {
     setCategoryFilter(null)
     setTagFilter(null)
     setSearch('')
-    setSearching(false)
   }
 
   function signedAmount(tx: Transaction): number {
     if (tx.kind === 'income') return tx.amount_cents
-    if (tx.kind === 'expense') return -tx.amount_cents
+    if (tx.kind === 'expense' || tx.kind === 'payment') return -tx.amount_cents
     if (accountFilter === tx.to_account_id) return tx.amount_cents
     if (accountFilter === tx.account_id) return -tx.amount_cents
     return tx.amount_cents
@@ -95,8 +127,8 @@ export default function Transactions() {
   if (!loadingAccounts && accounts.length === 0) {
     return (
       <main className="page page-narrow">
+        <header className="page-head"><h1>Lançamentos</h1><MonthNav month={month} setMonth={setMonth} /></header>
         <div className="card">
-          <div className="tx-toolbar"><MonthNav month={month} setMonth={setMonth} /></div>
           <div className="empty">
             <div className="empty-ghost"><div /><div /><div /></div>
             <h3>Crie sua primeira conta</h3>
@@ -110,35 +142,46 @@ export default function Transactions() {
 
   return (
     <main className="page page-narrow">
-      <div className="card">
-        <div className="tx-toolbar">
+      <header className="page-head">
+        <h1>Lançamentos</h1>
+        <div className="head-actions">
+          <MonthNav month={month} setMonth={setMonth} />
+          <div className="segmented" role="group" aria-label="Modo de visualização">
+            <button className={mode === 'cash' ? 'on' : ''} aria-pressed={mode === 'cash'} onClick={() => setMode('cash')}>Fluxo de caixa</button>
+            <button className={mode === 'all' ? 'on' : ''} aria-pressed={mode === 'all'} onClick={() => setMode('all')}>Todos os lançamentos</button>
+          </div>
+          <button className="icon-btn" onClick={() => setChoosingMode(true)} aria-label="Sobre os modos de visualização" title="Sobre os modos de visualização"><Info size={20} /></button>
           <Popover
             popClassName="menu-dark"
+            className="new-menu"
             trigger={(_, toggle) => (
-              <button className="btn btn-dark" onClick={toggle}><Plus size={16} /> Lançamento</button>
+              <button className="icon-btn" style={{ background: 'var(--yellow)' }} onClick={toggle} aria-label="Novo lançamento" title="Novo lançamento"><Plus size={20} /></button>
             )}
           >
             {(close) => (
               <>
-                {([['expense', 'Nova Despesa', 'D'], ['income', 'Nova Receita', 'R'], ['transfer', 'Nova Transferência', 'T']] as const).map(([kind, label, key]) => (
+                {([['expense', 'Nova despesa', 'D'], ['income', 'Nova receita', 'R'], ['transfer', 'Nova transferência', 'T']] as const).map(([kind, label, key]) => (
                   <button key={kind} onClick={() => { close(); open({ kind, accountId: accountFilter ?? undefined }) }}>
-                    {label} <span className="kbd">letra {key}</span>
+                    {label} <span className="kbd">{key}</span>
                   </button>
                 ))}
               </>
             )}
           </Popover>
-          <MonthNav month={month} setMonth={setMonth} />
         </div>
+      </header>
 
         <div className="filters">
           <div className="filter-bar">
             <FilterMenu
-              label={filteredAccount?.name ?? 'Origem'}
+              label={filteredAccount?.name ?? filteredCard?.name ?? 'Origem'}
               on={!!accountFilter}
               items={[
-                { id: null, label: 'Todas as contas' },
+                { id: null, label: cards.length ? 'Todas contas/cartões' : 'Todas as contas' },
+                ...(cards.length ? [{ id: null, label: 'Contas', header: true }] : []),
                 ...accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, label: a.name })),
+                ...(cards.length ? [{ id: null, label: 'Cartões', header: true }] : []),
+                ...cards.filter((c) => !c.archived).map((c) => ({ id: c.id, label: c.name })),
               ]}
               value={accountFilter}
               onChange={setAccountFilter}
@@ -167,17 +210,16 @@ export default function Transactions() {
               value={tagFilter}
               onChange={setTagFilter}
             />
-            {searching ? (
-              <input autoFocus placeholder="Buscar pela descrição" value={search} onChange={(e) => setSearch(e.target.value)} />
-            ) : (
-              <span className="spacer" />
-            )}
-            {hasFilters && <button className="muted small" onClick={clearFilters}>Limpar</button>}
           </div>
-          <button className="round-btn" onClick={() => setSearching((s) => !s)} aria-label="Buscar">
-            {searching ? <X size={16} /> : <Search size={16} />}
-          </button>
+          <label className="search-pill">
+            <Search size={18} />
+            <input placeholder="Buscar lançamento" aria-label="Buscar lançamento" value={search} onChange={(e) => setSearch(e.target.value)} />
+            {search && <button onClick={() => setSearch('')} aria-label="Limpar busca"><X size={16} /></button>}
+          </label>
+          {hasFilters && <button className="fil" onClick={clearFilters}><X size={16} /> Limpar</button>}
         </div>
+
+        <section className="card list-card" aria-label="Lista de lançamentos">
 
         {isLoading ? (
           <div className="empty"><p>Carregando…</p></div>
@@ -192,49 +234,69 @@ export default function Transactions() {
           <div className="tx-list">
             {groups.map((g) => (
               <section key={g.date}>
-                <div className={`day-head ${g.date === t ? 'today' : ''}`}>{g.date === t ? 'Hoje' : shortDate(g.date)}</div>
+                <div className={`day-head ${g.date === t ? 'today' : ''}`}>{g.date === t ? `Hoje · ${dayLabel(g.date)}` : dayLabel(g.date)}</div>
                 {g.items.map((tx) => {
                   const category = tx.category_id ? categoryMap.get(tx.category_id) : undefined
                   const parent = category?.parent_id ? categoryMap.get(category.parent_id) : undefined
-                  const account = accountMap.get(tx.account_id)
+                  const account = tx.account_id ? accountMap.get(tx.account_id) : undefined
+                  const card = tx.card_id ? cardMap.get(tx.card_id) : undefined
                   const amount = signedAmount(tx)
                   const series = tx.series_id ? seriesMap.get(tx.series_id) : undefined
+                  const cardIcon = card && <AccountIcon icon={card.icon} color={card.color} size={22} />
+                  const openRow = () => {
+                    if (tx.virtual && tx.card_id && tx.invoice_month) navigate(`/cartoes/${tx.card_id}?fatura=${tx.invoice_month.slice(0, 7)}`)
+                    else setSelectedId(tx.id)
+                  }
+                  const sub = tx.kind === 'transfer' ? 'Transferência'
+                    : tx.kind === 'payment' || tx.virtual ? `${card?.name ?? 'Cartão'} · ${monthLabel(toMonth(tx.invoice_month!)).split(' ')[0].toLowerCase()}`
+                    : category ? (parent ? `${parent.name} › ${category.name}` : category.name) : 'Sem categoria'
                   return (
-                    <div key={tx.id} className={`tx-row ${tx.id === selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(tx.id)}>
+                    <div key={tx.id} className={`tx-row ${tx.id === selectedId ? 'selected' : ''}`} onClick={openRow}>
                       {tx.kind === 'transfer' ? (
-                        <span className="avatar" style={{ width: 32, height: 32, background: 'var(--green-dark)', color: '#fff' }}><ArrowLeftRight size={15} /></span>
+                        <span className="avatar cat" style={{ width: 40, height: 40, background: 'var(--blue)' }}><ArrowLeftRight size={18} /></span>
+                      ) : tx.virtual || tx.kind === 'payment' ? (
+                        <span className="avatar cat" style={{ width: 40, height: 40, background: tx.virtual ? 'var(--invoice)' : 'var(--peach)' }}>{tx.virtual ? <Receipt size={18} /> : <CreditCard size={18} />}</span>
                       ) : (
                         <CategoryAvatar category={parent ?? category} />
                       )}
                       <div className="tx-desc">
                         {tx.description || (tx.kind === 'transfer' ? 'Transferência' : category?.name ?? 'Sem descrição')}
+                        {series?.kind === 'fixed' && <Repeat2 size={15} className="fixed" aria-label="Lançamento fixo" />}
                         {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
-                        {tx.attachments.length > 0 && <Paperclip size={11} className="clip" />}
-                        {category && parent && <span className="sub">{category.name}</span>}
+                        {tx.attachments.length > 0 && <Paperclip size={13} className="clip" aria-label="Com anexo" />}
+                        <span className="sub">{sub}</span>
                       </div>
                       <div className="tx-where">
-                        {series?.kind === 'fixed' && <Repeat2 size={13} aria-label="Lançamento fixo" />}
                         {tx.kind === 'transfer' ? (
                           <>
-                            <AccountAvatar account={account} size={18} />
-                            <ChevronRight size={12} />
-                            <AccountAvatar account={tx.to_account_id ? accountMap.get(tx.to_account_id) : undefined} size={18} />
+                            <AccountAvatar account={account} size={22} />
+                            <ArrowRight size={14} />
+                            <AccountAvatar account={tx.to_account_id ? accountMap.get(tx.to_account_id) : undefined} size={22} />
                           </>
-                        ) : (
-                          <><AccountAvatar account={account} size={18} /> {account?.name}</>
+                        ) : tx.kind === 'payment' || tx.virtual ? (
+                          <><AccountAvatar account={account} size={22} /><ArrowRight size={14} />{cardIcon}</>
+                        ) : card ? cardIcon : (
+                          <AccountAvatar account={account} size={22} />
                         )}
                       </div>
-                      <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''}`}>
+                      <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''} ${tx.kind === 'transfer' && !accountFilter ? 'transfer' : ''}`}>
                         {tx.kind === 'transfer' && !accountFilter ? formatCents(amount) : formatSigned(amount)}
                       </div>
-                      <button
-                        className={`paid-btn ${tx.paid ? '' : 'pending'}`}
-                        title={tx.paid ? 'Pago — clique para marcar como pendente' : 'Pendente — clique para marcar como pago'}
-                        onClick={(e) => { e.stopPropagation(); update.mutate({ id: tx.id, patch: { paid: !tx.paid } }) }}
-                        disabled={tx.kind === 'transfer'}
-                      >
-                        {tx.paid ? <ThumbsUp size={15} fill="currentColor" /> : <ThumbsDown size={15} fill="currentColor" />}
-                      </button>
+                      {isCardPurchase(tx) ? <span className="paid-spacer" /> : (
+                        <button
+                          className={`paid-btn ${tx.paid ? '' : 'pending'}`}
+                          title={tx.virtual ? 'Pagar fatura' : tx.paid ? 'Pago. Clique para marcar como pendente' : 'Pendente. Clique para marcar como pago'}
+                          aria-label={tx.virtual ? 'Pagar fatura' : tx.paid ? 'Pago. Desmarcar' : 'Marcar como pago'}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (tx.virtual) open({ kind: 'payment', cardId: tx.card_id!, invoiceMonth: tx.invoice_month! })
+                            else update.mutate({ id: tx.id, patch: { paid: !tx.paid } })
+                          }}
+                          disabled={tx.kind === 'transfer' || tx.kind === 'payment'}
+                        >
+                          <ThumbsUp size={18} />
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -242,34 +304,28 @@ export default function Transactions() {
             ))}
           </div>
         )}
+        </section>
 
-        <footer className="tx-footer">
-          <div className="summary">
-            {filteredAccount && (
-              <>
-                <div className="line"><span>Conta</span><b className="row" style={{ gap: 6, color: 'var(--text)' }}><AccountAvatar account={filteredAccount} size={16} />{filteredAccount.name}</b></div>
-                <hr />
-              </>
-            )}
-            {expanded && (
-              <>
-                <div className="line"><span>saldo anterior</span><b style={{ color: 'var(--text)' }}>{formatCents(summary.previous)}</b></div>
-                <hr />
-                <div className="line"><span>receita realizada</span><b className="income">{formatCents(summary.incomePaid)}</b></div>
-                <div className="line"><span>receita prevista</span><b>{formatCents(summary.incomeAll)}</b></div>
-                <div className="line"><span>despesa realizada</span><b className="expense">{formatCents(-summary.expensePaid)}</b></div>
-                <div className="line"><span>despesa prevista</span><b>{formatCents(-summary.expenseAll)}</b></div>
-                <hr />
-              </>
-            )}
-            <div className="line"><span>saldo</span><b className="big balance">{formatCents(summary.balance)}</b></div>
-            <div className="line"><span>previsto</span><b className="big">{formatCents(summary.forecast)}</b></div>
-          </div>
-          <button className="icon-btn" style={{ border: 0, background: expanded ? '#e7e8e4' : 'transparent' }} onClick={() => setExpanded((e) => !e)} aria-label={expanded ? 'Recolher resumo' : 'Expandir resumo'}>
-            {expanded ? <Minus size={16} /> : <Plus size={16} />}
-          </button>
-        </footer>
-      </div>
+        <section className="card summary-card" aria-label="Resumo">
+          {filteredAccount && <div><div className="k">Conta</div><div className="row" style={{ marginTop: 6, fontWeight: 800 }}><AccountAvatar account={filteredAccount} size={24} />{filteredAccount.name}</div></div>}
+          {filteredCard && <div><div className="k">Cartão</div><div className="row" style={{ marginTop: 6, fontWeight: 800 }}><AccountIcon icon={filteredCard.icon} color={filteredCard.color} size={24} />{filteredCard.name}</div></div>}
+          {simpleTotal ? (
+            <>
+              <div><div className="k">Entradas</div><div className="v income">{formatBRL(rows.filter((tx) => tx.kind === 'income').reduce((s, tx) => s + tx.amount_cents, 0))}</div></div>
+              <div><div className="k">Saídas</div><div className="v expense">{formatBRL(rows.filter((tx) => tx.kind === 'expense').reduce((s, tx) => s + tx.amount_cents, 0))}</div></div>
+              <div className="boxed"><div className="k">Total</div><div className="v">{formatCents(total)}</div></div>
+            </>
+          ) : (
+            <>
+              <div><div className="k">Saldo anterior</div><div className="v">{formatBRL(summary.previous)}</div></div>
+              <div><div className="k">Receitas</div><div className="v income">{formatBRL(summary.incomePaid)}</div><small>previsto {formatBRL(summary.incomeAll)}</small></div>
+              <div><div className="k">Despesas</div><div className="v expense">{formatBRL(summary.expensePaid)}</div><small>previsto {formatBRL(summary.expenseAll)}</small></div>
+              <div><div className="k">Saldo</div><div className="v">{formatBRL(summary.balance)}</div></div>
+              <div className="boxed"><div className="k">Previsto</div><div className="v">{formatBRL(summary.forecast)}</div></div>
+            </>
+          )}
+        </section>
+      {choosingMode && <ModeModal mode={mode} onChange={setMode} onClose={() => setChoosingMode(false)} />}
       {selected && (
         <TransactionPanel
           tx={selected}
@@ -285,43 +341,38 @@ export default function Transactions() {
   )
 }
 
+const MODE_TEXT: Record<ViewMode, string[]> = {
+  cash: [
+    'Só o dinheiro que entra e sai das suas contas;',
+    'As compras avulsas do cartão não aparecem;',
+    'Faturas e pagamentos de fatura aparecem normalmente;',
+    'No resumo, você vê o saldo e a previsão de saldo do período.',
+  ],
+  all: [
+    'Cada lançamento seu, um por um;',
+    'Incluindo todas as compras no cartão de crédito;',
+    'Faturas e pagamentos de fatura ficam de fora (pra não contar a mesma despesa duas vezes);',
+    'No resumo, só as entradas e saídas do período.',
+  ],
+}
+
+function ModeModal({ mode, onChange, onClose }: { mode: ViewMode; onChange: (m: ViewMode) => void; onClose: () => void }) {
+  return (
+    <Modal title="Modo de visualização" onClose={onClose}>
+      <Segmented value={mode} onChange={onChange} options={[['cash', 'Fluxo de caixa'], ['all', 'Todos os lançamentos']]} />
+      <p style={{ fontWeight: 600, fontSize: 13, margin: '18px 0 6px' }}>O que você vê neste modo:</p>
+      <ul className="mode-list">{MODE_TEXT[mode].map((line) => <li key={line}>{line}</li>)}</ul>
+      <button className="btn btn-primary" style={{ display: 'flex', margin: '18px auto 0', minWidth: 90 }} onClick={onClose}>OK</button>
+    </Modal>
+  )
+}
+
 function MonthNav({ month, setMonth }: { month: ReturnType<typeof currentMonth>; setMonth: (m: ReturnType<typeof currentMonth>) => void }) {
   return (
     <div className="month-nav">
-      <button onClick={() => setMonth(addMonths(month, -1))} aria-label="Mês anterior"><ChevronLeft size={18} /></button>
-      <span>{monthLabel(month)}</span>
-      <button onClick={() => setMonth(addMonths(month, 1))} aria-label="Próximo mês"><ChevronRight size={18} /></button>
+      <button onClick={() => setMonth(addMonths(month, -1))} aria-label="Mês anterior"><ChevronLeft size={20} /></button>
+      <span>{monthLabel(month).toLowerCase()}</span>
+      <button onClick={() => setMonth(addMonths(month, 1))} aria-label="Próximo mês"><ChevronRight size={20} /></button>
     </div>
   )
 }
-
-function FilterMenu<T extends string | null>({
-  label, on, items, value, onChange,
-}: {
-  label: string
-  on: boolean
-  items: { id: T | null; label: string; sub?: boolean }[]
-  value: T | null
-  onChange: (v: T | null) => void
-}) {
-  return (
-    <Popover
-      trigger={(_, toggle) => (
-        <button className={on ? 'on' : ''} onClick={toggle}>{label} <ChevronDown size={13} /></button>
-      )}
-    >
-      {(close) =>
-        items.map((item) => (
-          <button
-            key={item.id ?? 'all'}
-            className={`picker-item ${item.sub ? 'sub' : ''} ${item.id === value ? 'on' : ''}`}
-            onClick={() => { onChange(item.id); close() }}
-          >
-            {item.label}
-          </button>
-        ))
-      }
-    </Popover>
-  )
-}
-

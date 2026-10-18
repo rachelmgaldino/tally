@@ -1,8 +1,8 @@
-import { CirclePlus, Image, Info } from 'lucide-react'
+import { CirclePlus, Image, Info, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AccountIconPicker, type IconChoice } from '../../components/AccountIconPicker'
-import { AccountAvatar, AccountIcon } from '../../components/Avatars'
+import { AccountAvatar, AccountIcon, pastel } from '../../components/Avatars'
 import { useToast } from '../../components/Toast'
 import { Modal, MoneyInput, Toggle } from '../../components/ui'
 import { accountBalance } from '../../lib/balances'
@@ -29,19 +29,24 @@ export default function Accounts() {
     <>
       <div className="settings-head">
         <h2>Contas</h2>
-        <button className="btn btn-soft" onClick={() => setEditing('new')}><CirclePlus size={15} /> Nova conta</button>
+        <button className="btn btn-soft" onClick={() => setEditing('new')}><CirclePlus size={16} /> Nova conta</button>
       </div>
-      {sorted.length === 0 && <p className="muted">Nenhuma conta ainda. Crie a primeira para começar.</p>}
-      {sorted.map((a) => (
-        <button key={a.id} className="list-row" style={{ width: '100%', textAlign: 'left', opacity: a.archived ? 0.5 : 1 }} onClick={() => setEditing(a)}>
-          <AccountAvatar account={a} size={32} />
-          <div>
-            <div>{a.name}</div>
-            <div className="muted small">{a.archived ? 'Arquivada' : a.exclude_from_total ? 'Fora do saldo geral' : 'Conta manual'}</div>
-          </div>
-          <span className="actions balance">{formatBRL(accountBalance(a, txs).current)}</span>
-        </button>
-      ))}
+      <div className="acc-grid">
+        {sorted.map((a) => (
+          <button key={a.id} className={`acc ${a.archived ? 'archived' : ''}`} style={{ background: pastel(a.color, 0.7) }} onClick={() => setEditing(a)}>
+            <div className="top">
+              <AccountAvatar account={a} />
+              <b>{a.name}</b>
+              <span className="icon-btn sm" aria-hidden="true"><Pencil size={15} /></span>
+            </div>
+            <div>
+              <div className="v">{formatBRL(accountBalance(a, txs).current)}</div>
+              <small>{a.archived ? 'Arquivada' : a.exclude_from_total ? 'Fora do saldo geral' : 'Conta manual'}</small>
+            </div>
+          </button>
+        ))}
+        <button className="acc-new" onClick={() => setEditing('new')}><CirclePlus size={18} /> Nova conta</button>
+      </div>
       {editing && <AccountModal account={editing === 'new' ? undefined : editing} onClose={close} />}
     </>
   )

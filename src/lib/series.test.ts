@@ -31,7 +31,7 @@ describe('instalments', () => {
 const template: NewTransaction = {
   kind: 'expense', description: 'Shopee', amount_cents: 8900, date: '2026-09-22', paid: true,
   account_id: 'inter', to_account_id: null, category_id: null, notes: null,
-  series_id: null, series_index: null, tag_ids: [], attachments: [],
+  series_id: null, series_index: null, tag_ids: [], attachments: [], card_id: null, invoice_month: null,
 }
 
 describe('seriesRows', () => {

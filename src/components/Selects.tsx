@@ -1,7 +1,7 @@
 import { ChevronDown } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import type { Account, Category, CategoryKind } from '../lib/types'
-import { AccountAvatar, CategoryAvatar } from './Avatars'
+import type { Account, Card, Category, CategoryKind } from '../lib/types'
+import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { Popover } from './Picker'
 
 export function AccountSelect({
@@ -92,6 +92,47 @@ export function CategorySelect({
             >
               {depth === 0 && <CategoryAvatar category={category} size={22} />}
               {category.name}
+            </button>
+          ))}
+        </>
+      )}
+    </Popover>
+  )
+}
+
+/** "Conta/Cartão": accounts, then cards (square icons) for expenses and income. */
+export function SourceSelect({
+  accounts, cards, value, onChange,
+}: {
+  accounts: Account[]
+  cards: Card[]
+  value: string | null
+  onChange: (id: string) => void
+}) {
+  const account = accounts.find((a) => a.id === value)
+  const card = cards.find((c) => c.id === value)
+  return (
+    <Popover
+      trigger={(_, toggle) => (
+        <button type="button" className="input" onClick={toggle}>
+          {account && <><AccountAvatar account={account} size={20} /> <span>{account.name}</span></>}
+          {card && <><AccountIcon icon={card.icon} color={card.color} size={20} square /> <span>{card.name}</span></>}
+          {!account && !card && <span className="muted">Selecione</span>}
+        </button>
+      )}
+    >
+      {(close) => (
+        <>
+          {cards.length > 0 && <div className="picker-group">Contas</div>}
+          {accounts.map((a) => (
+            <button type="button" key={a.id} className={`picker-item ${a.id === value ? 'on' : ''}`} onClick={() => { onChange(a.id); close() }}>
+              <AccountAvatar account={a} size={22} /> {a.name}
+            </button>
+          ))}
+          {cards.length > 0 && <div className="picker-group">Cartões</div>}
+          {cards.map((c) => (
+            <button type="button" key={c.id} className={`picker-item ${c.id === value ? 'on' : ''}`} onClick={() => { onChange(c.id); close() }}>
+              <AccountIcon icon={c.icon} color={c.color} size={22} square /> {c.name}
             </button>
           ))}
         </>

@@ -35,7 +35,7 @@ let n = 0
 const tx = (o: Partial<Transaction>): Transaction => ({
   id: String(n++), kind: 'expense', description: '', amount_cents: 0, date: '2026-10-01', paid: true,
   account_id: 'nu', to_account_id: null, category_id: null, notes: null, created_at: '',
-  series_id: null, series_index: null, tag_ids: [], attachments: [], ...o,
+  series_id: null, series_index: null, tag_ids: [], attachments: [], card_id: null, invoice_month: null, ...o,
 })
 
 // Mirrors Rachel's Organizze screenshots for October 2026.
