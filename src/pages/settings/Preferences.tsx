@@ -31,10 +31,10 @@ export default function Preferences() {
     <>
       <header className="page-head"><h1>{s.title}</h1></header>
       <section className="card card-pad prefs">
-        <h3 className="section-h">{s.languageSection}</h3>
+        {/* In both languages, so it can be found whichever one is showing. */}
+        <h3 className="section-h">Idioma · Language</h3>
         <div className="pref-row">
-          {/* In both languages, so it can be found whichever one is showing. */}
-          <div><b>Idioma · Language</b><small>{s.languageNote}</small></div>
+          <div><b>{s.appLanguage}</b><small>{s.languageNote}</small></div>
           <Segmented<Language> value={prefs.language} onChange={(language) => change({ language })} options={LANGUAGES.map((l): [Language, string] => [l.id, l.name])} />
         </div>
       </section>

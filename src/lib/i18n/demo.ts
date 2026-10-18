@@ -49,7 +49,7 @@ export const en: typeof pt = {
   phonePlan: 'Phone plan',
   gym: 'Gym',
   englishCourse: 'Spanish class',
-  splitBills: "Move money for this month's bills",
+  splitBills: 'Money for the bills',
   toSavings: 'Put into savings',
   laptop: 'Laptop',
   glasses: 'New glasses',
