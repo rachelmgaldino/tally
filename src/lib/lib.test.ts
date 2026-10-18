@@ -66,8 +66,17 @@ describe('balances', () => {
     const s = periodSummary([accounts[0]], txs, '2026-11-01', '2026-12-01')
     expect(s.previous).toBe(203150)
     expect(s.incomePaid).toBe(0)
+    expect(s.balance).toBe(203150)
     expect(s.incomeAll).toBe(180000)
     expect(s.forecast).toBe(383150)
+  })
+  it('starts a month from the last one\'s Previsto, unpaid bills included', () => {
+    const late = [...txs, tx({ kind: 'expense', amount_cents: 35792, date: '2026-10-05', paid: false })]
+    const oct = periodSummary([accounts[0]], late, '2026-10-01', '2026-11-01')
+    const nov = periodSummary([accounts[0]], late, '2026-11-01', '2026-12-01')
+    expect(nov.previous).toBe(oct.forecast)
+    expect(nov.balance).toBe(oct.forecast)
+    expect(nov.forecast).toBe(oct.forecast + 180000)
   })
   it('computes account balances', () => {
     expect(accountBalance(accounts[1], txs)).toEqual({ current: -20000, forecast: -20000 })
