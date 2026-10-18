@@ -5,7 +5,7 @@ import { invoiceName } from '../lib/cards'
 import { longDate } from '../lib/dates'
 import { t } from '../lib/i18n'
 import { deleteEntries, deleteFromHere, useRefresh } from '../lib/entries'
-import { formatBRL } from '../lib/money'
+import { currencyOf, formatMoney, symbol } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import { PERIODS } from '../lib/series'
 import type { Attachment, Transaction } from '../lib/types'
@@ -42,6 +42,8 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
   const isPayment = tx.kind === 'payment'
   const to = tx.to_account_id ? accounts.get(tx.to_account_id) : undefined
   const series = tx.series_id ? seriesMap.get(tx.series_id) : undefined
+  const currency = currencyOf(card ?? account)
+  const landed = tx.kind === 'transfer' && tx.to_amount_cents ? tx.to_amount_cents : null
   const hasTags = tx.tag_ids.some((id) => tags.has(id))
 
   // Neighbouring entries of the same series, for the ‹ › arrows.
@@ -124,7 +126,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
           </div>
         </div>
         <div className={`ph-det-amount phone-only ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>
-          {tx.kind === 'income' ? '+' : tx.kind === 'transfer' ? '' : '−'}{formatBRL(tx.amount_cents)}
+          {tx.kind === 'income' ? '+' : tx.kind === 'transfer' ? '' : '−'}{formatMoney(tx.amount_cents, currency)}
         </div>
 
         {seriesLabel && (
@@ -145,11 +147,17 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
               </span>
             </div>
           )}
-          <div className="detail desk-only"><span className="k">{s.amount}</span><span className={`value ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>{formatBRL(tx.amount_cents)}</span></div>
+          <div className="detail desk-only"><span className="k">{s.amount}</span><span className={`value ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>{formatMoney(tx.amount_cents, currency)}</span></div>
           {tx.kind === 'transfer' ? (
             <>
               <div className="detail"><span className="k">{s.fromAccount}</span><span className="row"><AccountAvatar account={account} size={24} />{account?.name}</span></div>
               <div className="detail"><span className="k">{s.toAccount}</span><span className="row"><AccountAvatar account={to} size={24} />{to?.name}</span></div>
+              {landed && (
+                <>
+                  <div className="detail"><span className="k">{s.landed}</span><span className="value">{formatMoney(landed, currencyOf(to))}</span></div>
+                  <div className="detail"><span className="k">{s.rate}</span><span>{symbol(currencyOf(to))} 1 = {formatMoney(Math.round((tx.amount_cents / landed) * 100), currency)}</span></div>
+                </>
+              )}
             </>
           ) : (
             <>

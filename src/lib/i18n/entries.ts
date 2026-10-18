@@ -92,7 +92,7 @@ export const pt = {
   deleted: (n: number): string => (n === 1 ? 'Lançamento excluído.' : `${n} lançamentos excluídos.`),
 
   // CSV export
-  csvHeaders: ['Data', 'Descrição', 'Tipo', 'Categoria', 'Conta/Cartão', 'Valor', 'Situação'],
+  csvHeaders: ['Data', 'Descrição', 'Tipo', 'Categoria', 'Conta/Cartão', 'Valor', 'Moeda', 'Situação'],
   csvPaid: 'Pago',
   csvPending: 'Pendente',
   csvFile: (from: string) => `lancamentos-${from}.csv`,
@@ -135,6 +135,7 @@ export const pt = {
     incomeLegend: 'entradas',
     expenseLegend: 'saídas',
     keptLegend: 'guardado',
+    sentLegend: 'para outras moedas',
     forecastEnd: (isMonth: boolean): string => (isMonth ? 'Previsto pro fim do mês' : 'Previsto pro fim do período'),
     previousBalance: 'Saldo anterior',
     currentBalance: 'Saldo atual',
@@ -149,6 +150,7 @@ export const pt = {
     negative: ' negativo',
     left: 'sobra',
     kept: 'guardado',
+    sent: 'outras moedas',
   },
 }
 
@@ -234,7 +236,7 @@ export const en: typeof pt = {
   deleteText: "They'll leave the list and the balances. This can't be undone.",
   deleted: (n) => (n === 1 ? 'Transaction deleted.' : `${n} transactions deleted.`),
 
-  csvHeaders: ['Date', 'Description', 'Type', 'Category', 'Account/Card', 'Amount', 'Status'],
+  csvHeaders: ['Date', 'Description', 'Type', 'Category', 'Account/Card', 'Amount', 'Currency', 'Status'],
   csvPaid: 'Paid',
   csvPending: 'Pending',
   csvFile: (from) => `transactions-${from}.csv`,
@@ -273,6 +275,7 @@ export const en: typeof pt = {
     incomeLegend: 'money in',
     expenseLegend: 'money out',
     keptLegend: 'set aside',
+    sentLegend: 'to other currencies',
     forecastEnd: (isMonth) => (isMonth ? 'Forecast for end of month' : 'Forecast for end of period'),
     previousBalance: 'Previous balance',
     currentBalance: 'Current balance',
@@ -286,5 +289,6 @@ export const en: typeof pt = {
     negative: ' short',
     left: 'left',
     kept: 'set aside',
+    sent: 'other currencies',
   },
 }

@@ -2,7 +2,7 @@ import { Minus, Plus, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { PeriodSummary } from '../lib/balances'
 import { t } from '../lib/i18n'
-import { formatBRL, formatCents } from '../lib/money'
+import { formatMoney, formatCents, type Currency } from '../lib/money'
 
 /**
  * The card at the end of Lançamentos. With balances: the forecast for the end
@@ -11,11 +11,11 @@ import { formatBRL, formatCents } from '../lib/money'
  * button pressed: just the money in and out.
  */
 export function SummaryCard({
-  summary, totals, totalsOnly, onToggle, title, isMonth, filter,
+  summary, totals, totalsOnly, onToggle, title, isMonth, filter, currency,
 }: {
   summary: PeriodSummary
   /** Paid in and out, plus what is still pending (shown when nothing is paid yet). */
-  totals: { income: number; expense: number; pendingIncome: number; pendingExpense: number; saved: number }
+  totals: { income: number; expense: number; pendingIncome: number; pendingExpense: number; saved: number; sent: number }
   totalsOnly: boolean
   /** Left out when only totals make sense (a card is filtered). */
   onToggle?: () => void
@@ -24,8 +24,11 @@ export function SummaryCard({
   isMonth: boolean
   /** The filtered account or card, if any. */
   filter?: ReactNode
+  /** What the amounts are in: the filtered account's or card's currency, else the Moeda principal. */
+  currency?: Currency
 }) {
   const s = t().entries.card
+  const money = (cents: number) => formatMoney(cents, currency)
   const toggle = onToggle && (
     <button className="summary-toggle" onClick={onToggle} aria-pressed={totalsOnly}
       aria-label={totalsOnly ? s.showBalances : s.showTotals} title={totalsOnly ? s.showBalances : s.showTotals}>
@@ -36,8 +39,9 @@ export function SummaryCard({
   const heroFilter = filter && <div className="sum-hero-filter">{filter}</div>
 
   if (totalsOnly) {
-    const { income, expense, pendingIncome, pendingExpense, saved } = totals
+    const { income, expense, pendingIncome, pendingExpense, saved, sent: sentAll } = totals
     const kept = Math.max(saved, 0)
+    const sent = Math.max(sentAll, 0)
     return (
       <section className="card summary-card" aria-label={s.summary}>
         {head}
@@ -45,10 +49,10 @@ export function SummaryCard({
           <div className="sum-hero">
             {heroFilter}
             <div className="k">{s.periodBalance}</div>
-            <div className="sum-big">{formatBRL(income - expense - saved)}</div>
+            <div className="sum-big">{money(income - expense - saved - sentAll)}</div>
           </div>
           <div className="sum-side">
-            {income + expense + kept === 0 ? (
+            {income + expense + kept + sent === 0 ? (
               <p className="sum-pending">
                 {pendingIncome + pendingExpense === 0 ? s.nothing(isMonth) : (
                   <>
@@ -66,9 +70,15 @@ export function SummaryCard({
                   {expense > 0 && <i className="out" style={{ flex: expense }}><span><em>{s.expenseIn}</em>{formatCents(expense)}</span></i>}
                   {/* True to size, so its label sits under the bar instead of stretching it. */}
                   {kept > 0 && <i className="kept" style={{ flex: kept }} />}
+                  {sent > 0 && <i className="sent" style={{ flex: sent }} />}
                 </div>
                 <div className="sum-split-legend"><small>{s.incomeLegend}</small><small>{s.expenseLegend}</small></div>
-                {kept > 0 && <div className="sum-split-kept"><b className="sw kept" />{s.keptLegend} <b className="v">{formatCents(kept)}</b></div>}
+                {(kept > 0 || sent > 0) && (
+                  <div className="sum-split-kept">
+                    {kept > 0 && <span><b className="sw kept" />{s.keptLegend} <b className="v">{formatCents(kept)}</b></span>}
+                    {sent > 0 && <span><b className="sw sent" />{s.sentLegend} <b className="v">{formatCents(sent)}</b></span>}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -77,12 +87,13 @@ export function SummaryCard({
     )
   }
 
-  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast, saved } = summary
+  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast, saved, sent: sentAll } = summary
   const toPay = expenseAll - expensePaid
   const left = Math.max(forecast, 0)
   const short = Math.max(-forecast, 0)
   const kept = Math.max(saved, 0)
-  const whole = expensePaid + toPay + kept + left
+  const sent = Math.max(sentAll, 0)
+  const whole = expensePaid + toPay + kept + sent + left
   return (
     <section className="card summary-card" aria-label={s.summary}>
       {head}
@@ -90,24 +101,25 @@ export function SummaryCard({
         <div className="sum-hero">
           {heroFilter}
           <div className="k">{s.forecastEnd(isMonth)}</div>
-          <div className={`sum-big${forecast < 0 ? ' expense' : ''}`}>{formatBRL(forecast)}</div>
+          <div className={`sum-big${forecast < 0 ? ' expense' : ''}`}>{money(forecast)}</div>
           <div className="sum-minis">
-            <div><span>{s.previousBalance}</span><b>{formatBRL(previous)}</b></div>
-            <div><span>{s.currentBalance}</span><b>{formatBRL(balance)}</b></div>
+            <div><span>{s.previousBalance}</span><b>{money(previous)}</b></div>
+            <div><span>{s.currentBalance}</span><b>{money(balance)}</b></div>
           </div>
         </div>
         <div className="sum-side">
           <div className="sum-side-head">
             <span className="k">{s.money(isMonth)}</span>
-            <small className="sum-sum">{s.moneySum(formatBRL(previous), formatBRL(incomeAll))}<b>{formatBRL(previous + incomeAll)}</b></small>
-            <b className="sum-sum-short">{formatBRL(previous + incomeAll)}</b>
+            <small className="sum-sum">{s.moneySum(money(previous), money(incomeAll))}<b>{money(previous + incomeAll)}</b></small>
+            <b className="sum-sum-short">{money(previous + incomeAll)}</b>
           </div>
-          <div className="sum-bar" role="img" aria-label={s.barAria(formatBRL(expensePaid), formatBRL(toPay), short ? formatBRL(short) : null, formatBRL(left))}>
+          <div className="sum-bar" role="img" aria-label={s.barAria(money(expensePaid), money(toPay), short ? money(short) : null, money(left))}>
             {whole === 0 ? <i style={{ flex: 1 }} /> : (
               <>
                 {expensePaid > 0 && <i className="paid" style={{ flex: expensePaid }} />}
                 {toPay > 0 && <i className="topay" style={{ flex: toPay }} />}
                 {kept > 0 && <i className="kept" style={{ flex: kept }} />}
+                {sent > 0 && <i className="sent" style={{ flex: sent }} />}
                 {left > 0 && <i className="left" style={{ flex: left }} />}
               </>
             )}
@@ -116,6 +128,7 @@ export function SummaryCard({
             <span><b className="sw paid" /><span className="lbl">{s.alreadyPaid}</span> <b className="v">{formatCents(expensePaid)}</b><span className="lbl-after">{s.paidAfter}</span></span>
             <span><b className="sw topay" /><span className="lbl">{s.toPay}</span> <b className="v">{formatCents(toPay)}</b><span className="lbl-after">{s.toPay}</span></span>
             {kept > 0 && <span><b className="sw kept" /><span className="lbl">{s.kept}</span> <b className="v">{formatCents(kept)}</b><span className="lbl-after">{s.kept}</span></span>}
+            {sent > 0 && <span><b className="sw sent" /><span className="lbl">{s.sent}</span> <b className="v">{formatCents(sent)}</b><span className="lbl-after">{s.sent}</span></span>}
             {short > 0
               ? <span className="sum-neg"><TriangleAlert size={14} strokeWidth={2.5} aria-hidden="true" /><b className="v">{formatCents(short)}</b>{s.negative}</span>
               : <span><b className="sw left" /><span className="lbl">{s.left}</span> <b className="v">{formatCents(left)}</b><span className="lbl-after">{s.left}</span></span>}

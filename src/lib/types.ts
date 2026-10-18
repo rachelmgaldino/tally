@@ -9,6 +9,8 @@ export interface Account {
   color: string
   initial_balance_cents: number
   exclude_from_total: boolean
+  /** BRL, USD, CAD, EUR or GBP. Everything in the account is in it. */
+  currency: string
   archived: boolean
   created_at: string
 }
@@ -35,6 +37,8 @@ export interface Transaction {
   /** Null for card purchases, which have card_id instead. */
   account_id: string | null
   to_account_id: string | null
+  /** A transfer between accounts in different currencies: what landed in to_account_id, in its currency. Null otherwise. */
+  to_amount_cents?: number | null
   card_id: string | null
   /** Card entries: the invoice, as the first day of the month it is due (YYYY-MM-01). */
   invoice_month: string | null
@@ -80,6 +84,8 @@ export interface Card {
   closing_day: number
   due_day: number
   payment_account_id: string | null
+  /** The currency the invoice is in. */
+  currency: string
   archived: boolean
   created_at: string
 }

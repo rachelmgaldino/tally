@@ -1,4 +1,4 @@
-// Brazilian banks for the account icon picker. We draw a coloured badge with
+// Brazilian banks (and a few used for money abroad) for the account icon picker. We draw a coloured badge with
 // a short label instead of copying the banks' logo artwork.
 export interface Bank {
   id: string
@@ -36,6 +36,8 @@ export const BANKS: Bank[] = [
   { id: 'will', name: 'Will Bank', label: 'will', bg: '#ffe500', fg: '#111111' },
   { id: 'bmg', name: 'BMG', label: 'bmg', bg: '#f47920', fg: '#ffffff' },
   { id: 'daycoval', name: 'Daycoval', label: 'D', bg: '#0b3d91', fg: '#ffffff' },
+  { id: 'wise', name: 'Wise', label: 'wise', bg: '#9fe870', fg: '#163300' },
+  { id: 'nomad', name: 'Nomad', label: 'N', bg: '#ffd400', fg: '#111111' },
   { id: 'visa', name: 'Visa', label: 'VISA', bg: '#f3f4f1', fg: '#1a1f71' },
   { id: 'mastercard', name: 'Mastercard', label: 'MC', bg: '#f3f4f1', fg: '#eb001b' },
   { id: 'elo', name: 'Elo', label: 'elo', bg: '#111111', fg: '#ffcb05' },

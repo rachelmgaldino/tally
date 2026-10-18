@@ -11,7 +11,7 @@ import type { Card, NewTransaction, Period, Series, Transaction } from './types'
 // It never reads or writes the real account.
 
 // One store per language, so the sample data reads in the language picked.
-const key = () => `tally-demo-5${language() === 'pt-BR' ? '' : `-${language()}`}`
+const key = () => `tally-demo-6${language() === 'pt-BR' ? '' : `-${language()}`}`
 type Store = Record<string, Record<string, unknown>[]>
 
 function load(): Store {
@@ -83,14 +83,17 @@ function seed(): Store {
   const streaming = sub(s.streaming)
   const celular = sub(s.phone)
 
-  const account = (name: string, icon: string, color: string, initial: number, exclude = false) =>
-    ({ id: id(), name, icon, color, initial_balance_cents: initial, exclude_from_total: exclude, archived: false, created_at: now() })
+  const account = (name: string, icon: string, color: string, initial: number, exclude = false, currency = 'BRL') =>
+    ({ id: id(), name, icon, color, initial_balance_cents: initial, exclude_from_total: exclude, currency, archived: false, created_at: now() })
   const nu = account('Nubank', 'bank:nubank', '#820ad1', 320000)
   const inter = account('Inter', 'bank:inter', '#ff7a00', 85000)
   const savings = account(s.savings, 'bank:nubank', '#820ad1', 800000, true)
+  // Money abroad, in its own currencies.
+  const wise = account('Wise', 'bank:wise', '#9fe870', 98000, false, 'CAD')
+  const nomad = account('Nomad', 'bank:nomad', '#ffd400', 42000, false, 'USD')
 
   const card = (name: string, icon: string, color: string, limit: number, closing: number, due: number, pays: string): Card =>
-    ({ id: id(), name, icon, color, limit_cents: limit, closing_day: closing, due_day: due, payment_account_id: pays, archived: false, created_at: now() })
+    ({ id: id(), name, icon, color, limit_cents: limit, closing_day: closing, due_day: due, payment_account_id: pays, currency: 'BRL', archived: false, created_at: now() })
   const nuCard = card('Nubank', 'bank:nubank', '#820ad1', 600000, 3, 10, nu.id)
   const interCard = card('Inter Gold', 'bank:inter', '#ff7a00', 450000, 25, 5, inter.id)
   const cards = [nuCard, interCard]
@@ -152,6 +155,13 @@ function seed(): Store {
     add({ kind: 'expense', description: s.gas, amount_cents: between(18000, 25000), date: on(m, 16), account_id: inter.id, category_id: cat('transport') })
   }
   const [m3, m2, m1, m0] = months
+  // Reais sent to the Canadian account: what left and what landed.
+  add({ kind: 'transfer', description: s.toCanada, amount_cents: 200000, to_amount_cents: 49730, date: on(m1, 8), account_id: nu.id, to_account_id: wise.id })
+  add({ kind: 'transfer', description: s.toCanada, amount_cents: 150000, to_amount_cents: 37260, date: on(m0, 3), account_id: nu.id, to_account_id: wise.id })
+  spend(s.groceries, 8420, on(m1, 15), cat('groceries'), wise.id)
+  spend(s.groceries, 6890, on(m0, 6), cat('groceries'), wise.id)
+  add({ kind: 'income', description: s.freelance, amount_cents: 50000, date: on(m1, 18), account_id: nomad.id, category_id: cat('otherIncome'), tag_ids: [work.id] })
+  spend('Notion', 1200, on(m0, 2), streaming, nomad.id)
   add({ kind: 'income', description: s.freelance, amount_cents: 150000, date: on(m2, 21), account_id: inter.id, category_id: cat('otherIncome'), tag_ids: [work.id] })
   add({ kind: 'income', description: s.freelance, amount_cents: 120000, date: on(m0, 9), account_id: inter.id, category_id: cat('otherIncome'), tag_ids: [work.id] })
   add({ kind: 'income', description: s.savingsYield, amount_cents: 7100, date: on(m1, 1), account_id: savings.id, category_id: cat('investmentIncome'), notes: null })
@@ -185,7 +195,7 @@ function seed(): Store {
   for (const c of categories) delete c.key
   return {
     categories,
-    accounts: [nu, inter, savings],
+    accounts: [nu, inter, savings, wise, nomad],
     cards: cards as unknown as Record<string, unknown>[],
     series: series as unknown as Record<string, unknown>[],
     tags,

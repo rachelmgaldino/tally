@@ -1,7 +1,7 @@
 import { ChevronLeft, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useEffect, type ReactNode } from 'react'
-import { centsFromTyping, formatCents } from '../lib/money'
+import { centsFromTyping, formatCents, symbol } from '../lib/money'
 import { t } from '../lib/i18n'
 
 export function Modal({
@@ -42,11 +42,21 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
   )
 }
 
-export function MoneyInput({ value, onChange, autoFocus }: { value: number; onChange: (cents: number) => void; autoFocus?: boolean }) {
+export function MoneyInput({ value, onChange, autoFocus, prefix, id, label }: {
+  value: number
+  onChange: (cents: number) => void
+  autoFocus?: boolean
+  /** The currency symbol; the Moeda principal's when left out. */
+  prefix?: string
+  id?: string
+  label?: string
+}) {
   return (
     <div className="input">
-      <span className="prefix">R$</span>
+      <span className="prefix">{prefix ?? symbol()}</span>
       <input
+        id={id}
+        aria-label={label}
         inputMode="numeric"
         value={formatCents(value)}
         autoFocus={autoFocus}

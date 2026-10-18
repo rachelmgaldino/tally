@@ -1,11 +1,11 @@
-import { AlignLeft, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, Wallet, X } from 'lucide-react'
+import { AlignLeft, ArrowRight, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, Wallet, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
 import { monthTitle, today } from '../lib/dates'
 import { t } from '../lib/i18n'
 import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
-import { centsFromTyping, formatBRL, formatCents } from '../lib/money'
+import { centsFromTyping, currencyOf, formatMoney, formatCents, symbol } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import { PERIOD_ORDER, PERIODS, seriesChanges, splitInstallments } from '../lib/series'
 import type { Attachment, NewTransaction, Period, SeriesKind, Transaction, TxKind } from '../lib/types'
@@ -16,7 +16,8 @@ import { TagInput } from './TagInput'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
-import { Modal, Segmented, Toggle } from './ui'
+import { Modal, MoneyInput, Segmented, Toggle } from './ui'
+import { tone } from '../lib/theme'
 
 export type FormKind = Exclude<TxKind, 'payment'>
 
@@ -58,6 +59,7 @@ export function TransactionForm({
 
   const [description, setDescription] = useState(source?.description ?? (kind === 'transfer' ? common.kinds.transfer : ''))
   const [amount, setAmount] = useState(source?.amount_cents ?? 0)
+  const [toAmount, setToAmount] = useState(source?.to_amount_cents ?? 0)
   const [date, setDate] = useState(editing?.date ?? today())
   const [paid, setPaid] = useState(editing?.paid ?? true)
   // A new entry counts as paid when it's dated today or earlier, until Rachel flips the switch herself.
@@ -77,6 +79,13 @@ export function TransactionForm({
   })
   const invoice = card ? shiftInvoice(invoiceFor(card, date || today()), invoiceShift) : null
   const [toAccountId, setToAccountId] = useState<string | null>(source?.to_account_id ?? null)
+  const fromAccount = active.find((a) => a.id === accountId)
+  const toAccount = kind === 'transfer' ? active.find((a) => a.id === toAccountId) : undefined
+  // The amount is in the currency of the account or card it comes from.
+  const currency = currencyOf(card ?? fromAccount)
+  const toCurrency = currencyOf(toAccount)
+  // Between currencies a transfer keeps both sides: what left and what actually landed.
+  const crossing = !!fromAccount && !!toAccount && currency !== toCurrency
   const [categoryId, setCategoryId] = useState<string | null>(source?.category_id ?? null)
   const [notes, setNotes] = useState(source?.notes ?? '')
   const [tagIds, setTagIds] = useState<string[]>(source?.tag_ids ?? [])
@@ -112,6 +121,7 @@ export function TransactionForm({
     if (kind === 'transfer') {
       if (!toAccountId) return fail(s.pickToAccount)
       if (toAccountId === accountId) return fail(s.pickTwoAccounts)
+      if (crossing && toAmount <= 0) return fail(s.enterLanded)
     }
     if (repeat?.kind === 'installment' && amount < installments) return fail(s.tooManyInstallments)
     return {
@@ -122,6 +132,7 @@ export function TransactionForm({
       paid: kind === 'transfer' || card ? true : paid,
       account_id: card ? null : accountId,
       to_account_id: kind === 'transfer' ? toAccountId : null,
+      to_amount_cents: crossing ? toAmount : null,
       card_id: card?.id ?? null,
       invoice_month: invoice,
       category_id: kind === 'transfer' ? null : categoryId,
@@ -157,6 +168,7 @@ export function TransactionForm({
       if (again) {
         setDescription(kind === 'transfer' ? common.kinds.transfer : '')
         setAmount(0)
+        setToAmount(0)
         setNotes('')
         setFiles([])
         setShow((v) => ({ ...v, repeat: false, notes: false, files: false }))
@@ -243,14 +255,14 @@ export function TransactionForm({
             ))}
           </div>
         )}
-        <div className={`ph-amount ${kind}`}>
+        {!crossing && <div className={`ph-amount ${kind}`}>
           <label htmlFor="ph-amount">{s.amount}</label>
           <div className="row">
-            <span className="prefix">R$</span>
+            <span className="prefix">{symbol(currency)}</span>
             <input id="ph-amount" inputMode="numeric" value={formatCents(amount)} style={{ width: `${formatCents(amount).length * 0.62 + 0.2}em` }}
               onChange={(e) => setAmount(centsFromTyping(e.target.value))} onFocus={(e) => e.target.select()} />
           </div>
-        </div>
+        </div>}
         <div className="form-group">
         {kind === 'transfer' ? (
           <>
@@ -262,6 +274,24 @@ export function TransactionForm({
               <label>{s.toAccount}</label>
               <AccountSelect accounts={active} value={toAccountId} onChange={setToAccountId} />
             </div>
+            {crossing && (
+              <div className="fx-box toned" style={tone('var(--blue)')}>
+                <div className="fx-row">
+                  <div className="field">
+                    <label htmlFor="fx-from">{s.leftFrom(fromAccount.name)}</label>
+                    <MoneyInput id="fx-from" value={amount} onChange={setAmount} prefix={symbol(currency)} />
+                  </div>
+                  <span className="fx-arrow" aria-hidden="true"><ArrowRight size={18} /></span>
+                  <div className="field">
+                    <label htmlFor="fx-to">{s.landedIn(toAccount.name)}</label>
+                    <MoneyInput id="fx-to" value={toAmount} onChange={setToAmount} prefix={symbol(toCurrency)} />
+                  </div>
+                </div>
+                {amount > 0 && toAmount > 0 && (
+                  <p className="fx-rate"><Info size={14} /><span>{s.ratePaid} <b>{symbol(toCurrency)} 1 = {formatMoney(Math.round((amount / toAmount) * 100), currency)}</b></span></p>
+                )}
+              </div>
+            )}
           </>
         ) : null}
         <div className="field f-desc">
@@ -436,8 +466,8 @@ export function TransactionForm({
                   <div className="info-box">
                     <Info size={15} />
                     <div>
-                      {s.installmentsInfo(installments)}<b>{formatBRL(parts[parts.length - 1])}</b>
-                      {parts[0] !== parts[parts.length - 1] && <>{s.firstInstallment(formatBRL(parts[0]))}</>}
+                      {s.installmentsInfo(installments)}<b>{formatMoney(parts[parts.length - 1], currency)}</b>
+                      {parts[0] !== parts[parts.length - 1] && <>{s.firstInstallment(formatMoney(parts[0], currency))}</>}
                       <small>{s.installmentsRemainder}</small>
                     </div>
                   </div>
