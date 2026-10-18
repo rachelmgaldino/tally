@@ -9,6 +9,7 @@ import { DEMO } from './lib/config'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Overview from './pages/Overview'
+import Profile from './pages/Profile'
 import Transactions from './pages/Transactions'
 import Accounts from './pages/settings/Accounts'
 import Cards from './pages/settings/Cards'
@@ -32,7 +33,8 @@ export default function App() {
   if (session === undefined) return null
   if (!DEMO && !session) return <Login />
 
-  const name = (session?.user.user_metadata?.name as string | undefined) ?? 'Rachel'
+  const email = session?.user.email ?? 'rachel@exemplo.com'
+  const name = (session?.user.user_metadata?.name as string | undefined) || capitalize(email.split(/[@.]/)[0])
 
   return (
     <ToastProvider>
@@ -41,6 +43,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Overview name={name} />} />
           <Route path="/lancamentos" element={<Transactions />} />
+          <Route path="/perfil" element={<Profile name={name} email={email} />} />
           <Route path="/configuracoes" element={<SettingsLayout />}>
             <Route index element={<Navigate to="categorias" replace />} />
             <Route path="categorias" element={<Categories />} />
@@ -52,4 +55,8 @@ export default function App() {
       </TxFormProvider>
     </ToastProvider>
   )
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
