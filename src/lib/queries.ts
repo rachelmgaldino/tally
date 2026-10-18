@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { accountsTable, categoriesTable, seriesTable, tagsTable, transactionsTable, type Table } from './api'
+import { accountsTable, cardsTable, categoriesTable, seriesTable, tagsTable, transactionsTable, type Table } from './api'
 import { DEFAULT_CATEGORIES } from './defaults'
-import type { Account, Category, NewCategory, Series, Tag, Transaction } from './types'
+import type { Account, Card, Category, NewCategory, Series, Tag, Transaction } from './types'
 
 let seeding: Promise<Category[]> | null = null
 
@@ -23,6 +23,9 @@ export const useCategories = () =>
 
 export const useTransactions = () =>
   useQuery({ queryKey: ['transactions'], queryFn: () => transactionsTable.list() })
+
+export const useCards = () =>
+  useQuery({ queryKey: ['cards'], queryFn: () => cardsTable.list() })
 
 export const useSeries = () =>
   useQuery({ queryKey: ['series'], queryFn: () => seriesTable.list() })
@@ -48,9 +51,10 @@ export const useAccountMutations = () => useTableMutations('accounts', accountsT
 export const useCategoryMutations = () => useTableMutations('categories', categoriesTable)
 export const useTransactionMutations = () => useTableMutations('transactions', transactionsTable)
 export const useTagMutations = () => useTableMutations('tags', tagsTable)
+export const useCardMutations = () => useTableMutations('cards', cardsTable)
 
 export function byId<T extends { id: string }>(rows: T[] | undefined): Map<string, T> {
   return new Map((rows ?? []).map((r) => [r.id, r]))
 }
 
-export type { Account, Category, Series, Tag, Transaction }
+export type { Account, Card, Category, Series, Tag, Transaction }

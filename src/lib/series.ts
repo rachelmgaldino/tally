@@ -92,7 +92,8 @@ export function seriesRows(
       ...template,
       date,
       amount_cents: amounts ? amounts[k] : template.amount_cents,
-      paid: template.kind === 'transfer' ? true : paidFor(date, firstPaid, k === 0),
+      // Card purchases are settled by paying the invoice, so they never show as pending.
+      paid: template.kind === 'transfer' || template.card_id ? true : paidFor(date, firstPaid, k === 0),
       series_id: series.id,
       series_index: k + 1,
       attachments: k === 0 ? template.attachments : [],
@@ -102,7 +103,7 @@ export function seriesRows(
 }
 
 /** Fields that "Sim, atualizar próximos" copies to the following entries. */
-export const SHARED_FIELDS = ['description', 'amount_cents', 'account_id', 'to_account_id', 'category_id', 'notes', 'tag_ids'] as const
+export const SHARED_FIELDS = ['description', 'amount_cents', 'account_id', 'card_id', 'to_account_id', 'category_id', 'notes', 'tag_ids'] as const
 
 /** What changed between two versions of an entry, limited to SHARED_FIELDS, plus the date shift in days. */
 export function seriesChanges(before: Transaction, after: Transaction) {

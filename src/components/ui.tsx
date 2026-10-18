@@ -3,13 +3,14 @@ import { useEffect, type ReactNode } from 'react'
 import { centsFromTyping, formatCents } from '../lib/money'
 
 export function Modal({
-  title, subtitle, onClose, children, wide,
+  title, subtitle, onClose, children, wide, className,
 }: {
   title: ReactNode
   subtitle?: ReactNode
   onClose: () => void
   children: ReactNode
   wide?: boolean
+  className?: string
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -18,8 +19,8 @@ export function Modal({
   }, [onClose])
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true">
-        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={18} /></button>
+      <div className={`modal ${wide ? 'modal-wide' : ''} ${className ?? ''}`} role="dialog" aria-modal="true">
+        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={20} /></button>
         <div className="modal-head">
           <h2>{title}</h2>
           {subtitle && <p>{subtitle}</p>}

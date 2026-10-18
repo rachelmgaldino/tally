@@ -2,7 +2,7 @@ import { DEMO } from './config'
 import { demoTable } from './demo'
 import { supabase } from './supabase'
 import type {
-  Account, Category, NewAccount, NewCategory, NewSeries, NewTag, NewTransaction, Series, Tag, Transaction,
+  Account, Card, Category, NewAccount, NewCard, NewCategory, NewSeries, NewTag, NewTransaction, Series, Tag, Transaction,
 } from './types'
 
 export interface Table<Row, New> {
@@ -87,3 +87,4 @@ export const categoriesTable = table<Category, NewCategory>('categories', 'name'
 export const transactionsTable = table<Transaction, NewTransaction>('transactions', 'date')
 export const seriesTable = table<Series, NewSeries>('series', 'created_at')
 export const tagsTable = table<Tag, NewTag>('tags', 'name')
+export const cardsTable = table<Card, NewCard>('cards', 'created_at')

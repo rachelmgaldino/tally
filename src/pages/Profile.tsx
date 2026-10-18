@@ -1,4 +1,3 @@
-import { User } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '../components/Toast'
 import { Modal } from '../components/ui'
@@ -9,16 +8,16 @@ export default function Profile({ name, email }: { name: string; email: string }
   const [editing, setEditing] = useState<'name' | 'password' | null>(null)
   return (
     <main className="page page-narrow">
-      <div className="card card-pad" style={{ textAlign: 'center', padding: '40px 24px' }}>
-        <span className="avatar" style={{ width: 96, height: 96, background: '#d6d6d3', color: '#fafaf7' }}>
-          <User size={56} fill="currentColor" strokeWidth={0} />
+      <header className="page-head"><h1>Meu perfil</h1></header>
+      <div className="card card-pad" style={{ textAlign: 'center', padding: '40px 24px', maxWidth: 520 }}>
+        <span className="avatar" style={{ width: 96, height: 96, background: 'var(--rose)', fontFamily: 'var(--display)', fontSize: 44, fontWeight: 600 }}>
+          {name.charAt(0).toUpperCase()}
         </span>
-        <h2 style={{ fontSize: 17, marginTop: 18 }}>{name}</h2>
+        <h2 style={{ fontSize: 28, marginTop: 18 }}>{name}</h2>
         <div className="muted" style={{ marginTop: 4 }}>{email}</div>
-        <div className="row" style={{ justifyContent: 'center', gap: 10, marginTop: 10 }}>
-          <button className="btn-text-green" onClick={() => setEditing('name')}>Editar perfil</button>
-          <span style={{ width: 1, height: 16, background: '#f0a37a' }} />
-          <button className="btn-text-green" onClick={() => setEditing('password')}>Alterar senha</button>
+        <div className="row" style={{ justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+          <button className="btn" onClick={() => setEditing('name')}>Editar perfil</button>
+          <button className="btn" onClick={() => setEditing('password')}>Alterar senha</button>
         </div>
       </div>
       {editing === 'name' && <NameModal current={name} onClose={() => setEditing(null)} />}

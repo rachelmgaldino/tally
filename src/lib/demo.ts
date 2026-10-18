@@ -1,11 +1,12 @@
 import type { Table } from './api'
 import { DEFAULT_CATEGORIES } from './defaults'
+import { invoiceFor } from './cards'
 import { today } from './dates'
 
 // Demo mode keeps everything in localStorage so the UI can be tried without a
 // database. It is only reachable through `npm run demo` in development.
 
-const KEY = 'tally-demo-2'
+const KEY = 'tally-demo-3'
 type Store = Record<string, Record<string, unknown>[]>
 
 function load(): Store {
@@ -42,11 +43,15 @@ function seed(): Store {
   const month = t.slice(0, 8)
   const tx = (o: Record<string, unknown>) => ({
     id: id(), created_at: now(), notes: null, to_account_id: null, paid: true,
-    series_id: null, series_index: null, tag_ids: [], attachments: [], ...o,
+    series_id: null, series_index: null, tag_ids: [], attachments: [], card_id: null, invoice_month: null, ...o,
   })
+  const card = { id: id(), name: 'Inter Gold', icon: 'bank:inter', color: '#ff7a00', limit_cents: 300000, closing_day: 29, due_day: 5, payment_account_id: inter.id, archived: false, created_at: now() }
+  const buy = (description: string, cents: number, date: string, category: string) =>
+    tx({ kind: 'expense', description, amount_cents: cents, date, account_id: null, card_id: card.id, invoice_month: invoiceFor(card, date), category_id: cat(category) })
   return {
     categories,
     accounts: [nu, inter, savings],
+    cards: [card],
     series: [],
     tags: [{ id: id(), name: 'Viagem', created_at: now() }, { id: id(), name: 'Trabalho', created_at: now() }],
     transactions: [
@@ -56,6 +61,9 @@ function seed(): Store {
       tx({ kind: 'transfer', description: 'Transferência', amount_cents: 20000, date: t, account_id: inter.id, to_account_id: nu.id, category_id: null }),
       tx({ kind: 'income', description: 'Pai', amount_cents: 20000, date: t, account_id: nu.id, category_id: cat('Outras receitas') }),
       tx({ kind: 'expense', description: 'Aluguel', amount_cents: 120000, date: `${month}28`, paid: false, account_id: nu.id, category_id: cat('Casa') }),
+      buy('Restaurante', 8650, `${month}02`, 'Bares e restaurantes'),
+      buy('Farmácia', 4390, `${month}08`, 'Saúde'),
+      buy('Cinema', 6000, t, 'Lazer e hobbies'),
     ],
   }
 }

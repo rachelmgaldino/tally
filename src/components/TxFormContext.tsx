@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Transaction, TxKind } from '../lib/types'
 import { PromptCard, type PromptConfig } from './Prompt'
+import { PayInvoiceModal } from './PayInvoiceModal'
 import { TransactionForm } from './TransactionForm'
 
 interface FormState {
@@ -11,6 +12,9 @@ interface FormState {
   accountId?: string
   /** Open with the Repetir section showing ("Repetir" in the side panel). */
   repeat?: boolean
+  /** kind "payment": the invoice being paid. */
+  cardId?: string
+  invoiceMonth?: string
 }
 
 interface Ctx {
@@ -51,7 +55,16 @@ export function TxFormProvider({ children }: { children: ReactNode }) {
   return (
     <TxFormContext.Provider value={{ open, ask }}>
       {children}
-      {state && (
+      {state?.kind === 'payment' && (
+        <PayInvoiceModal
+          key={state.editing?.id ?? 'new-payment'}
+          cardId={state.editing?.card_id ?? state.cardId ?? ''}
+          invoiceMonth={state.editing?.invoice_month ?? state.invoiceMonth ?? ''}
+          editing={state.editing}
+          onClose={() => setState(null)}
+        />
+      )}
+      {state && state.kind !== 'payment' && (
         <TransactionForm
           key={`${state.kind}-${state.editing?.id ?? state.copyOf?.id ?? 'new'}`}
           kind={state.kind}
@@ -60,6 +73,7 @@ export function TxFormProvider({ children }: { children: ReactNode }) {
           defaultAccountId={state.accountId}
           startRepeat={state.repeat}
           onClose={() => setState(null)}
+          onKind={state.editing || state.copyOf ? undefined : (kind) => setState({ ...state, kind })}
         />
       )}
       {prompt && <PromptCard prompt={prompt} onClose={closePrompt} />}
