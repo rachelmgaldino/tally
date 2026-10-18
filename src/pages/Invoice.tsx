@@ -13,6 +13,7 @@ import { monthLabel, shortDate, today } from '../lib/dates'
 import { formatBRL, formatCents, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import type { TxKind } from '../lib/types'
+import { tone } from '../lib/theme'
 
 const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'Receitas']]
 
@@ -103,7 +104,7 @@ export default function Invoice() {
           ))}
         </div>
       )}
-      <section className="ph-inv-hero phone-only" style={{ background: pastel(card.color, 0.5) }} aria-label={`Fatura de ${label}`}>
+      <section className="ph-inv-hero phone-only toned" style={tone(pastel(card.color, 0.5))} aria-label={`Fatura de ${label}`}>
         <div className="ph-inv-nav">
           <button onClick={() => go(-1)} aria-label="Fatura anterior"><ChevronLeft size={20} /></button>
           <span>{label}</span>
