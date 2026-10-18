@@ -11,6 +11,7 @@ import { AccountSelect } from './Selects'
 import { TagInput } from './TagInput'
 import { useToast } from './Toast'
 import { Modal, MoneyInput } from './ui'
+import { currencyOf, symbol } from '../lib/money'
 
 /** "Pagar fatura": records a (possibly partial) payment of one invoice from an account. */
 export function PayInvoiceModal({
@@ -30,7 +31,8 @@ export function PayInvoiceModal({
   const toast = useToast()
   const card = cards.find((c) => c.id === cardId)
   const invoice = card ? invoiceOf(card, txs, invoiceMonth) : undefined
-  const active = accounts.filter((a) => !a.archived || a.id === editing?.account_id)
+  // A bill is paid from an account in its own currency.
+  const active = accounts.filter((a) => (!a.archived || a.id === editing?.account_id) && currencyOf(a) === currencyOf(card))
 
   const [amount, setAmount] = useState(editing?.amount_cents ?? invoice?.remaining ?? 0)
   const [date, setDate] = useState(editing?.date ?? today())
@@ -103,7 +105,7 @@ export function PayInvoiceModal({
         <div className="grid-2" style={{ gap: 10 }}>
           <div className="field">
             <label>{s.amount}</label>
-            <MoneyInput value={amount} onChange={setAmount} autoFocus />
+            <MoneyInput value={amount} onChange={setAmount} autoFocus prefix={symbol(currencyOf(card))} />
           </div>
           <div className="field">
             <label htmlFor="pay-date">{s.date}</label>

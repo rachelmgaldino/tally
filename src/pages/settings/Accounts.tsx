@@ -9,7 +9,8 @@ import { accountBalance } from '../../lib/balances'
 import { findBank } from '../../lib/banks'
 import { ACCOUNT_ICONS } from '../../lib/icons'
 import { t, locale } from '../../lib/i18n'
-import { formatBRL } from '../../lib/money'
+import { currencyOf, formatMoney, homeCurrency, symbol, type Currency } from '../../lib/money'
+import { CurrencyPicker } from '../../components/CurrencyPicker'
 import { useAccountMutations, useAccounts, useTransactions } from '../../lib/queries'
 import type { Account } from '../../lib/types'
 import { tone } from '../../lib/theme'
@@ -44,7 +45,7 @@ export default function Accounts() {
               <span className="icon-btn sm" aria-hidden="true"><Pencil size={15} /></span>
             </div>
             <div>
-              <div className={`v ${balance < 0 ? 'expense' : ''}`}>{formatBRL(balance)}</div>
+              <div className={`v ${balance < 0 ? 'expense' : ''}`}>{formatMoney(balance, currencyOf(a))}</div>
               {balance < 0 && !a.archived
                 ? <small className="neg-note"><AlertTriangle size={13} /> {s.negative}</small>
                 : <small>{a.archived ? s.archived : a.exclude_from_total ? s.excluded : s.manual}</small>}
@@ -75,6 +76,10 @@ function AccountModal({ account, onClose }: { account?: Account; onClose: () => 
   const [name, setName] = useState(account?.name ?? '')
   const [balance, setBalance] = useState(account?.initial_balance_cents ?? 0)
   const [exclude, setExclude] = useState(account?.exclude_from_total ?? false)
+  const [currency, setCurrency] = useState<Currency>(account ? currencyOf(account) : homeCurrency())
+  const { data: txs = [] } = useTransactions()
+  // Amounts already entered are in the old currency, so it only changes while there are none.
+  const used = !!account && txs.some((tx) => tx.account_id === account.id || tx.to_account_id === account.id)
   const [error, setError] = useState<string | null>(null)
   const busy = insert.isPending || update.isPending || remove.isPending
 
@@ -99,6 +104,7 @@ function AccountModal({ account, onClose }: { account?: Account; onClose: () => 
       color: icon?.color ?? '#d4d4d4',
       initial_balance_cents: balance,
       exclude_from_total: exclude,
+      currency,
     }
     try {
       if (account) await update.mutateAsync({ id: account.id, patch: row })
@@ -144,9 +150,10 @@ function AccountModal({ account, onClose }: { account?: Account; onClose: () => 
           <label className="required" htmlFor="acc-name">{s.name}</label>
           <input id="acc-name" className="input" placeholder={s.namePlaceholder} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!account} />
         </div>
+        <CurrencyPicker value={currency} onChange={setCurrency} label={s.currency} note={used ? s.currencyLocked : s.currencyNote} locked={used} />
         <div className="field">
           <label>{account ? s.initialBalance : s.balance}</label>
-          <MoneyInput value={balance} onChange={setBalance} />
+          <MoneyInput value={balance} onChange={setBalance} prefix={symbol(currency)} />
         </div>
         <div className="row">
           <Toggle checked={exclude} onChange={setExclude} label={s.exclude} />

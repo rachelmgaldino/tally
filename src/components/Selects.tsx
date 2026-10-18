@@ -4,6 +4,10 @@ import type { Account, Card, Category, CategoryKind } from '../lib/types'
 import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { Popover } from './Picker'
 import { locale, t } from '../lib/i18n'
+import { currencyOf, isForeign } from '../lib/money'
+
+/** A small "CAD" tag after the name of an account or card that isn't in the Moeda principal. */
+export const CurrencyTag = ({ of }: { of: { currency?: string | null } }) => (isForeign(of) ? <span className="cur-code">{currencyOf(of)}</span> : null)
 
 export function AccountSelect({
   accounts, value, onChange, placeholder = t().form.select,
@@ -18,7 +22,7 @@ export function AccountSelect({
     <Popover
       trigger={(_, toggle) => (
         <button type="button" className="input" onClick={toggle}>
-          {selected ? <><AccountAvatar account={selected} size={20} /> <span>{selected.name}</span></> : <span className="muted">{placeholder}</span>}
+          {selected ? <><AccountAvatar account={selected} size={20} /> <span>{selected.name}</span><CurrencyTag of={selected} /></> : <span className="muted">{placeholder}</span>}
         </button>
       )}
     >
@@ -28,7 +32,7 @@ export function AccountSelect({
         ) : (
           accounts.map((a) => (
             <button type="button" key={a.id} className={`picker-item ${a.id === value ? 'on' : ''}`} onClick={() => { onChange(a.id); close() }}>
-              <AccountAvatar account={a} size={22} /> {a.name}
+              <AccountAvatar account={a} size={22} /> {a.name}<CurrencyTag of={a} />
             </button>
           ))
         )
@@ -116,8 +120,8 @@ export function SourceSelect({
     <Popover
       trigger={(_, toggle) => (
         <button type="button" className="input" onClick={toggle}>
-          {account && <><AccountAvatar account={account} size={20} /> <span>{account.name}</span></>}
-          {card && <><AccountIcon icon={card.icon} color={card.color} size={20} square /> <span>{card.name}</span></>}
+          {account && <><AccountAvatar account={account} size={20} /> <span>{account.name}</span><CurrencyTag of={account} /></>}
+          {card && <><AccountIcon icon={card.icon} color={card.color} size={20} square /> <span>{card.name}</span><CurrencyTag of={card} /></>}
           {!account && !card && <span className="muted">{t().form.select}</span>}
         </button>
       )}
@@ -127,13 +131,13 @@ export function SourceSelect({
           {cards.length > 0 && <div className="picker-group">{t().form.accounts}</div>}
           {accounts.map((a) => (
             <button type="button" key={a.id} className={`picker-item ${a.id === value ? 'on' : ''}`} onClick={() => { onChange(a.id); close() }}>
-              <AccountAvatar account={a} size={22} /> {a.name}
+              <AccountAvatar account={a} size={22} /> {a.name}<CurrencyTag of={a} />
             </button>
           ))}
           {cards.length > 0 && <div className="picker-group">{t().form.cards}</div>}
           {cards.map((c) => (
             <button type="button" key={c.id} className={`picker-item ${c.id === value ? 'on' : ''}`} onClick={() => { onChange(c.id); close() }}>
-              <AccountIcon icon={c.icon} color={c.color} size={22} square /> {c.name}
+              <AccountIcon icon={c.icon} color={c.color} size={22} square /> {c.name}<CurrencyTag of={c} />
             </button>
           ))}
         </>

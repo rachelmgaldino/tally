@@ -10,7 +10,9 @@ import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
 import { addDays, addMonths, currentMonth, dayMonth, monthEnd, monthName, monthStart, monthTitle, today, weekdayDate } from '../lib/dates'
 import { t as text } from '../lib/i18n'
-import { formatBRL, formatCents } from '../lib/money'
+import { currencyName, currencyOf, formatMoney, formatCents, homeCurrency, isForeign, symbol } from '../lib/money'
+import { convert, useRates } from '../lib/rates'
+import { CurrencyTag } from '../components/Selects'
 import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
 import { tone } from '../lib/theme'
@@ -46,7 +48,7 @@ export default function Overview({ name }: { name: string }) {
     })
   }
 
-  const money = (cents: number) => (hidden ? 'R$ •••••' : formatBRL(cents))
+  const money = (cents: number) => (hidden ? `${symbol()} •••••` : formatMoney(cents))
   const [m, setM] = useState(currentMonth)
   const { prefs, setPrefs } = usePrefs()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -56,9 +58,12 @@ export default function Overview({ name }: { name: string }) {
   const to = monthEnd(m)
   const t = today()
   // Savings ("Não somar no Saldo Geral") stay out of sight here: their entries don't count
-  // in the month's totals, Próximos or Minhas contas.
+  // in the month's totals, Próximos or Minhas contas. Accounts and cards in another currency
+  // stay out of the totals too (they'd mix currencies) and show up on their own instead.
   const keptIds = new Set(accounts.filter((a) => a.exclude_from_total).map((a) => a.id))
-  const dayToDay = (tx: Transaction) => !tx.account_id || !keptIds.has(tx.account_id)
+  const apartIds = new Set([...keptIds, ...accounts.filter(isForeign).map((a) => a.id)])
+  const foreignCardIds = new Set(allCards.filter(isForeign).map((c) => c.id))
+  const dayToDay = (tx: Transaction) => (!tx.account_id || !apartIds.has(tx.account_id)) && (!tx.card_id || !foreignCardIds.has(tx.card_id))
   const inMonth = txs.filter((tx) => tx.date >= from && tx.date < to && dayToDay(tx))
   const income = inMonth.filter((tx) => tx.kind === 'income').reduce((s, tx) => s + tx.amount_cents, 0)
   const expense = inMonth.filter((tx) => tx.kind === 'expense').reduce((s, tx) => s + tx.amount_cents, 0)
@@ -68,7 +73,7 @@ export default function Overview({ name }: { name: string }) {
   const ledger = cashFlow(allCards, txs)
   // Today's balance; looking at another month, what the accounts hold (or should hold) when it ends.
   const balances = new Map(active.map((a) => [a.id, isCurrent ? accountBalance(a, ledger).current : accountBalance(a, ledger, to).forecast]))
-  const total = active.filter((a) => !a.exclude_from_total).reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
+  const total = active.filter((a) => !a.exclude_from_total && !isForeign(a)).reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
 
   const categoryMap = byId(categories)
   const accountMap = byId(accounts)
@@ -79,11 +84,22 @@ export default function Overview({ name }: { name: string }) {
 
   // Open invoices right now, one per card.
   // The open invoices this month, or for another month the invoices due in it.
-  const currentInvoices = cards.map((c) => invoiceOf(c, txs, isCurrent ? invoiceFor(c, t) : monthKey(m)))
+  const currentInvoices = cards.filter((c) => !isForeign(c)).map((c) => invoiceOf(c, txs, isCurrent ? invoiceFor(c, t) : monthKey(m)))
   const invoicesTotal = currentInvoices.reduce((s, inv) => s + inv.remaining, 0)
   const incomePending = inMonth.filter((tx) => tx.kind === 'income' && !tx.paid).reduce((s, tx) => s + tx.amount_cents, 0)
   const expensePending = toPay.reduce((s, tx) => s + tx.amount_cents, 0)
-  const included = active.filter((a) => !a.exclude_from_total)
+  const included = active.filter((a) => !a.exclude_from_total && !isForeign(a))
+  // Day-to-day accounts in other currencies: a pill each under the Saldo geral, and listed in Minhas contas.
+  const abroad = active.filter((a) => !a.exclude_from_total && isForeign(a))
+  const listed = [...included, ...abroad]
+  const accountMoney = (a: { id: string; currency?: string }) => (hidden ? `${symbol(currencyOf(a))} •••••` : formatMoney(balances.get(a.id) ?? 0, currencyOf(a)))
+  // "Converter as outras moedas" (off by default): an approximate total of everything, at today's rate.
+  const home = homeCurrency()
+  const { data: rates } = useRates(home, abroad.map(currencyOf), prefs.convertTotal && abroad.length > 0)
+  const converted = rates && abroad.reduce<number | null>((sum, a) => {
+    const v = convert(balances.get(a.id) ?? 0, currencyOf(a), home, rates)
+    return sum === null || v === null ? null : sum + v
+  }, total)
 
   // Próximos: unpaid bills and incomes in the next 7, 14 or 30 days (a saved choice); another month shows that month.
   const horizon = addDays(t, prefs.nextDays)
@@ -201,6 +217,16 @@ export default function Overview({ name }: { name: string }) {
             <div className="k">{s.totalBalance}</div>
             <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
             <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
+            {abroad.length > 0 && (
+              <div className="hero-fx">
+                {abroad.map((a) => (
+                  <span key={a.id} className="fx-pill"><AccountAvatar account={a} size={20} /><b className="money">{accountMoney(a)}</b></span>
+                ))}
+                {prefs.convertTotal && converted != null && rates && (
+                  <small className="fx-conv">≈ <b className="money">{money(converted)}</b> {s.convertedNote(dayMonth(rates.date))}</small>
+                )}
+              </div>
+            )}
             {prefs.showSaved && kept.length > 0 && (
               <div className="hero-kept">
                 <span><PiggyBank size={16} /><b className="money">{money(keptTotal)}</b></span>
@@ -272,12 +298,12 @@ export default function Overview({ name }: { name: string }) {
         </section>
 
         <section className="card card-pad" aria-label={s.myAccounts}>
-          <div className="section-title"><h3>{s.myAccounts}</h3><Link to="/configuracoes/contas" className="link">{included.length ? s.manage : s.add}</Link></div>
-          {included.length === 0 ? <p className="muted small" style={{ margin: 0 }}>{s.noAccountYetDot}</p> : included.map((a) => (
+          <div className="section-title"><h3>{s.myAccounts}</h3><Link to="/configuracoes/contas" className="link">{listed.length ? s.manage : s.add}</Link></div>
+          {listed.length === 0 ? <p className="muted small" style={{ margin: 0 }}>{s.noAccountYetDot}</p> : listed.map((a) => (
             <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
               <AccountAvatar account={a} />
-              <b style={{ flex: 1, minWidth: 0 }}>{a.name}</b>
-              <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
+              <b style={{ flex: 1, minWidth: 0 }}>{a.name}<CurrencyTag of={a} /></b>
+              <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{accountMoney(a)}</span>
             </div>
           ))}
         </section>
@@ -318,11 +344,11 @@ export default function Overview({ name }: { name: string }) {
                 <div key={c.id} className="card-line" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18 }}>
                   <CardArt card={c} style={{ width: 'clamp(140px, 12vw, 180px)' }} />
                   <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className="row" style={{ justifyContent: 'space-between' }}><span className="muted small" style={{ fontWeight: 700 }}>{s.availableLimit}</span><span className="money">{money(avail)}</span></div>
+                    <div className="row" style={{ justifyContent: 'space-between' }}><span className="muted small" style={{ fontWeight: 700 }}>{s.availableLimit}</span><span className="money">{hidden ? '•••••' : formatMoney(avail, currencyOf(c))}</span></div>
                     <div className="limit-bar"><div style={{ width: `${used}%`, background: pastel(c.color, 0.4) }} /></div>
                     <div className="row" style={{ justifyContent: 'space-between' }}>
                       <span className="muted small" style={{ fontWeight: 700 }}>{s.currentInvoiceDue(dayMonth(due))}</span>
-                      <span className="money expense">{money(inv.total)}</span>
+                      <span className="money expense">{hidden ? '•••••' : formatMoney(inv.total, currencyOf(c))}</span>
                     </div>
                     <button className="btn" style={{ alignSelf: 'flex-start', minHeight: 38, fontSize: 14 }} onClick={() => navigate(`/cartoes/${c.id}`)}>{s.seeInvoice}</button>
                   </div>
@@ -331,8 +357,8 @@ export default function Overview({ name }: { name: string }) {
             })}
           </section>
           <section className="card card-pad ov-wide">
-            <div className="section-title"><h3>{s.myAccounts}</h3>{included.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
-            {included.length === 0 ? (
+            <div className="section-title"><h3>{s.myAccounts}</h3>{listed.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
+            {listed.length === 0 ? (
               <div className="placeholder">
                 <span className="ico"><Landmark size={20} /></span>
                 <h3>{s.noAccountYet}</h3>
@@ -341,14 +367,14 @@ export default function Overview({ name }: { name: string }) {
                   <CirclePlus size={16} /> {s.addAccount}
                 </button>
               </div>
-            ) : <div className="acc-tiles">{included.map((a) => (
+            ) : <div className="acc-tiles">{listed.map((a) => (
               <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
                 <AccountAvatar account={a} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <b>{a.name}</b>
-                  <div className="muted small">{s.manualAccount}</div>
+                  <b>{a.name}<CurrencyTag of={a} /></b>
+                  <div className="muted small">{isForeign(a) ? currencyName(currencyOf(a)) : s.manualAccount}</div>
                 </div>
-                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
+                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{accountMoney(a)}</span>
               </div>
             ))}</div>}
           </section>
