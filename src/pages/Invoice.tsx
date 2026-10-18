@@ -90,7 +90,7 @@ export default function Invoice() {
         </Popover>
       </header>
       {activeCards.length > 1 && (
-        <div className="ph-card-pick phone-only" role="group" aria-label="Cartão">
+        <div className="ph-card-pick" role="group" aria-label="Cartão">
           {activeCards.map((c) => (
             <button key={c.id} className={c.id === card.id ? 'on' : ''} aria-pressed={c.id === card.id} onClick={() => navigate(`/cartoes/${c.id}`)}>
               <i style={{ background: pastel(c.color, 0.35) }} />{c.name}

@@ -51,7 +51,7 @@ function seed(): Store {
   return {
     categories,
     accounts: [nu, inter, savings],
-    cards: [card],
+    cards: [card, { id: id(), name: 'Mercado Pago', icon: 'bank:mercadopago', color: '#00b1ea', limit_cents: 150000, closing_day: 2, due_day: 10, payment_account_id: inter.id, archived: false, created_at: now() }],
     series: [],
     tags: [{ id: id(), name: 'Viagem', created_at: now() }, { id: id(), name: 'Trabalho', created_at: now() }],
     transactions: [
