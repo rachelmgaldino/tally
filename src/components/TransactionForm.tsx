@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
 import { monthLabel, today } from '../lib/dates'
-import { applyToNext, convertEntry, createEntry, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
+import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
 import { centsFromTyping, formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import { PERIOD_ORDER, PERIODS, seriesChanges, splitInstallments } from '../lib/series'
@@ -13,7 +13,7 @@ import { Popover } from './Picker'
 import { AccountSelect, CategorySelect, SourceSelect } from './Selects'
 import { TagInput } from './TagInput'
 import { useToast } from './Toast'
-import { useUndoDelete } from './useUndoDelete'
+import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
 import { Modal, Segmented, Toggle } from './ui'
 
@@ -61,7 +61,7 @@ export function TransactionForm({
   const { ask } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
-  const undoDelete = useUndoDelete()
+  const confirmDelete = useConfirm()
   const active = accounts.filter((a) => !a.archived)
   const source = editing ?? copyOf
   const inSeries = !!editing?.series_id
@@ -205,14 +205,16 @@ export function TransactionForm({
         title: 'Excluir lançamento recorrente',
         text: 'Este lançamento faz parte de uma repetição. O que você deseja excluir?',
         options: [
-          { label: 'Apenas este', onClick: () => undoDelete([editing], 'Lançamento excluído.') },
+          { label: 'Apenas este', onClick: async () => { await refresh(deleteEntries([editing])); toast('Lançamento excluído.') } },
           { label: 'Este e os próximos', primary: true, onClick: async () => { await refresh(deleteFromHere(editing, allTxs, series)); toast('Lançamentos excluídos.') } },
         ],
       })
       return
     }
+    if (!(await confirmDelete({ title: 'Excluir lançamento?', text: 'Ele sai da lista e dos saldos. Isso não pode ser desfeito.' }))) return
     onClose()
-    await undoDelete([editing], 'Lançamento excluído.')
+    await refresh(deleteEntries([editing]))
+    toast('Lançamento excluído.')
   }
 
   function addFiles(list: FileList | null) {

@@ -904,10 +904,6 @@ select.input { appearance: auto; }
   .welcome-steps small { display: none; }
 }
 
-/* Toast with "Desfazer" */
-.toast-act { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border-left: var(--border); font-weight: 800; font-size: 14px; background: var(--yellow); white-space: nowrap; }
-.toast-act:hover { background: #f2d077; }
-
 /* Detalhes: only filled fields, then chips for what's missing */
 .add-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 0 4px; }
 .add-chips button { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 12px; border-radius: 999px; border: 1.5px dashed var(--faint); font-size: 13px; font-weight: 800; color: var(--muted); background: var(--card); }
@@ -980,3 +976,19 @@ select.input { appearance: auto; }
 .sum-pill span { font-size: 13px; font-weight: 800; color: var(--muted); }
 .sum-pill b { font-family: var(--display); font-weight: 500; font-size: 17px; font-variant-numeric: tabular-nums; }
 .empty-mascot { display: flex; justify-content: center; margin-bottom: 10px; }
+
+/* Delete confirmation popup */
+.confirm-overlay { align-items: center; z-index: 70; }
+.confirm-box { max-width: 360px; text-align: center; padding: 28px 24px 22px; }
+.confirm-icon { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: var(--border); background: var(--pink); margin-bottom: 12px; }
+.confirm-box h2 { font-size: 24px; }
+.confirm-box p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+.confirm-foot { display: flex; gap: 10px; margin-top: 22px; }
+.confirm-foot .btn { flex: 1; }
+.btn-danger { background: var(--pink); box-shadow: var(--shadow); }
+.btn-danger:hover:not(:disabled) { background: var(--rose); }
+.btn-danger:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+@media (max-width: 760px) {
+  .confirm-overlay { align-items: flex-end; }
+  .confirm-box { max-width: none; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+}
