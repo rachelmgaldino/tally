@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Copy, Paperclip, Pencil, Plus, Repeat2, ThumbsUp, Trash2, Undo2, X } from 'lucide-react'
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Copy, CreditCard, Paperclip, Pencil, Plus, Repeat2, ThumbsUp, Trash2, Undo2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, openAttachment, removeAttachments, uploadAttachment } from '../lib/attachments'
 import { invoiceName } from '../lib/cards'
@@ -99,8 +99,25 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
       <div className="drawer-overlay" onClick={onClose} />
       <aside className="drawer" aria-label="Detalhes do lançamento">
         <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={18} /></button>
-        <span className={`chip-kind ${tx.kind}`}>{KIND_LABEL[tx.kind]}</span>
-        <h2>{tx.description || KIND_LABEL[tx.kind]}</h2>
+        <span className={`chip-kind desk-only ${tx.kind}`}>{KIND_LABEL[tx.kind]}</span>
+        <h2 className="desk-only">{tx.description || KIND_LABEL[tx.kind]}</h2>
+        <div className="ph-det-head phone-only">
+          {tx.kind === 'transfer' ? <span className="avatar cat" style={{ width: 52, height: 52, background: 'var(--blue)' }}><ArrowLeftRight size={22} /></span>
+            : isPayment ? <span className="avatar cat" style={{ width: 52, height: 52, background: 'var(--peach)' }}><CreditCard size={22} /></span>
+            : <CategoryAvatar category={parent ?? category} size={52} />}
+          <div style={{ minWidth: 0 }}>
+            <h2>{tx.description || KIND_LABEL[tx.kind]}</h2>
+            <div className="ph-det-badges">
+              <span className={`chip-kind ${tx.kind}`}>{KIND_LABEL[tx.kind]}</span>
+              {(tx.kind === 'expense' || tx.kind === 'income') && !card && (
+                <span className={`ph-det-status ${tx.paid ? 'paid' : ''}`}>{tx.paid ? (tx.kind === 'income' ? 'Recebida' : 'Paga') : 'Pendente'}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className={`ph-det-amount phone-only ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>
+          {tx.kind === 'income' ? '+' : tx.kind === 'transfer' ? '' : '−'}{formatBRL(tx.amount_cents)}
+        </div>
 
         {seriesLabel && (
           <div className="series-nav">
@@ -110,7 +127,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
           </div>
         )}
 
-        <div className="details">
+        <div className="details ph-det-card">
           {(tx.kind === 'expense' || tx.kind === 'income') && (
             <div className="detail">
               <span className="k">Categoria</span>
@@ -120,7 +137,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
               </span>
             </div>
           )}
-          <div className="detail"><span className="k">Valor</span><span className={`value ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>{formatBRL(tx.amount_cents)}</span></div>
+          <div className="detail desk-only"><span className="k">Valor</span><span className={`value ${tx.kind === 'income' ? 'income' : tx.kind === 'transfer' ? '' : 'expense'}`}>{formatBRL(tx.amount_cents)}</span></div>
           {tx.kind === 'transfer' ? (
             <>
               <div className="detail"><span className="k">Saiu da conta</span><span className="row"><AccountAvatar account={account} size={24} />{account?.name}</span></div>
@@ -170,12 +187,12 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
         <div className="drawer-actions">
           <button className="btn btn-primary" onClick={() => open({ kind: tx.kind, editing: tx })}><Pencil size={18} /> Editar</button>
           {!isPayment && (
-            <button className="btn btn-blue" onClick={() => open({ kind: tx.kind, editing: tx, repeat: true })} disabled={!!tx.series_id} title={tx.series_id ? 'Este lançamento já se repete' : undefined}>
+            <button className="btn btn-blue desk-only" onClick={() => open({ kind: tx.kind, editing: tx, repeat: true })} disabled={!!tx.series_id} title={tx.series_id ? 'Este lançamento já se repete' : undefined}>
               <Repeat2 size={18} /> Repetir
             </button>
           )}
           {tx.kind !== 'transfer' && !isPayment && !card && (
-            <button className="btn" onClick={togglePaid}>
+            <button className="btn pay-act" onClick={togglePaid}>
               {tx.paid ? <Undo2 size={18} /> : <ThumbsUp size={18} />}
               {tx.paid ? 'Desfazer' : 'Pagar'}
             </button>

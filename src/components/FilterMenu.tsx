@@ -11,8 +11,9 @@ export interface FilterItem<T> {
 
 /** One pill in the grey filter bar, opening a single-choice list. */
 export function FilterMenu<T extends string>({
-  label, on, items, value, onChange,
+  label, on, items, value, onChange, className,
 }: {
+  className?: string
   label: string
   on: boolean
   items: FilterItem<T>[]
@@ -21,6 +22,7 @@ export function FilterMenu<T extends string>({
 }) {
   return (
     <Popover
+      className={className}
       trigger={(_, toggle) => (
         <button className={on ? 'on' : ''} onClick={toggle}>{label} <ChevronDown size={13} /></button>
       )}

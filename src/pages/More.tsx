@@ -1,7 +1,9 @@
-import { ChevronRight, LogOut, SlidersHorizontal, Tag, Upload, Wallet } from 'lucide-react'
+import { ChevronRight, Eye, LogOut, SlidersHorizontal, Tag, Upload, Wallet } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UserAvatar } from '../components/Avatars'
 import { Mascot } from '../components/Sidebar'
+import { Toggle } from '../components/ui'
 import { DEMO } from '../lib/config'
 import { useAccounts, useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -12,6 +14,14 @@ export default function More({ name }: { name: string }) {
   const { data: cards = [] } = useCards()
   const nAcc = accounts.filter((a) => !a.archived).length
   const nCard = cards.filter((c) => !c.archived).length
+  // Same switch as the eye on Início.
+  const [hidden, setHidden] = useState(() => {
+    try { return localStorage.getItem('tally-hide-balance') === '1' } catch { return false }
+  })
+  const toggleHidden = (v: boolean) => {
+    setHidden(v)
+    try { localStorage.setItem('tally-hide-balance', v ? '1' : '0') } catch { /* ignore */ }
+  }
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   return (
     <main className="page more">
@@ -43,6 +53,7 @@ export default function More({ name }: { name: string }) {
       </div>
 
       <div className="card more-list">
+        <Toggle checked={hidden} onChange={toggleHidden} label={<span className="row" style={{ flex: 1, gap: 12 }}><Eye size={20} />Esconder valores</span>} />
         <button className="expense" onClick={() => !DEMO && supabase.auth.signOut()}><LogOut size={20} /> Sair</button>
       </div>
 

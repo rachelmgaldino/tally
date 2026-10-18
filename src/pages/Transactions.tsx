@@ -65,6 +65,8 @@ export default function Transactions() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  // On the phone the search field hides behind a button in the header.
+  const [searchOpen, setSearchOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mode, setModeState] = useState<ViewMode>(() => {
     try { return localStorage.getItem(MODE_KEY) === 'all' ? 'all' : 'cash' } catch { return 'cash' }
@@ -245,15 +247,21 @@ export default function Transactions() {
           <PeriodNav span={span} setSpan={setSpan} />
           <div className="segmented" role="group" aria-label="Modo de visualização">
             <button className={mode === 'cash' ? 'on' : ''} aria-pressed={mode === 'cash'} onClick={() => setMode('cash')}>Fluxo de caixa</button>
-            <button className={mode === 'all' ? 'on' : ''} aria-pressed={mode === 'all'} onClick={() => setMode('all')}>Todos os lançamentos</button>
+            <button className={mode === 'all' ? 'on' : ''} aria-pressed={mode === 'all'} onClick={() => setMode('all')}>Todos<span className="desk-only"> os lançamentos</span></button>
           </div>
-          <button className="icon-btn" onClick={() => setChoosingMode(true)} aria-label="Sobre os modos de visualização" title="Sobre os modos de visualização"><Info size={20} /></button>
+          <button className="icon-btn desk-only" onClick={() => setChoosingMode(true)} aria-label="Sobre os modos de visualização" title="Sobre os modos de visualização"><Info size={20} /></button>
+          <button className={`icon-btn phone-only ${searchOpen || search ? 'on' : ''}`} onClick={() => {
+            if (searchOpen) setSearch('')
+            else setTimeout(() => document.getElementById('tx-search')?.focus())
+            setSearchOpen(!searchOpen)
+          }} aria-label="Buscar" aria-pressed={searchOpen}><Search size={20} /></button>
           <Popover
             className="more-menu"
             trigger={(_, toggle) => <button className="icon-btn" onClick={toggle} aria-label="Mais opções" title="Imprimir ou exportar"><EllipsisVertical size={20} /></button>}
           >
             {(close) => (
               <>
+                <button className="picker-item phone-only" onClick={() => { close(); setChoosingMode(true) }}><Info size={18} /> Sobre os modos de visualização</button>
                 <button className="picker-item" onClick={() => { close(); window.print() }}><Printer size={18} /> Imprimir ou salvar em PDF</button>
                 <button className="picker-item" onClick={() => { close(); exportCsv() }} disabled={rows.length === 0}><Download size={18} /> Exportar planilha (CSV)</button>
               </>
@@ -281,6 +289,11 @@ export default function Transactions() {
 
         <div className="filters">
           <div className="filter-bar">
+            {([[null, 'Tudo'], ['expense', 'Despesas'], ['income', 'Receitas'], ['transfer', 'Transferências']] as const).map(([k, label]) => (
+              <button key={label} className={`fil kind-chip phone-only ${kindFilter === k ? 'on' : ''}`} onClick={() => setKindFilter(k)} aria-pressed={kindFilter === k}>
+                {k && <i className={`dot ${k}`} />}{label}
+              </button>
+            ))}
             <FilterMenu
               label={filteredAccount?.name ?? filteredCard?.name ?? 'Origem'}
               on={!!accountFilter}
@@ -295,6 +308,7 @@ export default function Transactions() {
               onChange={setAccountFilter}
             />
             <FilterMenu
+              className="desk-only"
               label={KIND_FILTERS.find(([k]) => k === kindFilter)?.[1] ?? 'Tipo'}
               on={!!kindFilter}
               items={[{ id: null, label: 'Todos os tipos' }, ...KIND_FILTERS.map(([id, label]) => ({ id, label }))]}
@@ -319,9 +333,9 @@ export default function Transactions() {
               onChange={setTagFilter}
             />
           </div>
-          <label className="search-pill">
+          <label className={`search-pill ${searchOpen || search ? 'open' : ''}`}>
             <Search size={18} />
-            <input placeholder="Buscar lançamento" aria-label="Buscar lançamento" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input id="tx-search" placeholder="Buscar lançamento" aria-label="Buscar lançamento" value={search} onChange={(e) => setSearch(e.target.value)} />
             {search && <button onClick={() => setSearch('')} aria-label="Limpar busca"><X size={16} /></button>}
           </label>
           {hasFilters && <button className="fil" onClick={clearFilters}><X size={16} /> Limpar</button>}
@@ -330,7 +344,7 @@ export default function Transactions() {
           </button>
         </div>
 
-        <section className="card list-card" aria-label="Lista de lançamentos">
+        <section className={`card list-card ${rows.length && !isLoading ? 'has-rows' : ''}`} aria-label="Lista de lançamentos">
 
         {isLoading ? (
           <div className="empty"><p>Carregando…</p></div>
@@ -347,6 +361,9 @@ export default function Transactions() {
               <section key={g.date}>
                 <div className={`day-head ${g.date === t ? 'today' : ''}`}>
                   {g.date === t ? `Hoje · ${dayLabel(g.date)}` : dayLabel(g.date)}
+                  {dayBalance.has(g.date) && !selecting && (
+                    <span className={`day-head-bal phone-only ${dayBalance.get(g.date)! < 0 ? 'expense' : ''}`}>saldo {formatBRL(dayBalance.get(g.date)!)}</span>
+                  )}
                   {selecting && (
                     <button className="day-pick" onClick={() => {
                       const ids = g.items.filter((tx) => !tx.virtual).map((tx) => tx.id)
@@ -355,6 +372,7 @@ export default function Transactions() {
                     }}>{g.items.filter((tx) => !tx.virtual).every((tx) => picked.has(tx.id)) ? 'desmarcar dia' : 'marcar dia'}</button>
                   )}
                 </div>
+                <div className="day-items">
                 {g.items.map((tx) => {
                   const category = tx.category_id ? categoryMap.get(tx.category_id) : undefined
                   const parent = category?.parent_id ? categoryMap.get(category.parent_id) : undefined
@@ -391,7 +409,7 @@ export default function Transactions() {
                         {series?.kind === 'fixed' && <Repeat2 size={15} className="fixed" aria-label="Lançamento fixo" />}
                         {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
                         {tx.attachments.length > 0 && <Paperclip size={13} className="clip" aria-label="Com anexo" />}
-                        <span className="sub">{sub}</span>
+                        <span className="sub">{sub}{(tx.kind === 'expense' || tx.kind === 'income') && !tx.virtual && (card ?? account) && <span className="phone-only"> · {(card ?? account)!.name}</span>}</span>
                       </div>
                       <div className="tx-where">
                         {tx.kind === 'transfer' ? (
@@ -428,8 +446,9 @@ export default function Transactions() {
                     </div>
                   )
                 })}
+                </div>
                 {dayBalance.has(g.date) && (
-                  <div className="day-balance">Saldo do dia <b className={dayBalance.get(g.date)! < 0 ? 'expense' : ''}>{formatBRL(dayBalance.get(g.date)!)}</b></div>
+                  <div className="day-balance desk-only">Saldo do dia <b className={dayBalance.get(g.date)! < 0 ? 'expense' : ''}>{formatBRL(dayBalance.get(g.date)!)}</b></div>
                 )}
               </section>
             ))}
