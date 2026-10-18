@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
 import { Mascot } from '../components/Sidebar'
+import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
@@ -48,6 +49,8 @@ export default function Overview({ name }: { name: string }) {
 
   const money = (cents: number) => (hidden ? 'R$ •••••' : formatBRL(cents))
   const [m, setM] = useState(currentMonth)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = selectedId ? txs.find((tx) => tx.id === selectedId) : undefined
   const isCurrent = monthKey(m) === monthKey(currentMonth())
   const from = monthStart(m)
   const to = monthEnd(m)
@@ -99,6 +102,11 @@ export default function Overview({ name }: { name: string }) {
     if (tx.virtual && tx.card_id) open({ kind: 'payment', cardId: tx.card_id, invoiceMonth: tx.invoice_month! })
     else update.mutate({ id: tx.id, patch: { paid: true } })
   }
+  // A card bill opens its invoice; anything else opens the entry's details.
+  const show = (tx: Transaction) => {
+    if (tx.virtual && tx.card_id) navigate(`/cartoes/${tx.card_id}?fatura=${tx.invoice_month!.slice(0, 7)}`)
+    else setSelectedId(tx.id)
+  }
   const nextRow = (tx: Transaction, late = false) => {
     const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
     const parent = c?.parent_id ? categoryMap.get(c.parent_id) : undefined
@@ -106,7 +114,8 @@ export default function Overview({ name }: { name: string }) {
     const when = tx.date === t ? 'hoje' : late ? `venceu ${shortDate(tx.date).slice(0, 5)}` : card ? `vence ${shortDate(tx.date).slice(0, 5)}` : shortDate(tx.date).slice(0, 5)
     const where = card ? '' : tx.account_id ? accountMap.get(tx.account_id)?.name : ''
     return (
-      <div key={tx.id} className="ph-next-row">
+      <div key={tx.id} className={`ph-next-row ${tx.id === selectedId ? 'selected' : ''}`} role="button" tabIndex={0}
+        onClick={() => show(tx)} onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) show(tx) }}>
         {card ? (
           <span className="avatar cat" style={{ width: 40, height: 40, background: 'var(--invoice)' }}><Receipt size={18} /></span>
         ) : (
@@ -119,7 +128,7 @@ export default function Overview({ name }: { name: string }) {
         <span className={`money ${tx.kind === 'income' ? 'income' : 'expense'}`}>
           {hidden ? '•••••' : `${tx.kind === 'income' ? '+' : '−'}${formatCents(tx.amount_cents)}`}
         </span>
-        <button className="paid-btn pending" onClick={() => settle(tx)} aria-label={card ? 'Pagar fatura' : 'Marcar como pago'} title={card ? 'Pagar fatura' : 'Marcar como pago'}>
+        <button className="paid-btn pending" onClick={(e) => { e.stopPropagation(); settle(tx) }} aria-label={card ? 'Pagar fatura' : 'Marcar como pago'} title={card ? 'Pagar fatura' : 'Marcar como pago'}>
           <ThumbsDown size={18} style={{ transform: 'scaleX(-1)' }} />
         </button>
       </div>
@@ -329,6 +338,7 @@ export default function Overview({ name }: { name: string }) {
         </div>
 
       </div>
+      {selected && <TransactionPanel tx={selected} onClose={() => setSelectedId(null)} onNavigate={setSelectedId} />}
     </main>
   )
 }
