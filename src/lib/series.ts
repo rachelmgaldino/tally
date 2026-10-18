@@ -1,4 +1,5 @@
 import { addMonths, currentMonth, monthEnd, today } from './dates'
+import { t } from './i18n'
 import type { NewTransaction, Period, Series, Transaction } from './types'
 
 interface PeriodInfo {
@@ -12,15 +13,23 @@ interface PeriodInfo {
   days?: number
 }
 
+/** Labels come from the current language, so they're read when shown. */
+const info = (p: Period, span: { months?: number; days?: number }): PeriodInfo => ({
+  ...span,
+  get label() { return t().common.periods[p].label },
+  get unit() { return t().common.periods[p].unit },
+  get adjective() { return t().common.periods[p].adjective },
+})
+
 export const PERIODS: Record<Period, PeriodInfo> = {
-  yearly: { label: 'Anual', unit: 'Anos', adjective: 'anual', months: 12 },
-  semiannual: { label: 'Semestral', unit: 'Semestres', adjective: 'semestral', months: 6 },
-  quarterly: { label: 'Trimestral', unit: 'Trimestres', adjective: 'trimestral', months: 3 },
-  bimonthly: { label: 'Bimestral', unit: 'Bimestres', adjective: 'bimestral', months: 2 },
-  monthly: { label: 'Mensal', unit: 'Meses', adjective: 'mensal', months: 1 },
-  biweekly: { label: 'Quinzenal', unit: 'Quinzenas', adjective: 'quinzenal', days: 15 },
-  weekly: { label: 'Semanal', unit: 'Semanas', adjective: 'semanal', days: 7 },
-  daily: { label: 'Diário', unit: 'Dias', adjective: 'diária', days: 1 },
+  yearly: info('yearly', { months: 12 }),
+  semiannual: info('semiannual', { months: 6 }),
+  quarterly: info('quarterly', { months: 3 }),
+  bimonthly: info('bimonthly', { months: 2 }),
+  monthly: info('monthly', { months: 1 }),
+  biweekly: info('biweekly', { days: 15 }),
+  weekly: info('weekly', { days: 7 }),
+  daily: info('daily', { days: 1 }),
 }
 
 export const PERIOD_ORDER = Object.keys(PERIODS) as Period[]

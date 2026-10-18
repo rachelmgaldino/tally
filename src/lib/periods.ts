@@ -1,4 +1,5 @@
-import { addMonths, monthEnd, monthLabel, monthStart } from './dates'
+import { addMonths, monthEnd, monthStart, monthTitle, weekdayDate } from './dates'
+import { t } from './i18n'
 import { shiftDate } from './series'
 
 // The span of time Lançamentos shows: one day, one week (Sunday to Saturday)
@@ -11,9 +12,6 @@ export interface Span {
   /** First day of the span, YYYY-MM-DD. */
   start: string
 }
-
-const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
-const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
 
 const parts = (iso: string) => iso.split('-').map(Number) as [number, number, number]
 const weekday = (iso: string) => {
@@ -45,11 +43,12 @@ export function shiftSpan(span: Span, n: number): Span {
   return { kind, start: monthStart(addMonths({ year: y, month: m }, n)) }
 }
 
-/** "sábado, 18 de outubro", "12 a 18 de outubro", "outubro 2026" */
+/** "sábado, 18 de outubro", "12 a 18 de outubro", "outubro 2026" (and the same in English) */
 export function spanLabel(span: Span): string {
   const [y, m, d] = parts(span.start)
-  if (span.kind === 'month') return monthLabel({ year: y, month: m }).toLowerCase()
-  if (span.kind === 'day') return `${WEEKDAYS[weekday(span.start)]}, ${d} de ${MONTHS[m - 1]}`
+  if (span.kind === 'month') return monthTitle({ year: y, month: m })
+  if (span.kind === 'day') return weekdayDate(span.start)
+  const months = t().common.monthsInline
   const [, m2, d2] = parts(shiftDate(span.start, 6))
-  return m2 === m ? `${d} a ${d2} de ${MONTHS[m - 1]}` : `${d} de ${MONTHS[m - 1].slice(0, 3)} a ${d2} de ${MONTHS[m2 - 1].slice(0, 3)}`
+  return m2 === m ? t().common.weekSameMonth(d, d2, months[m - 1]) : t().common.weekTwoMonths(d, months[m - 1].slice(0, 3), d2, months[m2 - 1].slice(0, 3))
 }
