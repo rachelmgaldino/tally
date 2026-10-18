@@ -1,6 +1,6 @@
 import {
   ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Paperclip, Plus, Printer, Receipt,
-  Repeat2, Search, Tag, ThumbsUp, Trash2, Undo2, X,
+  Repeat2, Search, Tag, ThumbsDown, ThumbsUp, Trash2, Undo2, X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -412,7 +412,7 @@ export default function Transactions() {
                           }}
                           disabled={tx.kind === 'transfer' || tx.kind === 'payment'}
                         >
-                          <ThumbsUp size={18} />
+                          {tx.paid ? <ThumbsUp size={18} /> : <ThumbsDown size={18} />}
                         </button>
                       )}
                     </div>

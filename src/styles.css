@@ -141,7 +141,9 @@ a { color: var(--ink); }
 .field > label, .label { font-size: 13px; font-weight: 800; color: var(--muted); }
 .input { min-height: 48px; border: var(--border); border-radius: 16px; padding: 0 14px; background: var(--card); outline: none; width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; font-weight: 700; }
 .input > span:not(.prefix):not(.avatar):not(.spacer) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-input[type='date'].input { min-width: 0; }
+input[type='date'].input { min-width: 0; max-width: 100%; display: block; -webkit-appearance: none; appearance: none; line-height: 45px; }
+/* iOS draws the date centred and wider than its box otherwise. */
+input[type='date'].input::-webkit-date-and-time-value { text-align: left; margin: 0; }
 .input:focus, .input:focus-within { box-shadow: 0 0 0 3px var(--yellow); }
 .input input { border: 0; outline: none; flex: 1; min-width: 0; background: transparent; height: 100%; font-weight: 700; }
 .input .prefix { color: var(--muted); font-weight: 800; }
@@ -537,7 +539,7 @@ select.input { appearance: auto; }
 
   /* Visão geral */
   .stats { display: flex; flex-direction: column; gap: 12px; }
-  .stat.hero { min-height: 0; padding: 18px; border-radius: 28px; box-shadow: 4px 4px 0 var(--ink); display: flex; justify-content: center; }
+  .stat.hero { min-height: 0; padding: 18px; border-radius: 28px; box-shadow: 4px 4px 0 var(--ink); }
   .stat.hero .hero-in { display: flex; flex-direction: column; align-items: flex-start; }
   .stat.hero .v { font-size: 38px !important; margin-top: 2px; }
   .stat.hero .mascot { right: -12px; top: -14px; bottom: auto; }

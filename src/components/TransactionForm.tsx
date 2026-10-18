@@ -62,6 +62,12 @@ export function TransactionForm({
   const [amount, setAmount] = useState(source?.amount_cents ?? 0)
   const [date, setDate] = useState(editing?.date ?? today())
   const [paid, setPaid] = useState(editing?.paid ?? true)
+  // A new entry counts as paid when it's dated today or earlier, until Rachel flips the switch herself.
+  const [paidTouched, setPaidTouched] = useState(!!editing)
+  function changeDate(d: string) {
+    setDate(d)
+    if (!paidTouched && d) setPaid(d <= today())
+  }
   // Account or, for expenses and income, a card.
   const [accountId, setAccountId] = useState<string | null>(source?.account_id ?? source?.card_id ?? defaultAccountId ?? active[0]?.id ?? null)
   const card = kind === 'transfer' ? undefined : cards.find((c) => c.id === accountId)
@@ -247,12 +253,12 @@ export function TransactionForm({
           </div>
           <div className="field">
             <label htmlFor="date">Data</label>
-            <input id="date" className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
           </div>
         </div>
         {kind !== 'transfer' && (
           <>
-            {!card && <Toggle checked={paid} onChange={setPaid} label={kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'} />}
+            {!card && <Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'} />}
             <div className="grid-2" style={{ gap: 10 }}>
               <div className="field">
                 <label>{usableCards.length ? 'Conta/Cartão' : 'Conta'}</label>

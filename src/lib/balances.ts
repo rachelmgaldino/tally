@@ -43,8 +43,8 @@ export function accountBalance(account: Account, txs: Transaction[], until?: str
 }
 
 export interface PeriodSummary {
+  /** Where the period starts: the previous period's Previsto, so unpaid bills already count. */
   previous: number
-  previousForecast: number
   incomePaid: number
   incomeAll: number
   expensePaid: number
@@ -66,19 +66,14 @@ export function periodSummary(
 ): PeriodSummary {
   const ids = new Set(accounts.map((a) => a.id))
   let previous = 0
-  let previousForecast = 0
-  for (const a of accounts) {
-    previous += a.initial_balance_cents
-    previousForecast += a.initial_balance_cents
-  }
+  for (const a of accounts) previous += a.initial_balance_cents
   let incomePaid = 0, incomeAll = 0, expensePaid = 0, expenseAll = 0
   for (const tx of txs) {
     if (tx.date >= to) continue
     const d = effectOnSet(tx, ids)
     if (d === 0) continue
     if (tx.date < from) {
-      previousForecast += d
-      if (tx.paid) previous += d
+      previous += d
       continue
     }
     if (d > 0) {
@@ -91,12 +86,11 @@ export function periodSummary(
   }
   return {
     previous,
-    previousForecast,
     incomePaid,
     incomeAll,
     expensePaid,
     expenseAll,
     balance: previous + incomePaid - expensePaid,
-    forecast: previousForecast + incomeAll - expenseAll,
+    forecast: previous + incomeAll - expenseAll,
   }
 }
