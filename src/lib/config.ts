@@ -5,5 +5,10 @@ export const SUPABASE_URL =
 export const SUPABASE_KEY =
   import.meta.env.VITE_SUPABASE_KEY ?? 'sb_publishable_VSnf05QDetRlkkVlTeq5UQ_GgeArPdx'
 
-/** `npm run demo`: in-memory data, no login, for trying the UI locally. */
-export const DEMO = import.meta.env.DEV && import.meta.env.VITE_DEMO === '1'
+/** Any page under /demo on the live site opens the demo, for showing Tally to friends. */
+const demoPath = typeof window !== 'undefined' && /^\/demo(\/|$)/.test(window.location.pathname)
+/** Where the app's routes start: /demo for the shared demo, the site root otherwise. */
+export const BASENAME = demoPath ? '/demo' : undefined
+
+/** Sample data kept in the browser, no login: `npm run demo` locally, or /demo. */
+export const DEMO = (import.meta.env.DEV && import.meta.env.VITE_DEMO === '1') || demoPath

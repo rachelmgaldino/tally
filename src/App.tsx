@@ -7,6 +7,7 @@ import { Sidebar } from './components/Sidebar'
 import { TxFormProvider } from './components/TxFormContext'
 import { ToastProvider } from './components/Toast'
 import { ConfirmProvider } from './components/Confirm'
+import { DemoBanner } from './components/DemoBanner'
 import { DEMO } from './lib/config'
 import { useSeriesUpkeep } from './lib/entries'
 import { PrefsProvider } from './lib/prefs'
@@ -50,6 +51,7 @@ export default function App() {
     <ConfirmProvider>
       <TxFormProvider>
         <SeriesUpkeep />
+        {DEMO && <DemoBanner />}
         <div className="app">
         <Sidebar name={name} />
         <div className="app-main">

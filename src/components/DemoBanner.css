@@ -1,0 +1,18 @@
+/* The strip at the top of the demo. Uses the theme's tokens so it follows any look. */
+.demo-banner {
+  display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  max-width: 1392px; margin: 16px auto 0; padding: 8px 16px;
+  background: var(--yellow); color: var(--ink); border: var(--border); border-radius: 999px;
+  font-size: 13px; text-align: center;
+}
+.demo-banner + .app { padding-top: 16px; }
+.demo-banner button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+  background: var(--card); color: var(--ink); border: var(--border); border-radius: 999px;
+  font: inherit; font-weight: 800; cursor: pointer;
+}
+@media (max-width: 760px) {
+  .demo-banner { margin: max(10px, env(safe-area-inset-top)) 12px 0; padding: 6px 6px 6px 14px; justify-content: space-between; text-align: left; font-size: 12px; gap: 8px; }
+  .demo-banner + .app { padding-top: 10px; }
+  .demo-banner-more { display: none; }
+}
