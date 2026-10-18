@@ -147,6 +147,7 @@ export const pt = {
     toPay: 'a pagar',
     negative: ' negativo',
     left: 'sobra',
+    kept: 'guardado',
   },
 }
 
@@ -282,5 +283,6 @@ export const en: typeof pt = {
     toPay: 'to pay',
     negative: ' short',
     left: 'left',
+    kept: 'set aside',
   },
 }

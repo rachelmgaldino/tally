@@ -57,20 +57,25 @@ export interface PeriodSummary {
   expenseAll: number
   balance: number
   forecast: number
+  /** Net moved into the kept accounts (left out of the Saldo geral) this period. */
+  saved: number
 }
 
 /**
  * The footer of the Lançamentos screen for one period [from, to).
  * Transfers between the selected accounts cancel out; a transfer into or out of
- * the selection counts as income or expense for it.
+ * the selection counts as income or expense for it, except one into or out of
+ * a kept account (`keptIds`), which goes to `saved`.
  */
 export function periodSummary(
   accounts: Account[],
   txs: Transaction[],
   from: string,
   to: string,
+  keptIds: Set<string> = new Set(),
 ): PeriodSummary {
   const ids = new Set(accounts.map((a) => a.id))
+  let saved = 0
   let previous = 0
   for (const a of accounts) previous += a.initial_balance_cents
   let incomePaid = 0, incomeAll = 0, expensePaid = 0, expenseAll = 0
@@ -80,6 +85,11 @@ export function periodSummary(
     if (d === 0) continue
     if (tx.date < from) {
       previous += d
+      continue
+    }
+    // Money moved into or out of a kept account is "guardado", not spending.
+    if (tx.kind === 'transfer' && (keptIds.has(tx.to_account_id ?? '') || keptIds.has(tx.account_id ?? ''))) {
+      saved -= d
       continue
     }
     if (d > 0) {
@@ -96,7 +106,8 @@ export function periodSummary(
     incomeAll,
     expensePaid,
     expenseAll,
-    balance: previous + incomePaid - expensePaid,
-    forecast: previous + incomeAll - expenseAll,
+    balance: previous + incomePaid - expensePaid - saved,
+    forecast: previous + incomeAll - expenseAll - saved,
+    saved,
   }
 }
