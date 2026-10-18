@@ -81,7 +81,7 @@ export function SummaryCard({
         <div className="sum-side">
           <div className="sum-side-head">
             <span className="k">Dinheiro do {word}</span>
-            <small className="sum-sum">{formatBRL(previous)} que já tinha + {formatBRL(incomeAll)} de receitas = <b>{formatBRL(previous + incomeAll)}</b></small>
+            <small className="sum-sum">{formatBRL(previous)} que já tinha + {formatBRL(incomeAll)} de receitas<span className="sum-sum-eq"> = <b>{formatBRL(previous + incomeAll)}</b></span></small>
             <b className="sum-sum-short">{formatBRL(previous + incomeAll)}</b>
           </div>
           <div className="sum-bar" role="img" aria-label={`Já pago ${formatBRL(expensePaid)}, a pagar ${formatBRL(toPay)}, ${short ? `faltam ${formatBRL(short)}` : `sobra ${formatBRL(left)}`}`}>
