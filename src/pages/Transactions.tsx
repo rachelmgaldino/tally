@@ -38,8 +38,8 @@ const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'R
 /** "Fluxo de caixa" shows money moving in accounts; "Todos os lançamentos" every entry, card purchases included. */
 type ViewMode = 'cash' | 'all'
 const MODE_KEY = 'tally-view-mode'
-/** The summary card shows either the full balance breakdown or plain in/out totals, whatever the view mode. */
-const SUMMARY_KEY = 'tally-summary-totals'
+/** The summary card shows either plain in/out totals of what's paid (the default) or the full balance breakdown, whatever the view mode. */
+const SUMMARY_KEY = 'tally-summary-view'
 
 export default function Transactions() {
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts()
@@ -71,11 +71,11 @@ export default function Transactions() {
   })
   const [choosingMode, setChoosingMode] = useState(false)
   const [totalsOnly, setTotalsOnlyState] = useState(() => {
-    try { return localStorage.getItem(SUMMARY_KEY) === '1' } catch { return false }
+    try { return localStorage.getItem(SUMMARY_KEY) !== 'saldos' } catch { return true }
   })
   const setTotalsOnly = (v: boolean) => {
     setTotalsOnlyState(v)
-    try { localStorage.setItem(SUMMARY_KEY, v ? '1' : '0') } catch { /* ignore */ }
+    try { localStorage.setItem(SUMMARY_KEY, v ? 'periodo' : 'saldos') } catch { /* ignore */ }
   }
   const setMode = (m: ViewMode) => {
     setModeState(m)
@@ -440,8 +440,8 @@ export default function Transactions() {
         <SummaryCard
           summary={summary}
           totals={{
-            income: rows.filter((tx) => tx.kind === 'income').reduce((s, tx) => s + tx.amount_cents, 0),
-            expense: rows.filter((tx) => tx.kind === 'expense').reduce((s, tx) => s + tx.amount_cents, 0),
+            income: rows.filter((tx) => tx.kind === 'income' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
+            expense: rows.filter((tx) => tx.kind === 'expense' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
           }}
           totalsOnly={simpleTotal}
           onToggle={filteredCard ? undefined : () => setTotalsOnly(!totalsOnly)}
