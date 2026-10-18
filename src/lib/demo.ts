@@ -132,14 +132,13 @@ function seed(): Store {
   repeat({ description: 'Netflix', amount_cents: 4490, card_id: nuCard.id, category_id: streaming }, 12)
   repeat({ description: 'Spotify', amount_cents: 2190, card_id: interCard.id, category_id: streaming }, 20)
   repeat({ description: 'Curso de inglês', amount_cents: 32000, account_id: inter.id, category_id: cat('Educação') }, 25)
+  repeat({ kind: 'transfer', description: 'Separar as contas do mês', amount_cents: 150000, account_id: nu.id, to_account_id: inter.id }, 6)
+  repeat({ kind: 'transfer', description: 'Guardar na caixinha', amount_cents: 50000, account_id: nu.id, to_account_id: savings.id }, 6)
   repeat({ description: 'Notebook', amount_cents: 420000, card_id: interCard.id, category_id: cat('Trabalho'), tag_ids: [work.id] }, 14, 10, months[1])
   repeat({ description: 'Óculos novos', amount_cents: 96000, card_id: nuCard.id, category_id: cat('Saúde') }, 22, 4, months[2])
 
   // Everyday spending, a little different each month.
   for (const m of months) {
-    // Single entries, not a fixed series: future transfers would count as already made.
-    add({ kind: 'transfer', description: 'Separar as contas do mês', amount_cents: 150000, date: on(m, 6), account_id: nu.id, to_account_id: inter.id })
-    add({ kind: 'transfer', description: 'Guardar na caixinha', amount_cents: 50000, date: on(m, 6), account_id: nu.id, to_account_id: savings.id })
     for (const day of [4, 11, 19, 26]) swipe(nuCard, 'Mercado', between(16000, 34000), on(m, day), cat('Mercado'))
     for (let i = 0; i < 4; i++) swipe(nuCard, pick(rnd, ['iFood', 'Restaurante japonês', 'Padaria', 'Pizzaria', 'Café com a Bia']), between(2800, 11500), on(m, between(1, 28)), cat('Bares e restaurantes'))
     for (let i = 0; i < 5; i++) swipe(interCard, 'Uber', between(1400, 4200), on(m, between(1, 28)), cat('Transporte'))
