@@ -16,9 +16,9 @@ import { Modal, Segmented } from '../components/ui'
 import { effectOnSet, periodSummary } from '../lib/balances'
 import { transactionsTable } from '../lib/api'
 import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
-import { useRefresh, useSeriesUpkeep } from '../lib/entries'
+import { deleteEntries, useRefresh, useSeriesUpkeep } from '../lib/entries'
 import { useToast } from '../components/Toast'
-import { useUndoDelete } from '../components/useUndoDelete'
+import { useConfirm } from '../components/Confirm'
 import { monthLabel, shortDate, today } from '../lib/dates'
 import { shiftSpan, spanAt, spanLabel, spanRange, type Span } from '../lib/periods'
 import { usePrefs } from '../lib/prefs'
@@ -55,7 +55,7 @@ export default function Transactions() {
   const { open } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
-  const undoDelete = useUndoDelete()
+  const confirmDelete = useConfirm()
 
   const { prefs } = usePrefs()
   const [spanState, setSpan] = useState<Span>(() => spanAt(prefs.period, today()))
@@ -175,12 +175,14 @@ export default function Transactions() {
     }
   }
 
-  function bulkDelete() {
+  async function bulkDelete() {
     const n = pickedRows.length
-    const list = pickedRows
-    stopSelecting()
-    undoDelete(list, n === 1 ? 'Lançamento excluído.' : `${n} lançamentos excluídos.`)
-      .catch((e) => toast(`Não foi possível concluir: ${(e as Error).message}`))
+    const ok = await confirmDelete({
+      title: n === 1 ? 'Excluir 1 lançamento?' : `Excluir ${n} lançamentos?`,
+      text: 'Eles saem da lista e dos saldos. Isso não pode ser desfeito.',
+    })
+    if (!ok) return
+    bulk(deleteEntries(pickedRows), n === 1 ? 'Lançamento excluído.' : `${n} lançamentos excluídos.`)
   }
 
   function exportCsv() {

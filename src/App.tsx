@@ -6,6 +6,7 @@ import { BottomTabs } from './components/BottomTabs'
 import { Sidebar } from './components/Sidebar'
 import { TxFormProvider } from './components/TxFormContext'
 import { ToastProvider } from './components/Toast'
+import { ConfirmProvider } from './components/Confirm'
 import { DEMO } from './lib/config'
 import { useSeriesUpkeep } from './lib/entries'
 import { PrefsProvider } from './lib/prefs'
@@ -46,6 +47,7 @@ export default function App() {
     <ProfileProvider name={name} email={email} avatarPath={session?.user.user_metadata?.avatar_path as string | undefined}>
     <PrefsProvider saved={session?.user.user_metadata?.prefs}>
     <ToastProvider>
+    <ConfirmProvider>
       <TxFormProvider>
         <SeriesUpkeep />
         <div className="app">
@@ -70,6 +72,7 @@ export default function App() {
         <BottomTabs />
         </div>
       </TxFormProvider>
+    </ConfirmProvider>
     </ToastProvider>
     </PrefsProvider>
     </ProfileProvider>

@@ -3,14 +3,14 @@ import { useRef, useState } from 'react'
 import { formatSize, openAttachment, removeAttachments, uploadAttachment } from '../lib/attachments'
 import { invoiceName } from '../lib/cards'
 import { longDate } from '../lib/dates'
-import { deleteFromHere, useRefresh } from '../lib/entries'
+import { deleteEntries, deleteFromHere, useRefresh } from '../lib/entries'
 import { formatBRL } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import { PERIODS } from '../lib/series'
 import type { Attachment, Transaction } from '../lib/types'
 import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { useToast } from './Toast'
-import { useUndoDelete } from './useUndoDelete'
+import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
 
 const KIND_LABEL = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência', payment: 'Pagamento de fatura' }
@@ -27,7 +27,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
   const { open, ask } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
-  const undoDelete = useUndoDelete()
+  const confirmDelete = useConfirm()
   const fileInput = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const category = tx.category_id ? categories.get(tx.category_id) : undefined
@@ -58,14 +58,16 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
         title: 'Excluir lançamento recorrente',
         text: 'Este lançamento faz parte de uma repetição. O que você deseja excluir?',
         options: [
-          { label: 'Apenas este', onClick: async () => { onClose(); await undoDelete([tx], 'Lançamento excluído.') } },
+          { label: 'Apenas este', onClick: async () => { onClose(); await refresh(deleteEntries([tx])); toast('Lançamento excluído.') } },
           { label: 'Este e os próximos', primary: true, onClick: async () => { onClose(); await refresh(deleteFromHere(tx, allTxs, series)); toast('Lançamentos excluídos.') } },
         ],
       })
       return
     }
+    if (!(await confirmDelete({ title: 'Excluir lançamento?', text: 'Ele sai da lista e dos saldos. Isso não pode ser desfeito.' }))) return
     onClose()
-    await undoDelete([tx], 'Lançamento excluído.')
+    await refresh(deleteEntries([tx]))
+    toast('Lançamento excluído.')
   }
 
   async function addFiles(list: FileList | null) {
