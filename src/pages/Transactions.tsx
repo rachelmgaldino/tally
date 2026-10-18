@@ -228,7 +228,7 @@ export default function Transactions() {
   }
 
   return (
-    <main className="page page-narrow">
+    <main className="page page-narrow tx-page">
       <header className="page-head">
         <h1>Lançamentos</h1>
         <div className="head-actions">
