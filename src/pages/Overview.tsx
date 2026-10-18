@@ -5,9 +5,10 @@ import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Av
 import { Mascot } from '../components/Sidebar'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
+import { usePrefs } from '../lib/prefs'
 import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
-import { addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
+import { addDays, addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
 import { formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
@@ -49,6 +50,7 @@ export default function Overview({ name }: { name: string }) {
 
   const money = (cents: number) => (hidden ? 'R$ •••••' : formatBRL(cents))
   const [m, setM] = useState(currentMonth)
+  const { prefs, setPrefs } = usePrefs()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = selectedId ? txs.find((tx) => tx.id === selectedId) : undefined
   const isCurrent = monthKey(m) === monthKey(currentMonth())
@@ -81,16 +83,27 @@ export default function Overview({ name }: { name: string }) {
   const expensePending = toPay.reduce((s, tx) => s + tx.amount_cents, 0)
   const included = active.filter((a) => !a.exclude_from_total)
 
-  // Phone only: the next bills and incomes, the late ones, and money kept outside the total.
-  const nextUp = ledger
-    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t : tx.date >= from && tx.date < to))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 4)
-  // Desktop: the same list, a little longer, with the late ones on top.
+  // Próximos: unpaid bills and incomes in the next 7, 14 or 30 days (a saved choice); another month shows that month.
+  const horizon = addDays(t, prefs.nextDays)
   const upcoming = ledger
-    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t : tx.date >= from && tx.date < to))
+    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t && tx.date <= horizon : tx.date >= from && tx.date < to))
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 6)
+  const nextHead = (
+    <div className="section-title next-head">
+      <h3>Próximos</h3>
+      {isCurrent && (
+        <div className="segmented days-pick" role="group" aria-label="Período de Próximos">
+          {([7, 14, 30] as const).map((n) => (
+            <button key={n} className={prefs.nextDays === n ? 'on' : ''} aria-pressed={prefs.nextDays === n} onClick={() => setPrefs({ nextDays: n }).catch(() => {})}>{n} dias</button>
+          ))}
+        </div>
+      )}
+      <Link to="/lancamentos" className="link">Ver tudo</Link>
+    </div>
+  )
+  const nothingNext = isCurrent
+    ? `Nada para pagar ou receber nos próximos ${prefs.nextDays} dias.`
+    : 'Nada pendente neste mês.'
   const kept = active.filter((a) => a.exclude_from_total)
   const keptTotal = kept.reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
   const entryName = (tx: Transaction) => {
@@ -246,8 +259,8 @@ export default function Overview({ name }: { name: string }) {
         )}
 
         <section className="card card-pad" aria-label="Próximos">
-          <div className="section-title"><h3>Próximos</h3><Link to="/lancamentos" className="link">Ver tudo</Link></div>
-          {nextUp.length === 0 ? <AllClear /> : nextUp.map((tx) => nextRow(tx))}
+          {nextHead}
+          {upcoming.length === 0 ? <AllClear text={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
         </section>
 
         <section className="card card-pad" aria-label="Minhas contas">
@@ -269,39 +282,13 @@ export default function Overview({ name }: { name: string }) {
       </section>
 
       <div className="ov-grid">
-        <div className="stack" style={{ gap: 20 }}>
           <section className="card card-pad" aria-label="Próximos">
-            <div className="section-title"><h3>Próximos</h3><Link to="/lancamentos" className="link">Ver tudo</Link></div>
+            {nextHead}
             {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {overdue.length === 1 ? '1 atrasada' : `${overdue.length} atrasadas`}</div>}
             {overdue.map((tx) => nextRow(tx, true))}
-            {upcoming.length === 0 && overdue.length === 0 ? <AllClear /> : upcoming.map((tx) => nextRow(tx))}
-          </section>
-          <section className="card card-pad">
-            <div className="section-title"><h3>Minhas contas</h3>{active.length > 0 && <Link to="/configuracoes/contas" className="link">Gerenciar</Link>}</div>
-            {active.length === 0 ? (
-              <div className="placeholder">
-                <span className="ico"><Landmark size={20} /></span>
-                <h3>Nenhuma conta ainda</h3>
-                <p>Aqui você poderá ver todos os saldos das suas contas.</p>
-                <button className="btn btn-soft" style={{ marginTop: 14 }} onClick={() => navigate('/configuracoes/contas?nova=1')}>
-                  <CirclePlus size={16} /> Adicionar conta
-                </button>
-              </div>
-            ) : active.map((a) => (
-              <div key={a.id} className="account-line" style={{ background: pastel(a.color, 0.82) }}>
-                <AccountAvatar account={a} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <b>{a.name}</b>
-                  <div className="muted small">{a.exclude_from_total ? 'fora do saldo geral' : 'conta manual'}</div>
-                </div>
-                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
-              </div>
-            ))}
+            {upcoming.length === 0 && overdue.length === 0 ? <AllClear text={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
           </section>
 
-        </div>
-
-        <div className="stack" style={{ gap: 20 }}>
           <section className="card card-pad">
             <div className="section-title"><h3>Meus cartões</h3>{cards.length > 0 && <Link to="/configuracoes/contas#cartoes" className="link">Gerenciar</Link>}</div>
             {cards.length === 0 ? (
@@ -335,8 +322,28 @@ export default function Overview({ name }: { name: string }) {
               )
             })}
           </section>
-        </div>
-
+          <section className="card card-pad ov-wide">
+            <div className="section-title"><h3>Minhas contas</h3>{active.length > 0 && <Link to="/configuracoes/contas" className="link">Gerenciar</Link>}</div>
+            {active.length === 0 ? (
+              <div className="placeholder">
+                <span className="ico"><Landmark size={20} /></span>
+                <h3>Nenhuma conta ainda</h3>
+                <p>Aqui você poderá ver todos os saldos das suas contas.</p>
+                <button className="btn btn-soft" style={{ marginTop: 14 }} onClick={() => navigate('/configuracoes/contas?nova=1')}>
+                  <CirclePlus size={16} /> Adicionar conta
+                </button>
+              </div>
+            ) : <div className="acc-tiles">{active.map((a) => (
+              <div key={a.id} className="account-line" style={{ background: pastel(a.color, 0.82) }}>
+                <AccountAvatar account={a} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b>{a.name}</b>
+                  <div className="muted small">{a.exclude_from_total ? 'fora do saldo geral' : 'conta manual'}</div>
+                </div>
+                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
+              </div>
+            ))}</div>}
+          </section>
       </div>
       {selected && <TransactionPanel tx={selected} onClose={() => setSelectedId(null)} onNavigate={setSelectedId} />}
     </main>
@@ -344,11 +351,11 @@ export default function Overview({ name }: { name: string }) {
 }
 
 /** Nothing waiting to be paid or received: the coin says so. */
-function AllClear() {
+function AllClear({ text }: { text: string }) {
   return (
     <div className="all-clear">
       <Mascot size={52} />
-      <div><b>Tudo em dia!</b><small>Nenhuma conta pendente por aqui.</small></div>
+      <div><b>Tudo em dia!</b><small>{text}</small></div>
     </div>
   )
 }
