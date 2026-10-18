@@ -461,6 +461,8 @@ export default function Transactions() {
           totals={{
             income: rows.filter((tx) => tx.kind === 'income' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
             expense: rows.filter((tx) => tx.kind === 'expense' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
+            pendingIncome: rows.filter((tx) => tx.kind === 'income' && !tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
+            pendingExpense: rows.filter((tx) => tx.kind === 'expense' && !tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
           }}
           totalsOnly={simpleTotal}
           onToggle={filteredCard ? undefined : () => setTotalsOnly(!totalsOnly)}
