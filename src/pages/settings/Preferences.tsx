@@ -52,7 +52,7 @@ export default function Preferences() {
         </div>
       </section>
 
-      <section className="card card-pad prefs toned" style={{ maxWidth: 860, ...tone('#fbe8ec') }}>
+      <section className="card card-pad prefs toned" style={tone('#fbe8ec')}>
         <h3 className="section-h">Zona de cuidado</h3>
         <div className="pref-row">
           <div><b>Começar do zero</b><small>Apaga todos os lançamentos. Contas, cartões, categorias e tags continuam.</small></div>
