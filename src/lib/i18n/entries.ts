@@ -132,7 +132,6 @@ export const pt = {
     /** Inside the bars; the trailing space separates it from the amount. */
     incomeIn: 'Entradas ',
     expenseIn: 'Saídas ',
-    keptIn: 'Guardado ',
     incomeLegend: 'entradas',
     expenseLegend: 'saídas',
     keptLegend: 'guardado',
@@ -271,7 +270,6 @@ export const en: typeof pt = {
     goingOut: (amount) => `−${amount} going out`,
     incomeIn: 'In ',
     expenseIn: 'Out ',
-    keptIn: 'Set aside ',
     incomeLegend: 'money in',
     expenseLegend: 'money out',
     keptLegend: 'set aside',
