@@ -309,7 +309,7 @@ export default function Overview({ name }: { name: string }) {
               const used = c.limit_cents > 0 ? Math.min(100, Math.max(0, ((c.limit_cents - avail) / c.limit_cents) * 100)) : 0
               return (
                 <div key={c.id} className="card-line" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18 }}>
-                  <CardArt card={c} style={{ width: 180 }} />
+                  <CardArt card={c} style={{ width: 'clamp(140px, 12vw, 180px)' }} />
                   <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div className="row" style={{ justifyContent: 'space-between' }}><span className="muted small" style={{ fontWeight: 700 }}>Limite disponível</span><span className="money">{money(avail)}</span></div>
                     <div className="limit-bar"><div style={{ width: `${used}%`, background: pastel(c.color, 0.4) }} /></div>
