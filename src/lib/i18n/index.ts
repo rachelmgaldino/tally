@@ -8,6 +8,7 @@ import * as demo from './demo'
 import * as entries from './entries'
 import * as form from './form'
 import * as invoice from './invoice'
+import * as landing from './landing'
 import * as login from './login'
 import * as overview from './overview'
 import * as prefs from './prefs'
@@ -26,6 +27,7 @@ const pt = {
   entries: entries.pt,
   form: form.pt,
   invoice: invoice.pt,
+  landing: landing.pt,
   login: login.pt,
   overview: overview.pt,
   prefs: prefs.pt,
@@ -40,6 +42,7 @@ const en: Strings = {
   entries: entries.en,
   form: form.en,
   invoice: invoice.en,
+  landing: landing.en,
   login: login.en,
   overview: overview.en,
   prefs: prefs.en,
