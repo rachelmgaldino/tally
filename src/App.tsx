@@ -10,10 +10,11 @@ import { ConfirmProvider } from './components/Confirm'
 import { DemoBanner } from './components/DemoBanner'
 import { DEMO } from './lib/config'
 import { useSeriesUpkeep } from './lib/entries'
-import { setLanguage } from './lib/i18n'
-import { deviceLanguage, PrefsProvider } from './lib/prefs'
+import { setLanguage, type Language } from './lib/i18n'
+import { deviceLanguage, PrefsProvider, rememberLanguage } from './lib/prefs'
 import { ProfileProvider } from './lib/profile'
 import { supabase } from './lib/supabase'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Invoice from './pages/Invoice'
 import More from './pages/More'
@@ -40,11 +41,7 @@ export default function App() {
   }, [qc])
 
   if (session === undefined) return null
-  if (!DEMO && !session) {
-    // Not signed in yet: the language last used on this device, or the browser's.
-    setLanguage(deviceLanguage())
-    return <Login />
-  }
+  if (!DEMO && !session) return <SignedOut />
 
   const email = session?.user.email ?? 'rachel@exemplo.com'
   const name = (session?.user.user_metadata?.name as string | undefined) || capitalize(email.split(/[@.]/)[0])
@@ -86,10 +83,34 @@ export default function App() {
   )
 }
 
+/** Before signing in: the landing page at the root, plus the sign-in and sign-up screen. */
+function SignedOut() {
+  // The language last used on this device, or the browser's. The PT · EN pill changes it.
+  const [lang, setLang] = useState<Language>(deviceLanguage)
+  setLanguage(lang)
+  function changeLanguage(next: Language) {
+    rememberLanguage(next)
+    setLang(next)
+  }
+  return (
+    <Routes>
+      {/* Opened from the home screen icon, Tally skips the landing page and asks to sign in. */}
+      <Route path="/" element={installed() ? <Navigate to="/entrar" replace /> : <Landing onLanguage={changeLanguage} />} />
+      <Route path="/entrar" element={<Login onLanguage={changeLanguage} />} />
+      <Route path="/criar-conta" element={<Login onLanguage={changeLanguage} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
 /** Creates upcoming entries of fixed (recurring) lançamentos as time passes. */
 function SeriesUpkeep() {
   useSeriesUpkeep()
   return null
+}
+
+function installed() {
+  return window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
 }
 
 function capitalize(s: string) {
