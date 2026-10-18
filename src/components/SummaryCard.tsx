@@ -64,9 +64,11 @@ export function SummaryCard({
                 <div className="sum-split">
                   {income > 0 && <i className="in" style={{ flex: income }}><span><em>{s.incomeIn}</em>{formatCents(income)}</span></i>}
                   {expense > 0 && <i className="out" style={{ flex: expense }}><span><em>{s.expenseIn}</em>{formatCents(expense)}</span></i>}
-                  {kept > 0 && <i className="kept" style={{ flex: kept }}><span><em>{s.keptIn}</em>{formatCents(kept)}</span></i>}
+                  {/* True to size, so its label sits under the bar instead of stretching it. */}
+                  {kept > 0 && <i className="kept" style={{ flex: kept }} />}
                 </div>
-                <div className="sum-split-legend"><small>{s.incomeLegend}</small><small>{s.expenseLegend}</small>{kept > 0 && <small>{s.keptLegend}</small>}</div>
+                <div className="sum-split-legend"><small>{s.incomeLegend}</small><small>{s.expenseLegend}</small></div>
+                {kept > 0 && <div className="sum-split-kept"><b className="sw kept" />{s.keptLegend} <b className="v">{formatCents(kept)}</b></div>}
               </>
             )}
           </div>
