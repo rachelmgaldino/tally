@@ -1,5 +1,5 @@
 import {
-  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Paperclip, Plus, Printer, Receipt,
+  ArrowLeftRight, ArrowRight, Check, ChevronLeft, ChevronRight, CircleCheck, CreditCard, Download, EllipsisVertical, Info, Minus, Paperclip, Plus, Printer, Receipt,
   Repeat2, Search, Tag, ThumbsDown, ThumbsUp, Trash2, Undo2, X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -37,6 +37,8 @@ const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'R
 /** "Fluxo de caixa" shows money moving in accounts; "Todos os lançamentos" every entry, card purchases included. */
 type ViewMode = 'cash' | 'all'
 const MODE_KEY = 'tally-view-mode'
+/** The summary card shows either the full balance breakdown or plain in/out totals, whatever the view mode. */
+const SUMMARY_KEY = 'tally-summary-totals'
 
 export default function Transactions() {
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts()
@@ -67,6 +69,13 @@ export default function Transactions() {
     try { return localStorage.getItem(MODE_KEY) === 'all' ? 'all' : 'cash' } catch { return 'cash' }
   })
   const [choosingMode, setChoosingMode] = useState(false)
+  const [totalsOnly, setTotalsOnlyState] = useState(() => {
+    try { return localStorage.getItem(SUMMARY_KEY) === '1' } catch { return false }
+  })
+  const setTotalsOnly = (v: boolean) => {
+    setTotalsOnlyState(v)
+    try { localStorage.setItem(SUMMARY_KEY, v ? '1' : '0') } catch { /* ignore */ }
+  }
   const setMode = (m: ViewMode) => {
     setModeState(m)
     try { localStorage.setItem(MODE_KEY, m) } catch { /* ignore */ }
@@ -114,8 +123,9 @@ export default function Transactions() {
 
   const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts
   const summary = periodSummary(summaryAccounts, ledger, from, to)
-  // A plain total (income minus expenses, transfers left out) when the list isn't about account balances.
-  const simpleTotal = mode === 'all' || !!filteredCard
+  // A plain total (income minus expenses, transfers left out) when asked for, or when a card is filtered,
+  // since account balances say nothing about a card.
+  const simpleTotal = totalsOnly || !!filteredCard
   const total = rows.reduce((s, tx) => s + (tx.kind === 'income' ? tx.amount_cents : tx.kind === 'expense' ? -tx.amount_cents : 0), 0)
   const filteredAccount = accountFilter ? accountMap.get(accountFilter) : undefined
 
@@ -428,6 +438,11 @@ export default function Transactions() {
         </section>
 
         <section className="card summary-card" aria-label="Resumo">
+          {!filteredCard && (
+            <button className="summary-toggle" onClick={() => setTotalsOnly(!totalsOnly)} aria-pressed={totalsOnly} title={totalsOnly ? 'Mostrar saldos' : 'Mostrar só entradas e saídas'} aria-label={totalsOnly ? 'Mostrar saldos' : 'Mostrar só entradas e saídas'}>
+              {totalsOnly ? <Plus size={16} /> : <Minus size={16} />}
+            </button>
+          )}
           {filteredAccount && <div><div className="k">Conta</div><div className="row" style={{ marginTop: 6, fontWeight: 800 }}><AccountAvatar account={filteredAccount} size={24} />{filteredAccount.name}</div></div>}
           {filteredCard && <div><div className="k">Cartão</div><div className="row" style={{ marginTop: 6, fontWeight: 800 }}><AccountIcon icon={filteredCard.icon} color={filteredCard.color} size={24} />{filteredCard.name}</div></div>}
           {simpleTotal ? (
@@ -493,14 +508,12 @@ const MODE_TEXT: Record<ViewMode, string[]> = {
   cash: [
     'Só o dinheiro que entra e sai das suas contas;',
     'As compras avulsas do cartão não aparecem;',
-    'Faturas e pagamentos de fatura aparecem normalmente;',
-    'No resumo, você vê o saldo e a previsão de saldo do período.',
+    'Faturas e pagamentos de fatura aparecem normalmente.',
   ],
   all: [
     'Cada lançamento seu, um por um;',
     'Incluindo todas as compras no cartão de crédito;',
-    'Faturas e pagamentos de fatura ficam de fora (pra não contar a mesma despesa duas vezes);',
-    'No resumo, só as entradas e saídas do período.',
+    'Faturas e pagamentos de fatura ficam de fora (pra não contar a mesma despesa duas vezes).',
   ],
 }
 
