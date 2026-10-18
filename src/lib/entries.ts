@@ -116,10 +116,21 @@ export async function applyToNext(before: Transaction, after: Transaction, all: 
   }
 }
 
-export async function deleteEntries(list: Transaction[]) {
+export async function deleteEntries(list: Transaction[], { keepFiles = false } = {}) {
   await transactionsTable.removeMany(list.map((t) => t.id))
   // Files go after the rows, so a failed delete never leaves rows pointing at missing files.
+  if (!keepFiles) await dropFiles(list)
+}
+
+/** Removes the attachments of deleted entries (done later when the delete can still be undone). */
+export async function dropFiles(list: Transaction[]) {
   await removeAttachments(list.flatMap((t) => t.attachments)).catch(() => {})
+}
+
+/** "Desfazer": puts deleted entries back exactly as they were. */
+export async function restoreEntries(list: Transaction[]) {
+  const rows = list.map(({ virtual: _virtual, ...row }) => row)
+  await transactionsTable.insert(rows as unknown as NewTransaction[])
 }
 
 /** "Este e os próximos": delete this entry and the later ones; a fixed series stops repeating. */

@@ -1,4 +1,5 @@
-import { X } from 'lucide-react'
+import { ChevronLeft, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useEffect, type ReactNode } from 'react'
 import { centsFromTyping, formatCents } from '../lib/money'
 
@@ -63,4 +64,9 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
       ))}
     </div>
   )
+}
+
+/** Phone only: the way back to the Mais tab from the pages it opens. */
+export function BackToMore() {
+  return <Link to="/mais" className="back-link phone-only"><ChevronLeft size={18} /> Mais</Link>
 }

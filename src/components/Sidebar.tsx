@@ -1,4 +1,4 @@
-import { CreditCard, House, List, LogOut, Plus, SlidersHorizontal, Tag, Upload, Wallet } from 'lucide-react'
+import { CreditCard, House, List, LogOut, Plus, SlidersHorizontal, Tag, Wallet } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { DEMO } from '../lib/config'
 import { useCards } from '../lib/queries'
@@ -41,7 +41,6 @@ export function Sidebar({ name }: { name: string }) {
         >
           <CreditCard size={20} /> Faturas
         </NavLink>
-        <span className="soon" title="Em breve"><Upload size={20} /> Importar <small>em breve</small></span>
         <div className="lbl">Ajustes</div>
         <NavLink to="/configuracoes/contas" className={() => (pathname.startsWith('/configuracoes/contas') || pathname.startsWith('/configuracoes/cartoes') ? 'active' : '')}>
           <Wallet size={20} /> Contas e cartões
