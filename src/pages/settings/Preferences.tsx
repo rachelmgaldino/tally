@@ -8,11 +8,13 @@ import { DEMO } from '../../lib/config'
 import type { PeriodKind } from '../../lib/periods'
 import { usePrefs, type Prefs } from '../../lib/prefs'
 import { supabase } from '../../lib/supabase'
+import { getTheme, setTheme, tone, type Theme } from '../../lib/theme'
 
 export default function Preferences() {
   const { prefs, setPrefs } = usePrefs()
   const toast = useToast()
   const [danger, setDanger] = useState<'reset' | 'delete' | null>(null)
+  const [theme, setThemeState] = useState<Theme>(getTheme)
 
   async function change(patch: Partial<Prefs>) {
     try {
@@ -42,7 +44,15 @@ export default function Preferences() {
         </div>
       </section>
 
-      <section className="card card-pad prefs" style={{ maxWidth: 860, background: '#fbe8ec' }}>
+      <section className="card card-pad prefs">
+        <h3 className="section-h">Aparência</h3>
+        <div className="pref-row">
+          <div><b>Tema</b><small>Automático segue o modo claro ou escuro do aparelho. Vale só para este aparelho.</small></div>
+          <Segmented<Theme> value={theme} onChange={(t) => { setTheme(t); setThemeState(t) }} options={[['light', 'Claro'], ['dark', 'Escuro'], ['auto', 'Automático']]} />
+        </div>
+      </section>
+
+      <section className="card card-pad prefs toned" style={{ maxWidth: 860, ...tone('#fbe8ec') }}>
         <h3 className="section-h">Zona de cuidado</h3>
         <div className="pref-row">
           <div><b>Começar do zero</b><small>Apaga todos os lançamentos. Contas, cartões, categorias e tags continuam.</small></div>

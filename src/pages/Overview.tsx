@@ -12,6 +12,7 @@ import { addDays, addMonths, currentMonth, monthEnd, monthLabel, monthStart, sho
 import { formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
+import { tone } from '../lib/theme'
 
 function greeting() {
   const h = new Date().getHours()
@@ -188,7 +189,7 @@ export default function Overview({ name }: { name: string }) {
       </header>
 
       <section className="stats-grid stats" aria-label="Resumo do mês">
-        <div className="card stat hero" style={{ background: 'var(--yellow)' }}>
+        <div className="card stat hero toned" style={tone('var(--yellow)')}>
           <div className="hero-in">
             <div className="k">Saldo geral</div>
             <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
@@ -201,17 +202,17 @@ export default function Overview({ name }: { name: string }) {
           <span className="mascot"><Mascot size={72} plain /></span>
         </div>
         <div className="stats-rest">
-        <div className="card stat" style={{ background: 'var(--green)' }}>
+        <div className="card stat toned" style={tone('var(--green)')}>
           <div className="k">Receitas do mês <span className="ico"><ArrowUp size={16} /></span></div>
           <div className="v">{money(income)}</div>
           <div className="s">{incomePending ? `${money(incomePending)} a receber` : income ? 'tudo recebido' : 'nada lançado ainda'}</div>
         </div>
-        <div className="card stat" style={{ background: 'var(--pink)' }}>
+        <div className="card stat toned" style={tone('var(--pink)')}>
           <div className="k">Despesas do mês <span className="ico"><ArrowDown size={16} /></span></div>
           <div className="v">{money(expense)}</div>
           <div className="s">{expensePending ? `${money(expensePending)} ainda a pagar` : expense ? 'tudo pago' : 'nada lançado ainda'}</div>
         </div>
-        <button className="card stat" style={{ background: 'var(--lavender)' }} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
+        <button className="card stat toned" style={tone('var(--lavender)')} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
           <div className="k">{isCurrent ? 'Faturas atuais' : `Faturas de ${monthLabel(m).split(' ')[0].toLowerCase()}`} <span className="ico"><CreditCard size={16} /></span></div>
           <div className="v">{money(invoicesTotal)}</div>
           <div className="s">
@@ -225,20 +226,20 @@ export default function Overview({ name }: { name: string }) {
 
       <div className="ph-home phone-only">
         <section className="ph-tiles" aria-label="Resumo">
-          <button className="ph-tile" style={{ background: 'var(--lavender)' }} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
+          <button className="ph-tile toned" style={tone('var(--lavender)')} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
             <span>Faturas</span><b>{money(invoicesTotal)}</b>
             <small>{cards.length === 0 ? 'adicionar cartão' : cards.length === 1 ? `vence ${shortDate(currentInvoices[0].due).slice(0, 5)}` : `${cards.length} cartões`}</small>
           </button>
-          <Link className="ph-tile" to="/lancamentos" style={{ background: 'var(--pink)' }}>
+          <Link className="ph-tile toned" to="/lancamentos" style={tone('var(--pink)')}>
             <span>A pagar</span><b>{money(expensePending)}</b>
             <small>{toPay.length === 0 ? 'nada pendente' : toPay.length === 1 ? '1 despesa' : `${toPay.length} despesas`}</small>
           </Link>
-          <Link className="ph-tile" to="/lancamentos" style={{ background: 'var(--green)' }}>
+          <Link className="ph-tile toned" to="/lancamentos" style={tone('var(--green)')}>
             <span>A receber</span><b>{money(incomePending)}</b>
             <small>{incomePending ? 'ainda neste mês' : income ? 'tudo recebido' : 'nada lançado'}</small>
           </Link>
           {kept.length > 0 && (
-            <Link className="ph-tile" to="/configuracoes/contas" style={{ background: 'var(--sand)' }}>
+            <Link className="ph-tile toned" to="/configuracoes/contas" style={tone('var(--sand)')}>
               <span>{kept.length === 1 ? kept[0].name : 'Guardado'}</span><b>{money(keptTotal)}</b>
               <small>fora do saldo geral</small>
             </Link>
@@ -266,7 +267,7 @@ export default function Overview({ name }: { name: string }) {
         <section className="card card-pad" aria-label="Minhas contas">
           <div className="section-title"><h3>Minhas contas</h3><Link to="/configuracoes/contas" className="link">{active.length ? 'Gerenciar' : 'Adicionar'}</Link></div>
           {active.length === 0 ? <p className="muted small" style={{ margin: 0 }}>Nenhuma conta ainda.</p> : active.map((a) => (
-            <div key={a.id} className="account-line" style={{ background: pastel(a.color, 0.82) }}>
+            <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
               <AccountAvatar account={a} />
               <b style={{ flex: 1, minWidth: 0 }}>{a.name}</b>
               <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
@@ -277,7 +278,7 @@ export default function Overview({ name }: { name: string }) {
 
       <section className="quick" aria-label="Ações rápidas">
         <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> Despesa <span className="kbd">D</span></button>
-        <button className="btn" style={{ background: 'var(--green)' }} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> Receita <span className="kbd">R</span></button>
+        <button className="btn toned" style={tone('var(--green)')} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> Receita <span className="kbd">R</span></button>
         <button className="btn btn-blue" onClick={() => open({ kind: 'transfer' })}><ArrowLeftRight size={18} /> Transferência <span className="kbd">T</span></button>
       </section>
 
@@ -334,7 +335,7 @@ export default function Overview({ name }: { name: string }) {
                 </button>
               </div>
             ) : <div className="acc-tiles">{active.map((a) => (
-              <div key={a.id} className="account-line" style={{ background: pastel(a.color, 0.82) }}>
+              <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
                 <AccountAvatar account={a} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b>{a.name}</b>
