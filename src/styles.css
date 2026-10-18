@@ -817,3 +817,7 @@ select.input { appearance: auto; }
 }
 .more-list > * + * { border-top: 1.5px dashed var(--line); }
 .more-list > .toggle { flex-direction: row-reverse; font-size: inherit; }
+@media (max-width: 760px) {
+  .form-group .paid-label { flex: 1; display: flex; align-items: center; gap: 12px; text-align: left; }
+  .form-group .paid-label svg { color: var(--muted); }
+}
