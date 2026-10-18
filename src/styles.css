@@ -261,14 +261,45 @@ select.input { appearance: auto; }
 .paid-btn.invoice { background: var(--invoice); border: var(--border); color: var(--ink); }
 .paid-btn:disabled { cursor: default; }
 .paid-spacer { width: 36px; flex-shrink: 0; }
-.summary-card { background: var(--sand); display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; padding: 20px; }
+/* Lançamentos summary: the forecast with Saldo anterior/atual, and one bar for the period's money. */
+.summary-card { position: relative; background: var(--sand); padding: 20px 22px; }
 .summary-card .k { font-size: 13px; font-weight: 800; }
-.summary-card .v { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 20px; margin-top: 4px; }
-.summary-card small { display: block; font-size: 12px; font-weight: 700; }
-.summary-card { position: relative; padding-right: 56px; }
-.summary-toggle { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; border: var(--border); background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.sum-head { position: absolute; top: 14px; right: 14px; display: flex; align-items: center; gap: 10px; }
+.sum-head > span:first-child { display: none; }
+.sum-head-filter { display: none; }
+.sum-hero-filter { margin-bottom: 8px; }
+.sum-filter { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
+.summary-toggle { width: 30px; height: 30px; border-radius: 50%; border: var(--border); background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer; flex: none; }
 .summary-toggle:active { transform: scale(0.92); }
-.summary-card .boxed { background: var(--card); border: var(--border); border-radius: 16px; padding: 10px 12px; }
+.sum-body { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 30px; align-items: center; padding-right: 30px; }
+.sum-big { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 36px; line-height: 1.1; margin: 4px 0 8px; }
+.sum-minis { display: flex; gap: 18px; padding-top: 8px; border-top: 1.5px dashed var(--ink); }
+.sum-minis div { display: flex; flex-direction: column; gap: 1px; }
+.sum-minis span { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.sum-minis b { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 16px; }
+.sum-side-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.sum-sum { font-size: 12px; font-weight: 700; color: var(--muted); text-align: right; }
+.sum-sum b { color: var(--ink); }
+.sum-sum-short { display: none; font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 15px; }
+.sum-bar, .sum-split { display: flex; height: 30px; border: var(--border); border-radius: 12px; overflow: hidden; background: var(--card); }
+.sum-bar i + i, .sum-split i + i { border-left: var(--border); }
+.sum-bar .paid, .sw.paid { background: #d9707f; }
+.sum-bar .topay, .sw.topay { background: repeating-linear-gradient(135deg, var(--pink) 0 6px, #fbe3e8 6px 12px); }
+.sum-bar .left, .sw.left { background: var(--green); }
+.sw.short { background: var(--expense); }
+.sum-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.sum-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.sum-legend .v { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 14px; color: var(--ink); }
+.sum-legend .expense .v { color: var(--expense); }
+.sum-legend .lbl-after { display: none; }
+.sw { width: 12px; height: 12px; border-radius: 4px; border: var(--border); display: inline-block; flex: none; }
+.sum-split { height: 38px; border-radius: 14px; }
+.sum-split i { min-width: 0; overflow: hidden; display: flex; align-items: center; padding: 0 12px; font-style: normal; font-family: var(--display); font-weight: 500; font-size: 14px; white-space: nowrap; }
+.sum-split .in { background: var(--green); }
+.sum-split .out { background: var(--pink); }
+.sum-split em { font-style: normal; }
+.sum-split-legend { display: none; justify-content: space-between; margin-top: 6px; }
+.sum-split-legend small { font-size: 12px; font-weight: 700; color: var(--muted); }
 .empty { text-align: center; padding: 40px 20px; }
 .empty h3 { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
 .empty p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
@@ -568,10 +599,25 @@ select.input { appearance: auto; }
   .tx-page .page-head .month-nav { order: 2; width: 100%; flex: none; justify-content: space-between; }
   .tx-page .page-head .segmented { order: 3; width: 100%; }
   .tx-page .new-menu { display: none; }
-  .summary-card { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; padding: 14px; border-radius: 22px; }
-  .summary-toggle { top: 10px; right: 10px; }
-  .summary-card .v { font-size: 17px; margin-top: 2px; }
-  .summary-card > *:only-child, .summary-card .boxed { grid-column: 1 / -1; }
+  .summary-card { padding: 14px 16px 16px; border-radius: 22px; }
+  .sum-head { position: static; margin-bottom: 12px; }
+  .sum-head > span:first-child { display: block; flex: 1; min-width: 0; font-size: 13px; font-weight: 800; color: var(--muted); }
+  .sum-head-filter { display: inline-flex; }
+  .sum-hero-filter { display: none; }
+  .sum-body { display: block; padding-right: 0; }
+  .sum-big { font-size: 32px; }
+  .sum-side { margin-top: 14px; }
+  .sum-sum { display: none; }
+  .sum-sum-short { display: inline; }
+  .sum-legend { flex-wrap: nowrap; justify-content: center; gap: 4px; font-size: 10.5px; white-space: nowrap; }
+  .sum-legend > span { gap: 3px; }
+  .sum-legend > span + span::before { content: '·'; margin-right: 1px; }
+  .sum-legend .lbl { display: none; }
+  .sum-legend .lbl-after { display: inline; }
+  .sum-legend .v { font-size: 12.5px; }
+  .sum-legend .sw { width: 10px; height: 10px; }
+  .sum-split em { display: none; }
+  .sum-split-legend { display: flex; }
   .list-card { padding: 6px 4px 4px; }
   .tx-row { gap: 10px; padding: 10px 8px; }
   .tx-amount { font-size: 16px; }
