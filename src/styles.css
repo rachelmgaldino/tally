@@ -1057,7 +1057,9 @@ select.input { appearance: auto; }
   .status-late, .tile.pink, .mini-btn) { --tone: var(--pink); }
 :root[data-theme='dark'] :is(.btn-blue, .segmented button.on, .chip-kind.transfer, .kind-tabs button.on.transfer, .status-future, .form-section.repeat) { --tone: var(--blue); }
 :root[data-theme='dark'] :is(.status-closed, .series-nav, .tx-desc .part) { --tone: var(--lavender); }
-:root[data-theme='dark'] :is(.summary-card, .sum-pill, .tile.sand) { --tone: var(--sand); }
+:root[data-theme='dark'] .tile.sand { --tone: var(--sand); }
+/* The period summary goes lilac at night so it stands out from the peach Saldo geral. */
+:root[data-theme='dark'] :is(.summary-card, .sum-pill) { --tone: var(--lavender); }
 :root[data-theme='dark'] :is(.invoice-banner, .invoice-head, .paid-btn.invoice) { --tone: var(--peach); }
 
 /* The day islands: pastel fill, deep purple text, and day colours for everything inside. */
