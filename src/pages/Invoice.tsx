@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarClock, ChevronLeft, ChevronRight, PieChart, Plus, Receipt, Search, X } from 'lucide-react'
+import { AlertCircle, CalendarCheck, CalendarClock, ChevronLeft, ChevronRight, EllipsisVertical, PieChart, Plus, Receipt, Search, Settings, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
@@ -7,7 +7,7 @@ import { Popover } from '../components/Picker'
 import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
-import { invoiceFor, invoiceOf, shiftInvoice, STATUS_LABEL, toMonth } from '../lib/cards'
+import { availableLimit, invoiceFor, invoiceOf, shiftInvoice, STATUS_LABEL, toMonth } from '../lib/cards'
 import { monthLabel, shortDate, today } from '../lib/dates'
 import { formatBRL, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
@@ -73,9 +73,62 @@ export default function Invoice() {
   const paidPct = invoice.total > 0 ? Math.min(100, (invoice.paid / invoice.total) * 100) : 0
   const previous = invoiceOf(card, txs, shiftInvoice(month, -1))
   const sorted = [...invoice.payments].sort((a, b) => a.date.localeCompare(b.date))
+  const activeCards = (cards ?? []).filter((c) => !c.archived || c.id === card.id)
+  const avail = availableLimit(card, txs)
+  const usedPct = card.limit_cents > 0 ? Math.min(100, Math.max(0, ((card.limit_cents - avail) / card.limit_cents) * 100)) : 0
+  const pay = () => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })
 
   return (
-    <main className="page page-narrow">
+    <main className="page page-narrow inv-page">
+      <header className="ph-inv-head phone-only">
+        <h1>Faturas</h1>
+        <Popover
+          className="more-menu"
+          trigger={(_, toggle) => <button className="icon-btn" onClick={toggle} aria-label="Mais opções"><EllipsisVertical size={20} /></button>}
+        >
+          {(close) => <button className="picker-item" onClick={() => { close(); navigate('/configuracoes/contas#cartoes') }}><Settings size={18} /> Gerenciar cartões</button>}
+        </Popover>
+      </header>
+      {activeCards.length > 1 && (
+        <div className="ph-card-pick" role="group" aria-label="Cartão">
+          {activeCards.map((c) => (
+            <button key={c.id} className={c.id === card.id ? 'on' : ''} aria-pressed={c.id === card.id} onClick={() => navigate(`/cartoes/${c.id}`)}>
+              <i style={{ background: pastel(c.color, 0.35) }} />{c.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <section className="ph-inv-hero phone-only" style={{ background: pastel(card.color, 0.5) }} aria-label={`Fatura de ${label}`}>
+        <div className="ph-inv-nav">
+          <button onClick={() => go(-1)} aria-label="Fatura anterior"><ChevronLeft size={20} /></button>
+          <span>{label}</span>
+          <button onClick={() => go(1)} aria-label="Próxima fatura"><ChevronRight size={20} /></button>
+        </div>
+        <div className="ph-inv-mid">
+          <span className={`status status-${invoice.status}`}>{STATUS_LABEL[invoice.status].replace(/^Fatura /, '')}</span>
+          <b>{formatBRL(invoice.total)}</b>
+          <small>vence {shortDate(invoice.due).slice(0, 5)} · fecha {shortDate(invoice.closing).slice(0, 5)}</small>
+        </div>
+        {card.limit_cents > 0 && (
+          <>
+            <div className="ph-inv-limit"><div style={{ width: `${usedPct}%` }} /></div>
+            <div className="ph-inv-limit-legend"><span>Limite usado {formatBRL(card.limit_cents - avail)}</span><span>Disponível {formatBRL(avail)}</span></div>
+          </>
+        )}
+      </section>
+      <div className="ph-inv-actions phone-only">
+        {invoice.remaining > 0
+          ? <button className="btn btn-primary" onClick={pay}>{partial ? 'Pagar restante' : 'Pagar fatura'}</button>
+          : <span className="btn ph-inv-done">{invoice.total > 0 ? 'Fatura paga' : 'Nada a pagar'}</span>}
+        <button className="btn" onClick={() => open({ kind: 'expense', accountId: card.id })}>Nova compra</button>
+      </div>
+      {previous.remaining > 0 && (
+        <div className="ph-alert phone-only">
+          <AlertCircle size={20} />
+          <b style={{ flex: 1, fontSize: 13, whiteSpace: 'normal' }}>Ainda faltam {formatBRL(previous.remaining)} da fatura de {monthLabel(toMonth(shiftInvoice(month, -1))).split(' ')[0].toLowerCase()}.</b>
+        </div>
+      )}
+
       <section className="card invoice-head">
         <CardArt card={card} tilt />
         <div className="title">
@@ -132,7 +185,7 @@ export default function Invoice() {
       </section>
 
       {(invoice.payments.length > 0 || invoice.total > 0) && (
-        <section className="card card-pad payments">
+        <section className={`card card-pad payments ${sorted.length ? 'has-pay' : ''}`}>
           <div className="section-title">
             <h3>Pagamento</h3>
             {partial && invoice.remaining > 0 && (
@@ -228,7 +281,7 @@ export default function Invoice() {
         if (t?.invoice_month && t.card_id === card.id) setParams({ fatura: t.invoice_month.slice(0, 7) }, { replace: true })
         setSelectedId(nid)
       }} />}
-      <div style={{ textAlign: 'center' }}>
+      <div className="desk-only" style={{ textAlign: 'center' }}>
         <button className="link" onClick={() => navigate('/configuracoes/contas#cartoes')}>Gerenciar cartões</button>
       </div>
     </main>

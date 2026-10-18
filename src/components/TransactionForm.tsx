@@ -1,13 +1,14 @@
-import { Check, ChevronDown, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { AlignLeft, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, Wallet, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
 import { monthLabel, today } from '../lib/dates'
 import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
-import { formatBRL } from '../lib/money'
+import { centsFromTyping, formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import { PERIOD_ORDER, PERIODS, seriesChanges, splitInstallments } from '../lib/series'
 import type { Attachment, NewTransaction, Period, SeriesKind, Transaction, TxKind } from '../lib/types'
+import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { Popover } from './Picker'
 import { AccountSelect, CategorySelect, SourceSelect } from './Selects'
 import { TagInput } from './TagInput'
@@ -16,6 +17,12 @@ import { useTxForm } from './TxFormContext'
 import { Modal, MoneyInput, Segmented, Toggle } from './ui'
 
 export type FormKind = Exclude<TxKind, 'payment'>
+
+function yesterday(): string {
+  const d = new Date(`${today()}T12:00:00`)
+  d.setDate(d.getDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
 
 const TITLES: Record<FormKind, [string, string]> = {
   expense: ['Nova despesa', 'Editar despesa'],
@@ -216,10 +223,19 @@ export function TransactionForm({
     setFiles((f) => [...f, ...picked.filter((p) => p.size <= MAX_ATTACHMENT_BYTES)])
   }
 
+  // Phone rows show the picked account and category as their icon.
+  const srcAccount = active.find((a) => a.id === accountId)
+  const pickedCategory = categories.find((c) => c.id === categoryId)
+  const pickedParent = pickedCategory?.parent_id ? categories.find((c) => c.id === pickedCategory.parent_id) : undefined
+
   const parts = repeat?.kind === 'installment' ? splitInstallments(amount, installments) : null
 
   return (
-    <Modal title={TITLES[kind][titleIndex]} onClose={onClose} className="modal-form">
+    <Modal
+      title={<><span className="desk-only">{TITLES[kind][titleIndex]}</span><span className="phone-only">{editing ? 'Editar lançamento' : 'Novo lançamento'}</span></>}
+      onClose={onClose}
+      className="modal-form"
+    >
       <form className="tx-form" onSubmit={(e) => { e.preventDefault(); save(false) }}>
         {onKind && !editing && (
           <div className="segmented kind-tabs" role="tablist" aria-label="Tipo de lançamento">
@@ -230,6 +246,15 @@ export function TransactionForm({
             ))}
           </div>
         )}
+        <div className={`ph-amount phone-only ${kind}`}>
+          <label htmlFor="ph-amount">Valor</label>
+          <div className="row">
+            <span className="prefix">R$</span>
+            <input id="ph-amount" inputMode="numeric" value={formatCents(amount)} style={{ width: `${formatCents(amount).length * 0.62 + 0.2}em` }}
+              onChange={(e) => setAmount(centsFromTyping(e.target.value))} onFocus={(e) => e.target.select()} />
+          </div>
+        </div>
+        <div className="form-group">
         {kind === 'transfer' ? (
           <>
             <div className="field">
@@ -242,31 +267,54 @@ export function TransactionForm({
             </div>
           </>
         ) : null}
-        <div className="field">
+        <div className="field f-desc">
+          <span className="f-ico phone-only"><AlignLeft size={20} /></span>
           <label htmlFor="desc">Descrição</label>
           <input id="desc" className="input" placeholder="Adicione uma descrição para o lançamento" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
         </div>
         <div className="grid-2" style={{ gap: 10 }}>
-          <div className="field">
+          <div className="field desk-only">
             <label>Valor</label>
             <MoneyInput value={amount} onChange={setAmount} />
           </div>
-          <div className="field">
+          <div className="field f-date">
+            <span className="f-ico phone-only"><Calendar size={20} /></span>
             <label htmlFor="date">Data</label>
-            <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
+            <div className="f-date-in">
+              {[[today(), 'Hoje'], [yesterday(), 'Ontem']].map(([d, l]) => (
+                <button type="button" key={l} className={`phone-only day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
+              ))}
+              <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
+            </div>
           </div>
         </div>
         {kind !== 'transfer' && (
           <>
-            {!card && <Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'} />}
+            {!card && <div className="f-paid"><Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={
+              <span className="paid-label">
+                <CircleCheck size={20} className="phone-only" />
+                <span className="desk-only">{kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'}</span>
+                <span className="phone-only">{kind === 'income' ? 'Já foi recebido' : 'Já foi pago'}</span>
+              </span>
+            } /></div>}
             <div className="grid-2" style={{ gap: 10 }}>
-              <div className="field">
-                <label>{usableCards.length ? 'Conta/Cartão' : 'Conta'}</label>
+              <div className="field f-src">
+                <span className="f-ico phone-only">
+                  {card ? <AccountIcon icon={card.icon} color={card.color} size={40} square />
+                    : srcAccount ? <AccountAvatar account={srcAccount} size={40} />
+                    : <Wallet size={20} />}
+                </span>
+                <label><span className="desk-only">{usableCards.length ? 'Conta/Cartão' : 'Conta'}</span><span className="phone-only">{usableCards.length ? 'Conta ou cartão' : 'Conta'}</span></label>
                 <SourceSelect accounts={active} cards={usableCards} value={accountId} onChange={setAccountId} />
+                <ChevronRight size={18} className="f-chev phone-only" />
               </div>
-              <div className="field">
+              <div className="field f-cat">
+                <span className="f-ico phone-only">
+                  {pickedCategory ? <CategoryAvatar category={pickedParent ?? pickedCategory} size={40} /> : <TagIcon size={20} />}
+                </span>
                 <label>Categoria</label>
                 <CategorySelect categories={categories} kind={kind} value={categoryId} onChange={setCategoryId} />
+                <ChevronRight size={18} className="f-chev phone-only" />
               </div>
             </div>
             {card && invoice && (
@@ -291,7 +339,23 @@ export function TransactionForm({
             )}
           </>
         )}
-        <div className="option-icons">
+        </div>
+        <div className="ph-more phone-only">
+          <button type="button" onClick={() => toggle('repeat')} disabled={inSeries} aria-expanded={show.repeat}>
+            <Repeat2 size={20} />
+            <span><small>Repetir</small>{inSeries ? 'Já se repete' : !show.repeat ? 'Não repete' : repeatKind === 'fixed' ? `Fixo · ${PERIODS[period].adjective}` : `Parcelado em ${installments}x`}</span>
+            <ChevronRight size={18} className={show.repeat ? 'turned' : ''} />
+          </button>
+          <button type="button" onClick={() => {
+            const open = !(show.tags || show.notes || show.files)
+            setShow((s) => ({ ...s, tags: open, notes: open, files: open }))
+          }} aria-expanded={show.tags || show.notes || show.files}>
+            <Plus size={20} />
+            <span><small>Mais detalhes</small>Tags, observação, anexo</span>
+            <ChevronDown size={18} className={show.tags || show.notes || show.files ? 'flipped' : ''} />
+          </button>
+        </div>
+        <div className="option-icons desk-only">
           <button
             type="button"
             className={show.repeat ? 'on' : ''}
@@ -391,13 +455,13 @@ export function TransactionForm({
         )}
 
         {error && <div className="error">{error}</div>}
-        <div className="form-actions">
+        <div className={`form-actions ${editing ? 'editing' : ''}`}>
           <button type="button" className="mini-btn" onClick={del} title={editing ? 'Excluir' : 'Descartar'} aria-label={editing ? 'Excluir' : 'Descartar'} disabled={busy}><Trash2 size={18} /></button>
           <div className="row" style={{ gap: 14 }}>
             {!editing && (
-              <button type="button" className="btn" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} /> Salvar e criar outro</button>
+              <button type="button" className="btn save-again" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} className="desk-only" /> <span className="desk-only">Salvar e criar outro</span><span className="phone-only">Salvar e novo</span></button>
             )}
-            <button type="submit" className="save-btn" disabled={busy} title="Salvar" aria-label="Salvar"><Check size={30} strokeWidth={2.5} /></button>
+            <button type="submit" className="save-btn" disabled={busy} title="Salvar" aria-label="Salvar"><Check size={30} strokeWidth={2.5} className="desk-only" /><span className="phone-only">Salvar</span></button>
           </div>
         </div>
       </form>
