@@ -2,7 +2,8 @@ import { AlignLeft, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, Cop
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
-import { monthLabel, today } from '../lib/dates'
+import { monthTitle, today } from '../lib/dates'
+import { t } from '../lib/i18n'
 import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
 import { centsFromTyping, formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
@@ -25,20 +26,6 @@ function yesterday(): string {
   return d.toISOString().slice(0, 10)
 }
 
-const TITLES: Record<FormKind, [string, string]> = {
-  expense: ['Nova despesa', 'Editar despesa'],
-  income: ['Nova receita', 'Editar receita'],
-  transfer: ['Transferência entre contas', 'Editar transferência'],
-}
-
-const KIND_TAB: Record<FormKind, string> = { expense: 'Despesa', income: 'Receita', transfer: 'Transferência' }
-
-const REPEAT_TITLE: Record<FormKind, string> = {
-  expense: 'Repetir despesas',
-  income: 'Repetir receitas',
-  transfer: 'Repetir transferências',
-}
-
 const INSTALLMENT_COUNTS = Array.from({ length: 71 }, (_, i) => i + 2)
 
 export function TransactionForm({
@@ -53,6 +40,8 @@ export function TransactionForm({
   /** Switches between despesa, receita and transferência while creating. */
   onKind?: (kind: FormKind) => void
 }) {
+  const s = t().form
+  const common = t().common
   const { data: accounts = [] } = useAccounts()
   const { data: categories = [] } = useCategories()
   const { data: allTxs = [] } = useTransactions()
@@ -67,7 +56,7 @@ export function TransactionForm({
   const inSeries = !!editing?.series_id
   const series = editing?.series_id ? seriesMap.get(editing.series_id) : undefined
 
-  const [description, setDescription] = useState(source?.description ?? (kind === 'transfer' ? 'Transferência' : ''))
+  const [description, setDescription] = useState(source?.description ?? (kind === 'transfer' ? common.kinds.transfer : ''))
   const [amount, setAmount] = useState(source?.amount_cents ?? 0)
   const [date, setDate] = useState(editing?.date ?? today())
   const [paid, setPaid] = useState(editing?.paid ?? true)
@@ -111,20 +100,20 @@ export function TransactionForm({
   const formRef = useRef<HTMLFormElement>(null)
   const toggle = (k: keyof typeof show) => {
     const opening = !show[k]
-    setShow((s) => ({ ...s, [k]: !s[k] }))
+    setShow((v) => ({ ...v, [k]: !v[k] }))
     // On short screens the section opens below the fold; bring it into view.
     if (opening) requestAnimationFrame(() => formRef.current?.querySelector(`[data-section="${k}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
   }
 
   function validate(): NewTransaction | null {
-    if (amount <= 0) return fail('Informe um valor.')
-    if (!date) return fail('Informe a data.')
-    if (!accountId) return fail(kind === 'transfer' ? 'Escolha de qual conta saiu.' : 'Escolha a conta.')
+    if (amount <= 0) return fail(s.enterAmount)
+    if (!date) return fail(s.enterDate)
+    if (!accountId) return fail(kind === 'transfer' ? s.pickFromAccount : s.pickAccount)
     if (kind === 'transfer') {
-      if (!toAccountId) return fail('Escolha em qual conta entrou.')
-      if (toAccountId === accountId) return fail('Escolha duas contas diferentes.')
+      if (!toAccountId) return fail(s.pickToAccount)
+      if (toAccountId === accountId) return fail(s.pickTwoAccounts)
     }
-    if (repeat?.kind === 'installment' && amount < installments) return fail('O valor é pequeno demais para tantas parcelas.')
+    if (repeat?.kind === 'installment' && amount < installments) return fail(s.tooManyInstallments)
     return {
       kind,
       description: description.trim(),
@@ -164,18 +153,18 @@ export function TransactionForm({
         const after = await refresh(updateEntry(editing, row, upload))
         if (inSeries) offerApplyToNext(editing, after)
       }
-      toast(editing ? 'Lançamento atualizado.' : repeat ? 'Lançamentos salvos.' : 'Lançamento salvo.')
+      toast(editing ? s.entryUpdated : repeat ? s.entriesSaved : s.entrySaved)
       if (again) {
-        setDescription(kind === 'transfer' ? 'Transferência' : '')
+        setDescription(kind === 'transfer' ? common.kinds.transfer : '')
         setAmount(0)
         setNotes('')
         setFiles([])
-        setShow((s) => ({ ...s, repeat: false, notes: false, files: false }))
+        setShow((v) => ({ ...v, repeat: false, notes: false, files: false }))
       } else {
         onClose()
       }
     } catch (e) {
-      setError(`Não foi possível salvar: ${(e as Error).message}`)
+      setError(s.couldNotSave((e as Error).message))
     } finally {
       setBusy(false)
     }
@@ -184,19 +173,19 @@ export function TransactionForm({
   /** After editing one entry of a series, Organizze asks whether the later ones change too. */
   function offerApplyToNext(before: Transaction, after: Transaction) {
     const { patch, dayShift } = seriesChanges(before, after)
-    const hasLater = allTxs.some((t) => t.series_id === after.series_id && (t.series_index ?? 0) > (after.series_index ?? 0))
+    const hasLater = allTxs.some((x) => x.series_id === after.series_id && (x.series_index ?? 0) > (after.series_index ?? 0))
     if (!hasLater || (Object.keys(patch).length === 0 && dayShift === 0)) return
     ask({
-      title: 'Alteração salva!',
-      text: 'Este lançamento é recorrente. Deseja aplicar a mesma alteração nos próximos?',
+      title: s.changeSaved,
+      text: s.applyToNextText,
       options: [
-        { label: 'Não, apenas este', onClick: () => {} },
+        { label: s.onlyThisNo, onClick: () => {} },
         {
-          label: 'Sim, atualizar próximos',
+          label: s.updateNext,
           primary: true,
           onClick: async () => {
             await refresh(applyToNext(before, after, allTxs, series, cards))
-            toast('Próximos lançamentos atualizados.')
+            toast(s.nextUpdated)
           },
         },
       ],
@@ -208,26 +197,26 @@ export function TransactionForm({
     if (inSeries) {
       onClose()
       ask({
-        title: 'Excluir lançamento recorrente',
-        text: 'Este lançamento faz parte de uma repetição. O que você deseja excluir?',
+        title: s.deleteRecurringTitle,
+        text: s.deleteRecurringText,
         options: [
-          { label: 'Apenas este', onClick: async () => { await refresh(deleteEntries([editing])); toast('Lançamento excluído.') } },
-          { label: 'Este e os próximos', primary: true, onClick: async () => { await refresh(deleteFromHere(editing, allTxs, series)); toast('Lançamentos excluídos.') } },
+          { label: s.onlyThis, onClick: async () => { await refresh(deleteEntries([editing])); toast(s.entryDeleted) } },
+          { label: s.thisAndNext, primary: true, onClick: async () => { await refresh(deleteFromHere(editing, allTxs, series)); toast(s.entriesDeleted) } },
         ],
       })
       return
     }
-    if (!(await confirmDelete({ title: 'Excluir lançamento?', text: 'Ele sai da lista e dos saldos. Isso não pode ser desfeito.' }))) return
+    if (!(await confirmDelete({ title: s.deleteTitle, text: s.deleteText }))) return
     onClose()
     await refresh(deleteEntries([editing]))
-    toast('Lançamento excluído.')
+    toast(s.entryDeleted)
   }
 
   function addFiles(list: FileList | null) {
     if (!list) return
     const picked = Array.from(list)
     const tooBig = picked.find((f) => f.size > MAX_ATTACHMENT_BYTES)
-    if (tooBig) setError(`${tooBig.name} passa de ${Math.round(MAX_ATTACHMENT_BYTES / 1_000_000)} MB.`)
+    if (tooBig) setError(s.fileTooBig(tooBig.name, Math.round(MAX_ATTACHMENT_BYTES / 1_000_000)))
     setFiles((f) => [...f, ...picked.filter((p) => p.size <= MAX_ATTACHMENT_BYTES)])
   }
 
@@ -240,22 +229,22 @@ export function TransactionForm({
 
   return (
     <Modal
-      title={<><span className="desk-only">{TITLES[kind][titleIndex]}</span><span className="phone-only">{editing ? 'Editar lançamento' : 'Novo lançamento'}</span></>}
+      title={<><span className="desk-only">{s.titles[kind][titleIndex]}</span><span className="phone-only">{editing ? s.editEntry : s.newEntry}</span></>}
       onClose={onClose}
       className="modal-form"
     >
       <form ref={formRef} className="tx-form" onSubmit={(e) => { e.preventDefault(); save(false) }}>
         {onKind && !editing && (
-          <div className="segmented kind-tabs" role="tablist" aria-label="Tipo de lançamento">
+          <div className="segmented kind-tabs" role="tablist" aria-label={s.kindTabs}>
             {(['expense', 'income', 'transfer'] as const).map((k) => (
               <button type="button" role="tab" aria-selected={k === kind} key={k} className={`${k} ${k === kind ? 'on' : ''}`} onClick={() => k !== kind && onKind(k)}>
-                {KIND_TAB[k]}
+                {common.kinds[k]}
               </button>
             ))}
           </div>
         )}
         <div className={`ph-amount ${kind}`}>
-          <label htmlFor="ph-amount">Valor</label>
+          <label htmlFor="ph-amount">{s.amount}</label>
           <div className="row">
             <span className="prefix">R$</span>
             <input id="ph-amount" inputMode="numeric" value={formatCents(amount)} style={{ width: `${formatCents(amount).length * 0.62 + 0.2}em` }}
@@ -266,26 +255,26 @@ export function TransactionForm({
         {kind === 'transfer' ? (
           <>
             <div className="field">
-              <label>Saiu da conta</label>
+              <label>{s.fromAccount}</label>
               <AccountSelect accounts={active} value={accountId} onChange={setAccountId} />
             </div>
             <div className="field">
-              <label>Entrou na conta</label>
+              <label>{s.toAccount}</label>
               <AccountSelect accounts={active} value={toAccountId} onChange={setToAccountId} />
             </div>
           </>
         ) : null}
         <div className="field f-desc">
           <span className="f-ico phone-only"><AlignLeft size={20} /></span>
-          <label htmlFor="desc">Descrição</label>
-          <input id="desc" className="input" placeholder="Adicione uma descrição para o lançamento" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
+          <label htmlFor="desc">{s.description}</label>
+          <input id="desc" className="input" placeholder={s.descriptionPlaceholder} value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
         </div>
         <div className="grid-2" style={{ gap: 10 }}>
           <div className="field f-date">
             <span className="f-ico phone-only"><Calendar size={20} /></span>
-            <label htmlFor="date">Data</label>
+            <label htmlFor="date">{s.date}</label>
             <div className="f-date-in">
-              {[[today(), 'Hoje'], [yesterday(), 'Ontem']].map(([d, l]) => (
+              {[[today(), common.today], [yesterday(), s.yesterday]].map(([d, l]) => (
                 <button type="button" key={l} className={`day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
               ))}
               <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
@@ -297,8 +286,8 @@ export function TransactionForm({
             {!card && <div className="f-paid"><Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={
               <span className="paid-label">
                 <CircleCheck size={20} className="phone-only" />
-                <span className="desk-only">{kind === 'income' ? 'Lançamento recebido' : 'Lançamento pago'}</span>
-                <span className="phone-only">{kind === 'income' ? 'Já foi recebido' : 'Já foi pago'}</span>
+                <span className="desk-only">{kind === 'income' ? s.receivedDesk : s.paidDesk}</span>
+                <span className="phone-only">{kind === 'income' ? s.receivedPhone : s.paidPhone}</span>
               </span>
             } /></div>}
             <div className="grid-2" style={{ gap: 10 }}>
@@ -308,7 +297,7 @@ export function TransactionForm({
                     : srcAccount ? <AccountAvatar account={srcAccount} size={40} />
                     : <Wallet size={20} />}
                 </span>
-                <label><span className="desk-only">{usableCards.length ? 'Conta/Cartão' : 'Conta'}</span><span className="phone-only">{usableCards.length ? 'Conta ou cartão' : 'Conta'}</span></label>
+                <label><span className="desk-only">{usableCards.length ? s.accountOrCardDesk : s.account}</span><span className="phone-only">{usableCards.length ? s.accountOrCardPhone : s.account}</span></label>
                 <SourceSelect accounts={active} cards={usableCards} value={accountId} onChange={setAccountId} />
                 <ChevronRight size={18} className="f-chev phone-only" />
               </div>
@@ -316,18 +305,18 @@ export function TransactionForm({
                 <span className="f-ico phone-only">
                   {pickedCategory ? <CategoryAvatar category={pickedParent ?? pickedCategory} size={40} /> : <TagIcon size={20} />}
                 </span>
-                <label>Categoria</label>
+                <label>{s.category}</label>
                 <CategorySelect categories={categories} kind={kind} value={categoryId} onChange={setCategoryId} />
                 <ChevronRight size={18} className="f-chev phone-only" />
               </div>
             </div>
             {card && invoice && (
               <div className="invoice-banner">
-                <CreditCard size={18} /> Entra na fatura de
+                <CreditCard size={18} /> {s.goesToInvoice}
                 <Popover
                   className="invoice-pick"
                   trigger={(_, toggle) => (
-                    <button type="button" onClick={toggle}>{monthLabel(toMonth(invoice)).toLowerCase()} <ChevronDown size={14} /></button>
+                    <button type="button" onClick={toggle}>{monthTitle(toMonth(invoice))} <ChevronDown size={14} /></button>
                   )}
                 >
                   {(close) => [-2, -1, 0, 1, 2, 3].map((d) => {
@@ -347,15 +336,15 @@ export function TransactionForm({
         <div className="ph-more phone-only">
           <button type="button" onClick={() => toggle('repeat')} disabled={inSeries} aria-expanded={show.repeat}>
             <Repeat2 size={20} />
-            <span><small>Repetir</small>{inSeries ? 'Já se repete' : !show.repeat ? 'Não repete' : repeatKind === 'fixed' ? `Fixo · ${PERIODS[period].adjective}` : `Parcelado em ${installments}x`}</span>
+            <span><small>{s.repeat}</small>{inSeries ? s.alreadyRepeats : !show.repeat ? s.noRepeat : repeatKind === 'fixed' ? s.fixedSummary(PERIODS[period].adjective) : s.installmentSummary(installments)}</span>
             <ChevronRight size={18} className={show.repeat ? 'turned' : ''} />
           </button>
           <button type="button" onClick={() => {
             const open = !(show.tags || show.notes || show.files)
-            setShow((s) => ({ ...s, tags: open, notes: open, files: open }))
+            setShow((v) => ({ ...v, tags: open, notes: open, files: open }))
           }} aria-expanded={show.tags || show.notes || show.files}>
             <Plus size={20} />
-            <span><small>Mais detalhes</small>Tags, observação, anexo</span>
+            <span><small>{s.moreDetails}</small>{s.moreDetailsHint}</span>
             <ChevronDown size={18} className={show.tags || show.notes || show.files ? 'flipped' : ''} />
           </button>
         </div>
@@ -365,64 +354,64 @@ export function TransactionForm({
             className={show.repeat ? 'on' : ''}
             onClick={() => toggle('repeat')}
             disabled={inSeries}
-            title={inSeries ? 'Este lançamento já se repete' : undefined}
+            title={inSeries ? s.entryAlreadyRepeats : undefined}
           >
-            <span><Repeat2 size={20} /></span>Repetir
+            <span><Repeat2 size={20} /></span>{s.repeat}
           </button>
           <button type="button" className={show.notes ? 'on' : ''} onClick={() => toggle('notes')}>
-            <span><MessageSquare size={20} /></span>Observação
+            <span><MessageSquare size={20} /></span>{s.note}
           </button>
           <button type="button" className={show.files ? 'on' : ''} onClick={() => toggle('files')}>
-            <span><Paperclip size={20} /></span>Anexo
+            <span><Paperclip size={20} /></span>{s.attachment}
           </button>
           <button type="button" className={show.tags ? 'on' : ''} onClick={() => toggle('tags')}>
-            <span><TagIcon size={20} /></span>Tags
+            <span><TagIcon size={20} /></span>{s.tags}
           </button>
         </div>
 
         {show.tags && (
           <div className="form-section" data-section="tags">
-            <h4>Tags</h4>
+            <h4>{s.tags}</h4>
             <TagInput value={tagIds} onChange={setTagIds} />
           </div>
         )}
 
         {show.notes && (
           <div className="form-section" data-section="notes">
-            <h4>Observação</h4>
+            <h4>{s.note}</h4>
             <div className="field">
-              <textarea id="notes" className="input" placeholder="Adicione uma observação…" value={notes} onChange={(e) => setNotes(e.target.value)} />
+              <textarea id="notes" className="input" placeholder={s.notePlaceholder} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
         )}
 
         {show.files && (
           <div className="form-section" data-section="files">
-            <h4>Anexos</h4>
+            <h4>{s.attachments}</h4>
             {kept.map((a) => (
               <div key={a.path} className="file-line">
                 <Paperclip size={13} /> <span>{a.name}</span> <small>{formatSize(a.size)}</small>
-                <button type="button" onClick={() => setKept((k) => k.filter((x) => x !== a))} aria-label={`Remover ${a.name}`}><X size={13} /></button>
+                <button type="button" onClick={() => setKept((k) => k.filter((x) => x !== a))} aria-label={s.remove(a.name)}><X size={13} /></button>
               </div>
             ))}
             {files.map((f, i) => (
               <div key={`${f.name}-${i}`} className="file-line">
                 <Paperclip size={13} /> <span>{f.name}</span> <small>{formatSize(f.size)}</small>
-                <button type="button" onClick={() => setFiles((list) => list.filter((x) => x !== f))} aria-label={`Remover ${f.name}`}><X size={13} /></button>
+                <button type="button" onClick={() => setFiles((list) => list.filter((x) => x !== f))} aria-label={s.remove(f.name)}><X size={13} /></button>
               </div>
             ))}
             <input ref={fileInput} type="file" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
-            <button type="button" className="add-file" style={{ alignSelf: 'flex-start' }} onClick={() => fileInput.current?.click()}><Plus size={13} /> Adicionar anexo</button>
+            <button type="button" className="add-file" style={{ alignSelf: 'flex-start' }} onClick={() => fileInput.current?.click()}><Plus size={13} /> {s.addAttachment}</button>
           </div>
         )}
 
         {show.repeat && !inSeries && (
           <div className="form-section repeat" data-section="repeat">
-            <h4>{REPEAT_TITLE[kind]}</h4>
-            <Segmented value={repeatKind} onChange={setRepeatKind} options={[['fixed', 'Fixo'], ['installment', 'Parcelado']]} />
+            <h4>{s.repeatTitle[kind]}</h4>
+            <Segmented value={repeatKind} onChange={setRepeatKind} options={[['fixed', s.fixed], ['installment', s.installment]]} />
             {repeatKind === 'fixed' ? (
               <div className="field">
-                <label htmlFor="period">Período de lançamento</label>
+                <label htmlFor="period">{s.period}</label>
                 <select id="period" className="input" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
                   {PERIOD_ORDER.map((p) => <option key={p} value={p}>{PERIODS[p].label}</option>)}
                 </select>
@@ -431,13 +420,13 @@ export function TransactionForm({
               <>
                 <div className="grid-2" style={{ gap: 10 }}>
                   <div className="field">
-                    <label htmlFor="parts">Parcelas</label>
+                    <label htmlFor="parts">{s.installments}</label>
                     <select id="parts" className="input" value={installments} onChange={(e) => setInstallments(Number(e.target.value))}>
                       {INSTALLMENT_COUNTS.map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
                   <div className="field">
-                    <label htmlFor="period">Período de lançamento</label>
+                    <label htmlFor="period">{s.period}</label>
                     <select id="period" className="input" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
                       {PERIOD_ORDER.map((p) => <option key={p} value={p}>{PERIODS[p].unit}</option>)}
                     </select>
@@ -447,9 +436,9 @@ export function TransactionForm({
                   <div className="info-box">
                     <Info size={15} />
                     <div>
-                      Serão lançadas {installments} parcelas de <b>{formatBRL(parts[parts.length - 1])}</b>
-                      {parts[0] !== parts[parts.length - 1] && <> (a primeira de {formatBRL(parts[0])})</>}
-                      <small>Em caso de divisão não exata, a sobra será somada à primeira parcela.</small>
+                      {s.installmentsInfo(installments)}<b>{formatBRL(parts[parts.length - 1])}</b>
+                      {parts[0] !== parts[parts.length - 1] && <>{s.firstInstallment(formatBRL(parts[0]))}</>}
+                      <small>{s.installmentsRemainder}</small>
                     </div>
                   </div>
                 )}
@@ -461,13 +450,13 @@ export function TransactionForm({
         {error && <div className="error">{error}</div>}
         <div className={`form-actions ${editing ? 'editing' : ''}`}>
           {editing
-            ? <button type="button" className="mini-btn" onClick={del} title="Excluir" aria-label="Excluir" disabled={busy}><Trash2 size={18} /></button>
-            : <button type="button" className="btn cancel-btn desk-only" onClick={onClose} disabled={busy}>Cancelar</button>}
+            ? <button type="button" className="mini-btn" onClick={del} title={common.delete} aria-label={common.delete} disabled={busy}><Trash2 size={18} /></button>
+            : <button type="button" className="btn cancel-btn desk-only" onClick={onClose} disabled={busy}>{common.cancel}</button>}
           <div className="row" style={{ gap: 14 }}>
             {!editing && (
-              <button type="button" className="btn save-again" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} className="desk-only" /> <span className="desk-only">Salvar e criar outro</span><span className="phone-only">Salvar e novo</span></button>
+              <button type="button" className="btn save-again" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} className="desk-only" /> <span className="desk-only">{s.saveAndNewDesk}</span><span className="phone-only">{s.saveAndNewPhone}</span></button>
             )}
-            <button type="submit" className="save-btn" disabled={busy} title="Salvar" aria-label="Salvar"><Check size={30} strokeWidth={2.5} className="desk-only" /><span className="phone-only">Salvar</span></button>
+            <button type="submit" className="save-btn" disabled={busy} title={common.save} aria-label={common.save}><Check size={30} strokeWidth={2.5} className="desk-only" /><span className="phone-only">{common.save}</span></button>
           </div>
         </div>
       </form>

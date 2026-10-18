@@ -7,6 +7,7 @@ import {
   Tv, Umbrella, User, Users, Utensils, Wallet, Wifi, Wine, Wrench, Zap,
   type LucideIcon,
 } from 'lucide-react'
+import { t } from './i18n'
 
 /** Icons a category can use, by the key stored in the database. */
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -30,9 +31,9 @@ export function categoryIcon(key: string): LucideIcon {
 
 /** Generic account icons ("Ícones personalizados"). */
 export const ACCOUNT_ICONS: Record<string, { label: string; icon: LucideIcon }> = {
-  bank: { label: 'Banco', icon: Landmark },
-  wallet: { label: 'Carteira', icon: Wallet },
-  piggy: { label: 'Cofrinho', icon: PiggyBank },
+  bank: { get label() { return t().settings.iconLabels.bank }, icon: Landmark },
+  wallet: { get label() { return t().settings.iconLabels.wallet }, icon: Wallet },
+  piggy: { get label() { return t().settings.iconLabels.piggy }, icon: PiggyBank },
 }
 
 export const PALETTE = [

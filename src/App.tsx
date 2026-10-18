@@ -10,7 +10,8 @@ import { ConfirmProvider } from './components/Confirm'
 import { DemoBanner } from './components/DemoBanner'
 import { DEMO } from './lib/config'
 import { useSeriesUpkeep } from './lib/entries'
-import { PrefsProvider } from './lib/prefs'
+import { setLanguage } from './lib/i18n'
+import { deviceLanguage, PrefsProvider } from './lib/prefs'
 import { ProfileProvider } from './lib/profile'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
@@ -39,7 +40,11 @@ export default function App() {
   }, [qc])
 
   if (session === undefined) return null
-  if (!DEMO && !session) return <Login />
+  if (!DEMO && !session) {
+    // Not signed in yet: the language last used on this device, or the browser's.
+    setLanguage(deviceLanguage())
+    return <Login />
+  }
 
   const email = session?.user.email ?? 'rachel@exemplo.com'
   const name = (session?.user.user_metadata?.name as string | undefined) || capitalize(email.split(/[@.]/)[0])

@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react'
 import type { Account, Card, Category, CategoryKind } from '../lib/types'
 import { AccountAvatar, AccountIcon, CategoryAvatar } from './Avatars'
 import { Popover } from './Picker'
+import { locale, t } from '../lib/i18n'
 
 export function AccountSelect({
-  accounts, value, onChange, placeholder = 'Selecione',
+  accounts, value, onChange, placeholder = t().form.select,
 }: {
   accounts: Account[]
   value: string | null
@@ -23,7 +24,7 @@ export function AccountSelect({
     >
       {(close) =>
         accounts.length === 0 ? (
-          <div className="picker-group">Nenhuma conta. Crie uma em Configurações → Contas.</div>
+          <div className="picker-group">{t().form.noAccounts}</div>
         ) : (
           accounts.map((a) => (
             <button type="button" key={a.id} className={`picker-item ${a.id === value ? 'on' : ''}`} onClick={() => { onChange(a.id); close() }}>
@@ -39,7 +40,7 @@ export function AccountSelect({
 /** Parents in name order, each followed by its subcategories. */
 export function orderedCategories(categories: Category[], kind?: CategoryKind): { category: Category; depth: number }[] {
   const active = categories.filter((c) => !c.archived && (!kind || c.kind === kind))
-  const byName = (a: Category, b: Category) => a.name.localeCompare(b.name, 'pt-BR')
+  const byName = (a: Category, b: Category) => a.name.localeCompare(b.name, locale())
   const out: { category: Category; depth: number }[] = []
   for (const parent of active.filter((c) => !c.parent_id).sort(byName)) {
     out.push({ category: parent, depth: 0 })
@@ -73,7 +74,7 @@ export function CategorySelect({
           {selected ? (
             <><CategoryAvatar category={parent ?? selected} size={20} /> <span>{selected.name}</span></>
           ) : (
-            <span className="muted">Buscar categoria</span>
+            <span className="muted">{t().form.searchCategory}</span>
           )}
           <span className="spacer" />
           <ChevronDown size={16} className="muted" />
@@ -82,7 +83,7 @@ export function CategorySelect({
     >
       {(close) => (
         <>
-          <input className="search" placeholder="Buscar" autoFocus value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="search" placeholder={t().form.search} autoFocus value={q} onChange={(e) => setQ(e.target.value)} />
           {items.map(({ category, depth }) => (
             <button
               type="button"
@@ -117,19 +118,19 @@ export function SourceSelect({
         <button type="button" className="input" onClick={toggle}>
           {account && <><AccountAvatar account={account} size={20} /> <span>{account.name}</span></>}
           {card && <><AccountIcon icon={card.icon} color={card.color} size={20} square /> <span>{card.name}</span></>}
-          {!account && !card && <span className="muted">Selecione</span>}
+          {!account && !card && <span className="muted">{t().form.select}</span>}
         </button>
       )}
     >
       {(close) => (
         <>
-          {cards.length > 0 && <div className="picker-group">Contas</div>}
+          {cards.length > 0 && <div className="picker-group">{t().form.accounts}</div>}
           {accounts.map((a) => (
             <button type="button" key={a.id} className={`picker-item ${a.id === value ? 'on' : ''}`} onClick={() => { onChange(a.id); close() }}>
               <AccountAvatar account={a} size={22} /> {a.name}
             </button>
           ))}
-          {cards.length > 0 && <div className="picker-group">Cartões</div>}
+          {cards.length > 0 && <div className="picker-group">{t().form.cards}</div>}
           {cards.map((c) => (
             <button type="button" key={c.id} className={`picker-item ${c.id === value ? 'on' : ''}`} onClick={() => { onChange(c.id); close() }}>
               <AccountIcon icon={c.icon} color={c.color} size={22} square /> {c.name}

@@ -8,16 +8,18 @@ import { Popover } from '../components/Picker'
 import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
-import { availableLimit, invoiceFor, invoiceOf, shiftInvoice, STATUS_LABEL, toMonth } from '../lib/cards'
-import { monthLabel, shortDate, today } from '../lib/dates'
+import { availableLimit, invoiceFor, invoiceOf, shiftInvoice, statusLabel, toMonth } from '../lib/cards'
+import { dayMonth, monthName, monthTitle, shortDate, today } from '../lib/dates'
+import { t } from '../lib/i18n'
 import { formatBRL, formatCents, formatSigned } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTransactions } from '../lib/queries'
 import type { TxKind } from '../lib/types'
 import { tone } from '../lib/theme'
 
-const KIND_FILTERS: [TxKind, string][] = [['expense', 'Despesas'], ['income', 'Receitas']]
-
 export default function Invoice() {
+  const s = t().invoice
+  const cm = t().common
+  const KIND_FILTERS: [TxKind, string][] = [['expense', s.kindFilters.expense], ['income', s.kindFilters.income]]
   const { id } = useParams()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -59,7 +61,7 @@ export default function Invoice() {
   const selected = selectedId ? txs.find((tx) => tx.id === selectedId) : undefined
   const partial = invoice.paid > 0
   const m = toMonth(month)
-  const label = monthLabel(m).replace(/^\w/, (c) => c.toLowerCase())
+  const label = monthTitle(m)
 
   // Spending per top-level category, for the "Categorias" tile.
   const byCategory = new Map<string, number>()
@@ -83,20 +85,20 @@ export default function Invoice() {
   return (
     <main className="page inv-page">
       <header className="page-head desk-only">
-        <h1>Faturas</h1>
-        <button className="link" onClick={() => navigate('/configuracoes/contas#cartoes')}>Gerenciar cartões</button>
+        <h1>{s.title}</h1>
+        <button className="link" onClick={() => navigate('/configuracoes/contas#cartoes')}>{s.manageCards}</button>
       </header>
       <header className="ph-inv-head phone-only">
-        <h1>Faturas</h1>
+        <h1>{s.title}</h1>
         <Popover
           className="more-menu"
-          trigger={(_, toggle) => <button className="icon-btn" onClick={toggle} aria-label="Mais opções"><EllipsisVertical size={20} /></button>}
+          trigger={(_, toggle) => <button className="icon-btn" onClick={toggle} aria-label={s.moreOptions}><EllipsisVertical size={20} /></button>}
         >
-          {(close) => <button className="picker-item" onClick={() => { close(); navigate('/configuracoes/contas#cartoes') }}><Settings size={18} /> Gerenciar cartões</button>}
+          {(close) => <button className="picker-item" onClick={() => { close(); navigate('/configuracoes/contas#cartoes') }}><Settings size={18} /> {s.manageCards}</button>}
         </Popover>
       </header>
       {activeCards.length > 1 && (
-        <div className="ph-card-pick" role="group" aria-label="Cartão">
+        <div className="ph-card-pick" role="group" aria-label={cm.card}>
           {activeCards.map((c) => (
             <button key={c.id} className={c.id === card.id ? 'on' : ''} aria-pressed={c.id === card.id} onClick={() => navigate(`/cartoes/${c.id}`)}>
               <i style={{ background: pastel(c.color, 0.35) }} />{c.name}
@@ -104,84 +106,84 @@ export default function Invoice() {
           ))}
         </div>
       )}
-      <section className="ph-inv-hero phone-only toned" style={tone(pastel(card.color, 0.5))} aria-label={`Fatura de ${label}`}>
+      <section className="ph-inv-hero phone-only toned" style={tone(pastel(card.color, 0.5))} aria-label={s.invoiceOf(label)}>
         <div className="ph-inv-nav">
-          <button onClick={() => go(-1)} aria-label="Fatura anterior"><ChevronLeft size={20} /></button>
+          <button onClick={() => go(-1)} aria-label={s.prevInvoice}><ChevronLeft size={20} /></button>
           <span>{label}</span>
-          <button onClick={() => go(1)} aria-label="Próxima fatura"><ChevronRight size={20} /></button>
+          <button onClick={() => go(1)} aria-label={s.nextInvoice}><ChevronRight size={20} /></button>
         </div>
         <div className="ph-inv-mid">
-          <span className={`status status-${invoice.status}`}>{STATUS_LABEL[invoice.status].replace(/^Fatura /, '')}</span>
+          <span className={`status status-${invoice.status}`}>{s.heroStatus[invoice.status]}</span>
           <b>{formatBRL(invoice.total)}</b>
-          <small>vence {shortDate(invoice.due).slice(0, 5)} · fecha {shortDate(invoice.closing).slice(0, 5)}</small>
+          <small>{s.dueCloses(dayMonth(invoice.due), dayMonth(invoice.closing))}</small>
         </div>
         {card.limit_cents > 0 && (
           <>
             <div className="ph-inv-limit"><div style={{ width: `${usedPct}%` }} /></div>
-            <div className="ph-inv-limit-legend"><span>Limite usado {formatBRL(card.limit_cents - avail)}</span><span>Disponível {formatBRL(avail)}</span></div>
+            <div className="ph-inv-limit-legend"><span>{s.limitUsed(formatBRL(card.limit_cents - avail))}</span><span>{s.available(formatBRL(avail))}</span></div>
           </>
         )}
       </section>
       <div className="ph-inv-actions phone-only">
         {invoice.remaining > 0
-          ? <button className="btn btn-primary" onClick={pay}>{partial ? 'Pagar restante' : 'Pagar fatura'}</button>
-          : <span className="btn ph-inv-done">{invoice.total > 0 ? 'Fatura paga' : 'Nada a pagar'}</span>}
-        <button className="btn" onClick={() => open({ kind: 'expense', accountId: card.id })}>Nova compra</button>
+          ? <button className="btn btn-primary" onClick={pay}>{partial ? s.payRemaining : s.payInvoice}</button>
+          : <span className="btn ph-inv-done">{invoice.total > 0 ? s.invoicePaid : s.nothingToPay}</span>}
+        <button className="btn" onClick={() => open({ kind: 'expense', accountId: card.id })}>{s.newPurchase}</button>
       </div>
       {previous.remaining > 0 && (
         <div className="ph-alert phone-only">
           <AlertCircle size={20} />
-          <b style={{ flex: 1, fontSize: 13, whiteSpace: 'normal' }}>Ainda faltam {formatBRL(previous.remaining)} da fatura de {monthLabel(toMonth(shiftInvoice(month, -1))).split(' ')[0].toLowerCase()}.</b>
+          <b style={{ flex: 1, fontSize: 13, whiteSpace: 'normal' }}>{s.previousLeft(formatBRL(previous.remaining), monthName(shiftInvoice(month, -1)))}</b>
         </div>
       )}
 
       <section className="card invoice-head">
         <CardArt card={card} tilt />
         <div className="title">
-          <span className={`status status-${invoice.status}`}>{STATUS_LABEL[invoice.status]}</span>
+          <span className={`status status-${invoice.status}`}>{statusLabel(invoice.status)}</span>
           <h1>
-            <button onClick={() => go(-1)} aria-label="Fatura anterior"><ChevronLeft size={20} /></button>
-            <span>Fatura {label.split(' ')[0]}</span>
-            <button onClick={() => go(1)} aria-label="Próxima fatura"><ChevronRight size={20} /></button>
+            <button onClick={() => go(-1)} aria-label={s.prevInvoice}><ChevronLeft size={20} /></button>
+            <span>{s.heading(monthName(m))}</span>
+            <button onClick={() => go(1)} aria-label={s.nextInvoice}><ChevronRight size={20} /></button>
           </h1>
-          <span className="muted" style={{ fontWeight: 700 }}>{card.name} · vence {shortDate(invoice.due).slice(0, 5)} · fecha {shortDate(invoice.closing).slice(0, 5)}</span>
+          <span className="muted" style={{ fontWeight: 700 }}>{card.name} · {s.dueCloses(dayMonth(invoice.due), dayMonth(invoice.closing))}</span>
           {card.limit_cents > 0 && (
             <div className="inv-limit">
               <div className="limit-bar"><div style={{ width: `${usedPct}%`, background: pastel(card.color, 0.4) }} /></div>
               <div className="row" style={{ justifyContent: 'space-between' }}>
-                <span>Limite usado {formatBRL(card.limit_cents - avail)}</span><span>Disponível {formatBRL(avail)}</span>
+                <span>{s.limitUsed(formatBRL(card.limit_cents - avail))}</span><span>{s.available(formatBRL(avail))}</span>
               </div>
             </div>
           )}
         </div>
         <div className="invoice-totals">
-          <span className="k">Fatura total</span>
+          <span className="k">{s.total}</span>
           <span className="v">{formatBRL(invoice.total)}</span>
-          {invoice.paid > 0 && <span className="paid-note">pago {formatBRL(invoice.paid)} · falta {formatBRL(invoice.remaining)}</span>}
-          {previous.remaining > 0 && <span className="paid-note expense">anterior: faltam {formatBRL(previous.remaining)}</span>}
-          {invoice.remaining === 0 && invoice.total > 0 && <span className="inv-paid"><Mascot size={30} /> Fatura paga!</span>}
+          {invoice.paid > 0 && <span className="paid-note">{s.paidLeft(formatBRL(invoice.paid), formatBRL(invoice.remaining))}</span>}
+          {previous.remaining > 0 && <span className="paid-note expense">{s.previousShort(formatBRL(previous.remaining))}</span>}
+          {invoice.remaining === 0 && invoice.total > 0 && <span className="inv-paid"><Mascot size={30} /> {s.invoicePaidCheer}</span>}
           {invoice.remaining > 0 && (
             <button className="btn btn-primary" onClick={() => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })}>
-              {partial ? 'Pagar restante' : 'Pagar fatura'}
+              {partial ? s.payRemaining : s.payInvoice}
             </button>
           )}
         </div>
       </section>
 
       {breakdown.length > 0 && (
-        <section className="card card-pad inv-cats desk-only" aria-label="Gastos por categoria">
+        <section className="card card-pad inv-cats desk-only" aria-label={s.byCategory}>
           <div className="stack-bar">
             {breakdown.map(([cid, v]) => {
-              const c = categoryMap.get(cid)
-              return <div key={cid || 'none'} style={{ width: `${(v / spent) * 100}%`, background: c ? pastel(c.color) : 'var(--field)' }} />
+              const cat = categoryMap.get(cid)
+              return <div key={cid || 'none'} style={{ width: `${(v / spent) * 100}%`, background: cat ? pastel(cat.color) : 'var(--field)' }} />
             })}
           </div>
           <div className="inv-cats-legend">
             {breakdown.map(([cid, v]) => {
-              const c = categoryMap.get(cid)
+              const cat = categoryMap.get(cid)
               return (
                 <span key={cid || 'none'}>
-                  <i style={{ background: c ? pastel(c.color) : 'var(--field)' }} />{c?.name ?? 'Sem categoria'} <b className="money">{formatCents(v)}</b>
+                  <i style={{ background: cat ? pastel(cat.color) : 'var(--field)' }} />{cat?.name ?? cm.noCategory} <b className="money">{formatCents(v)}</b>
                 </span>
               )
             })}
@@ -192,19 +194,19 @@ export default function Invoice() {
       {invoice.payments.length > 0 && (
         <section className={`card card-pad payments ${sorted.length ? 'has-pay' : ''}`}>
           <div className="section-title">
-            <h3>Pagamento</h3>
+            <h3>{s.payment}</h3>
             {partial && invoice.remaining > 0 && (
-              <button className="btn btn-primary" onClick={() => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })}>Pagar restante</button>
+              <button className="btn btn-primary" onClick={() => open({ kind: 'payment', cardId: card.id, invoiceMonth: month })}>{s.payRemaining}</button>
             )}
           </div>
           <div className="progress"><div style={{ width: `${paidPct}%` }} /></div>
           <div className="progress-legend">
-            <span className="income">Pago {formatBRL(invoice.paid)}</span>
-            <span className={invoice.remaining > 0 ? 'expense' : 'muted'}>Falta {formatBRL(invoice.remaining)}</span>
+            <span className="income">{s.paid(formatBRL(invoice.paid))}</span>
+            <span className={invoice.remaining > 0 ? 'expense' : 'muted'}>{s.left(formatBRL(invoice.remaining))}</span>
           </div>
           {sorted.length > 0 && (
             <table>
-              <thead><tr><th>Data</th><th>Valor pago</th><th>Conta</th><th></th></tr></thead>
+              <thead><tr><th>{s.colDate}</th><th>{s.colPaid}</th><th>{s.colAccount}</th><th></th></tr></thead>
               <tbody>
                 {sorted.map((p) => {
                   const a = p.account_id ? accounts.get(p.account_id) : undefined
@@ -214,8 +216,8 @@ export default function Invoice() {
                       <td className="money">{formatBRL(p.amount_cents)}</td>
                       <td><span className="row"><AccountAvatar account={a} size={22} />{a?.name}</span></td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button className="act" onClick={() => open({ kind: 'payment', editing: p })}>Editar</button>
-                        <button className="act" style={{ marginLeft: 6 }} onClick={() => setSelectedId(p.id)}>Detalhes</button>
+                        <button className="act" onClick={() => open({ kind: 'payment', editing: p })}>{s.edit}</button>
+                        <button className="act" style={{ marginLeft: 6 }} onClick={() => setSelectedId(p.id)}>{s.details}</button>
                       </td>
                     </tr>
                   )
@@ -227,20 +229,20 @@ export default function Invoice() {
       )}
 
       <div className="filters">
-        <button className="btn btn-dark" style={{ minHeight: 40 }} onClick={() => open({ kind: 'expense', accountId: card.id })}><Plus size={18} /> Lançamento</button>
+        <button className="btn btn-dark" style={{ minHeight: 40 }} onClick={() => open({ kind: 'expense', accountId: card.id })}><Plus size={18} /> {s.newEntry}</button>
         <div className="filter-bar">
           <FilterMenu
-            label={KIND_FILTERS.find(([k]) => k === kindFilter)?.[1] ?? 'Tipo'}
+            label={KIND_FILTERS.find(([k]) => k === kindFilter)?.[1] ?? s.kind}
             on={!!kindFilter}
-            items={[{ id: null, label: 'Todos os tipos' }, ...KIND_FILTERS.map(([kid, l]) => ({ id: kid, label: l }))]}
+            items={[{ id: null, label: s.allKinds }, ...KIND_FILTERS.map(([kid, l]) => ({ id: kid, label: l }))]}
             value={kindFilter}
             onChange={(v) => setKindFilter(v as TxKind | null)}
           />
           <FilterMenu
-            label={categoryFilter ? categoryMap.get(categoryFilter)?.name ?? 'Categorias' : 'Categorias'}
+            label={categoryFilter ? categoryMap.get(categoryFilter)?.name ?? s.categories : s.categories}
             on={!!categoryFilter}
             items={[
-              { id: null, label: 'Todas as categorias' },
+              { id: null, label: s.allCategories },
               ...orderedCategories(categories).map(({ category, depth }) => ({ id: category.id, label: category.name, sub: depth > 0 })),
             ]}
             value={categoryFilter}
@@ -249,16 +251,16 @@ export default function Invoice() {
         </div>
         <label className="search-pill">
           <Search size={18} />
-          <input placeholder="Buscar compra" aria-label="Buscar compra" value={search} onChange={(e) => setSearch(e.target.value)} />
-          {search && <button onClick={() => setSearch('')} aria-label="Limpar busca"><X size={16} /></button>}
+          <input placeholder={s.searchPurchase} aria-label={s.searchPurchase} value={search} onChange={(e) => setSearch(e.target.value)} />
+          {search && <button onClick={() => setSearch('')} aria-label={s.clearSearch}><X size={16} /></button>}
         </label>
       </div>
 
-      <section className="card list-card" aria-label="Compras da fatura">
+      <section className="card list-card" aria-label={s.purchases}>
         {rows.length === 0 ? (
           <div className="empty">
-            <h3>Nenhuma compra nesta fatura</h3>
-            <p>Compras feitas no cartão aparecem aqui, na fatura em que caírem.</p>
+            <h3>{s.emptyTitle}</h3>
+            <p>{s.emptyText}</p>
           </div>
         ) : (
           <div className="tx-list">
@@ -270,9 +272,9 @@ export default function Invoice() {
                 <div key={tx.id} className={`tx-row invoice-row ${tx.id === selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(tx.id)}>
                   <CategoryAvatar category={parent ?? category} />
                   <div className="tx-desc">
-                    {tx.description || category?.name || 'Sem descrição'}
+                    {tx.description || category?.name || cm.noDescription}
                     {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
-                    <span className="sub">{shortDate(tx.date).slice(0, 5)} · {category ? (parent ? `${parent.name} › ${category.name}` : category.name) : 'Sem categoria'}</span>
+                    <span className="sub">{dayMonth(tx.date)} · {category ? (parent ? `${parent.name} › ${category.name}` : category.name) : cm.noCategory}</span>
                   </div>
                   <div className={`tx-amount ${tx.kind === 'income' ? 'income' : ''}`}>{formatSigned(tx.kind === 'income' ? tx.amount_cents : -tx.amount_cents)}</div>
                 </div>

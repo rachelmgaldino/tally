@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { t } from '../../lib/i18n'
 import Accounts from './Accounts'
 import Cards from './Cards'
 
@@ -8,12 +9,13 @@ export default function AccountsAndCards() {
   useEffect(() => {
     if (pathname.endsWith('/cartoes') || hash === '#cartoes') document.getElementById('cartoes')?.scrollIntoView()
   }, [pathname, hash])
+  const s = t().settings.accountsAndCards
   return (
     <>
       <header className="page-head">
         <div>
-          <h1>Contas e cartões</h1>
-          <p>Onde o seu dinheiro mora e os cartões que você usa.</p>
+          <h1>{s.title}</h1>
+          <p>{s.intro}</p>
         </div>
       </header>
       <section className="card card-pad"><Accounts /></section>
