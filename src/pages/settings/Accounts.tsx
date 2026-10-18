@@ -1,4 +1,4 @@
-import { CirclePlus, Image, Info, Pencil } from 'lucide-react'
+import { AlertTriangle, CirclePlus, Image, Info, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AccountIconPicker, type IconChoice } from '../../components/AccountIconPicker'
@@ -29,10 +29,11 @@ export default function Accounts() {
     <>
       <div className="settings-head">
         <h2>Contas</h2>
-        <button className="btn btn-soft" onClick={() => setEditing('new')}><CirclePlus size={16} /> Nova conta</button>
       </div>
       <div className="acc-grid">
-        {sorted.map((a) => (
+        {sorted.map((a) => {
+          const balance = accountBalance(a, txs).current
+          return (
           <button key={a.id} className={`acc ${a.archived ? 'archived' : ''}`} style={{ background: pastel(a.color, 0.7) }} onClick={() => setEditing(a)}>
             <div className="top">
               <AccountAvatar account={a} />
@@ -40,11 +41,14 @@ export default function Accounts() {
               <span className="icon-btn sm" aria-hidden="true"><Pencil size={15} /></span>
             </div>
             <div>
-              <div className="v">{formatBRL(accountBalance(a, txs).current)}</div>
-              <small>{a.archived ? 'Arquivada' : a.exclude_from_total ? 'Fora do saldo geral' : 'Conta manual'}</small>
+              <div className={`v ${balance < 0 ? 'expense' : ''}`}>{formatBRL(balance)}</div>
+              {balance < 0 && !a.archived
+                ? <small className="neg-note"><AlertTriangle size={13} /> Saldo negativo</small>
+                : <small>{a.archived ? 'Arquivada' : a.exclude_from_total ? 'Fora do saldo geral' : 'Conta manual'}</small>}
             </div>
           </button>
-        ))}
+          )
+        })}
         <button className="acc-new" onClick={() => setEditing('new')}><CirclePlus size={18} /> Nova conta</button>
       </div>
       {editing && <AccountModal account={editing === 'new' ? undefined : editing} onClose={close} />}

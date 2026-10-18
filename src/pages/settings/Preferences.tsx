@@ -26,7 +26,7 @@ export default function Preferences() {
   return (
     <>
       <header className="page-head"><h1>Preferências</h1></header>
-      <section className="card card-pad prefs" style={{ maxWidth: 860 }}>
+      <section className="card card-pad prefs">
         <h3 className="section-h">Lançamentos</h3>
         <div className="pref-row">
           <div><b>Ordem da lista</b><small>Qual dia aparece primeiro</small></div>

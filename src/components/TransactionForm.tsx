@@ -13,8 +13,9 @@ import { Popover } from './Picker'
 import { AccountSelect, CategorySelect, SourceSelect } from './Selects'
 import { TagInput } from './TagInput'
 import { useToast } from './Toast'
+import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
-import { Modal, MoneyInput, Segmented, Toggle } from './ui'
+import { Modal, Segmented, Toggle } from './ui'
 
 export type FormKind = Exclude<TxKind, 'payment'>
 
@@ -60,6 +61,7 @@ export function TransactionForm({
   const { ask } = useTxForm()
   const refresh = useRefresh()
   const toast = useToast()
+  const confirmDelete = useConfirm()
   const active = accounts.filter((a) => !a.archived)
   const source = editing ?? copyOf
   const inSeries = !!editing?.series_id
@@ -209,10 +211,10 @@ export function TransactionForm({
       })
       return
     }
-    if (!confirm('Excluir este lançamento?')) return
+    if (!(await confirmDelete({ title: 'Excluir lançamento?', text: 'Ele sai da lista e dos saldos. Isso não pode ser desfeito.' }))) return
+    onClose()
     await refresh(deleteEntries([editing]))
     toast('Lançamento excluído.')
-    onClose()
   }
 
   function addFiles(list: FileList | null) {
@@ -246,7 +248,7 @@ export function TransactionForm({
             ))}
           </div>
         )}
-        <div className={`ph-amount phone-only ${kind}`}>
+        <div className={`ph-amount ${kind}`}>
           <label htmlFor="ph-amount">Valor</label>
           <div className="row">
             <span className="prefix">R$</span>
@@ -273,16 +275,12 @@ export function TransactionForm({
           <input id="desc" className="input" placeholder="Adicione uma descrição para o lançamento" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
         </div>
         <div className="grid-2" style={{ gap: 10 }}>
-          <div className="field desk-only">
-            <label>Valor</label>
-            <MoneyInput value={amount} onChange={setAmount} />
-          </div>
           <div className="field f-date">
             <span className="f-ico phone-only"><Calendar size={20} /></span>
             <label htmlFor="date">Data</label>
             <div className="f-date-in">
               {[[today(), 'Hoje'], [yesterday(), 'Ontem']].map(([d, l]) => (
-                <button type="button" key={l} className={`phone-only day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
+                <button type="button" key={l} className={`day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
               ))}
               <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
             </div>
@@ -456,7 +454,9 @@ export function TransactionForm({
 
         {error && <div className="error">{error}</div>}
         <div className={`form-actions ${editing ? 'editing' : ''}`}>
-          <button type="button" className="mini-btn" onClick={del} title={editing ? 'Excluir' : 'Descartar'} aria-label={editing ? 'Excluir' : 'Descartar'} disabled={busy}><Trash2 size={18} /></button>
+          {editing
+            ? <button type="button" className="mini-btn" onClick={del} title="Excluir" aria-label="Excluir" disabled={busy}><Trash2 size={18} /></button>
+            : <button type="button" className="btn cancel-btn desk-only" onClick={onClose} disabled={busy}>Cancelar</button>}
           <div className="row" style={{ gap: 14 }}>
             {!editing && (
               <button type="button" className="btn save-again" onClick={() => save(true)} disabled={busy}><CopyPlus size={18} className="desk-only" /> <span className="desk-only">Salvar e criar outro</span><span className="phone-only">Salvar e novo</span></button>

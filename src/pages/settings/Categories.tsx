@@ -1,4 +1,4 @@
-import { ChevronDown, CirclePlus, Image } from 'lucide-react'
+import { ChevronDown, CirclePlus, Ellipsis, Image } from 'lucide-react'
 import { useState } from 'react'
 import { CategoryAvatar, CategoryIcon, pastel } from '../../components/Avatars'
 import { Popover } from '../../components/Picker'
@@ -52,18 +52,24 @@ export default function Categories() {
           <div className="list-row" style={{ opacity: p.archived ? 0.5 : 1 }}>
             <CategoryAvatar category={p} />
             <button onClick={() => setEditing({ mode: 'category', category: p })}>{p.name}</button>
-            <span className="actions">
-              {!p.archived && <button onClick={() => setEditing({ mode: 'sub', parentId: p.id })}>+ subcategoria</button>}
-              <button onClick={() => toggleArchive(p)}>{p.archived ? 'reativar' : 'arquivar'}</button>
-            </span>
+            <RowMenu
+              items={[
+                ['Editar', () => setEditing({ mode: 'category', category: p })],
+                ...(!p.archived ? [['Nova subcategoria', () => setEditing({ mode: 'sub', parentId: p.id })] as MenuItem] : []),
+                [p.archived ? 'Reativar' : 'Arquivar', () => toggleArchive(p)],
+              ]}
+            />
           </div>
           {ofKind.filter((c) => c.parent_id === p.id).sort(byName).map((c) => (
             <div key={c.id} className="list-row sub" style={{ opacity: c.archived ? 0.5 : 1 }}>
               <span className="dot" style={{ background: pastel(p.color, 0.3) }} />
               <button onClick={() => setEditing({ mode: 'sub', parentId: p.id, category: c })}>{c.name}</button>
-              <span className="actions">
-                <button onClick={() => toggleArchive(c)}>{c.archived ? 'reativar' : 'arquivar'}</button>
-              </span>
+              <RowMenu
+                items={[
+                  ['Editar', () => setEditing({ mode: 'sub', parentId: p.id, category: c })],
+                  [c.archived ? 'Reativar' : 'Arquivar', () => toggleArchive(c)],
+                ]}
+              />
             </div>
           ))}
         </div>
@@ -83,6 +89,22 @@ export default function Categories() {
         />
       )}
     </>
+  )
+}
+
+type MenuItem = [string, () => void]
+
+/** The ⋯ at the end of a category row. */
+function RowMenu({ items }: { items: MenuItem[] }) {
+  return (
+    <Popover
+      className="row-menu"
+      trigger={(_, toggle) => <button className="icon-btn sm" onClick={toggle} aria-label="Opções"><Ellipsis size={18} /></button>}
+    >
+      {(close) => items.map(([label, run]) => (
+        <button key={label} className="picker-item" onClick={() => { close(); run() }}>{label}</button>
+      ))}
+    </Popover>
   )
 }
 

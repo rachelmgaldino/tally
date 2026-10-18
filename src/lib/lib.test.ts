@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { accountBalance, periodSummary } from './balances'
-import { addMonths, monthEnd, monthLabel, shortDate } from './dates'
-import { centsFromTyping, formatCents, formatSigned } from './money'
+import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
+import { centsFromTyping, formatBRL, formatCents, formatSigned } from './money'
 import type { Account, Transaction } from './types'
 
 describe('money', () => {
@@ -9,6 +9,8 @@ describe('money', () => {
     expect(formatCents(123456)).toBe('1.234,56')
     expect(formatCents(-4450)).toBe('-44,50')
     expect(formatSigned(180000)).toBe('+1.800,00')
+    expect(formatSigned(-4450)).toBe('\u221244,50')
+    expect(formatBRL(-23900)).toBe('\u2212R$ 239,00')
   })
   it('reads typing from the right like a bank app', () => {
     expect(centsFromTyping('0,001')).toBe(1)
@@ -18,6 +20,11 @@ describe('money', () => {
 })
 
 describe('dates', () => {
+  it('adds days across months and years', () => {
+    expect(addDays('2026-10-28', 7)).toBe('2026-11-04')
+    expect(addDays('2026-12-25', 14)).toBe('2027-01-08')
+  })
+
   it('moves across years', () => {
     expect(addMonths({ year: 2026, month: 12 }, 1)).toEqual({ year: 2027, month: 1 })
     expect(addMonths({ year: 2026, month: 1 }, -1)).toEqual({ year: 2025, month: 12 })

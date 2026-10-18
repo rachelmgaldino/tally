@@ -13,9 +13,11 @@ export interface Prefs {
   period: PeriodKind
   /** A running balance under each day in Lançamentos. */
   dailyBalance: boolean
+  /** How many days ahead Próximos looks on Início. */
+  nextDays: 7 | 14 | 30
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7 }
 const KEY = 'tally-prefs'
 
 function local(): Partial<Prefs> {
