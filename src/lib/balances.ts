@@ -1,3 +1,4 @@
+import { today } from './dates'
 import type { Account, Transaction } from './types'
 
 /**
@@ -23,13 +24,18 @@ export function effectOnSet(tx: Transaction, accountIds: Set<string>): number {
 }
 
 export interface AccountBalance {
-  /** Paid transactions only. */
+  /** Paid transactions dated up to today. */
   current: number
   /** Paid and pending. */
   forecast: number
 }
 
-export function accountBalance(account: Account, txs: Transaction[], until?: string): AccountBalance {
+/**
+ * A transfer is saved as done even when it is dated later (a fixed transfer
+ * creates a year of them), so the current balance also leaves out anything
+ * dated after `on`.
+ */
+export function accountBalance(account: Account, txs: Transaction[], until?: string, on = today()): AccountBalance {
   let current = account.initial_balance_cents
   let forecast = account.initial_balance_cents
   for (const tx of txs) {
@@ -37,7 +43,7 @@ export function accountBalance(account: Account, txs: Transaction[], until?: str
     const d = effectOn(tx, account.id)
     if (d === 0) continue
     forecast += d
-    if (tx.paid) current += d
+    if (tx.paid && tx.date <= on) current += d
   }
   return { current, forecast }
 }

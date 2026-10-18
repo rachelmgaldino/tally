@@ -1060,14 +1060,14 @@ select.input { appearance: auto; }
 :root[data-theme='dark'] .tile.sand { --tone: var(--sand); }
 /* The period summary goes lilac at night so it stands out from the peach Saldo geral. */
 :root[data-theme='dark'] :is(.summary-card, .sum-pill) { --tone: var(--lavender); }
-:root[data-theme='dark'] :is(.invoice-banner, .invoice-head, .paid-btn.invoice) { --tone: var(--peach); }
+:root[data-theme='dark'] :is(.invoice-banner, .invoice-head, .paid-btn.invoice, .demo-banner) { --tone: var(--peach); }
 
 /* The day islands: pastel fill, deep purple text, and day colours for everything inside. */
 :root[data-theme='dark'] :is(.toned, .side nav a.active, .btn-primary, .prompt-option.primary, .save-btn, .ph-card-pick button.on, .cat-icons button.on,
   .filter-bar > .picker > button.on, .option-icons button.on > span, .tabs button.on, .fil.on, .pick.on, .day-chip.on, .tx-page .icon-btn.on,
   .status-current, .welcome, .btn-soft, .btn-ghost-green, .chip-kind, .kind-tabs button.on, .status-paid, .inv-paid, .ph-inv-done,
   .drawer-actions .pay-act, .ph-det-status.paid, .btn-pink, .btn-danger, .overdue, .ph-alert, .status-late, .tile, .mini-btn, .btn-blue,
-  .segmented button.on, .status-future, .form-section.repeat, .status-closed, .series-nav, .tx-desc .part, .summary-card, .sum-pill,
+  .segmented button.on, .status-future, .form-section.repeat, .status-closed, .series-nav, .tx-desc .part, .summary-card, .sum-pill, .demo-banner,
   .invoice-banner, .invoice-head, .paid-btn.invoice, .chip, .tx-row.selected) {
   --ink: #3a3358;
   --muted: #5b5179;
