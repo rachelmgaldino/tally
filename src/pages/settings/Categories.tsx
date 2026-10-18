@@ -4,15 +4,15 @@ import { CategoryAvatar, CategoryIcon, pastel } from '../../components/Avatars'
 import { Popover } from '../../components/Picker'
 import { useToast } from '../../components/Toast'
 import { Modal, Segmented } from '../../components/ui'
+import { t, locale } from '../../lib/i18n'
 import { CATEGORY_ICONS, PALETTE } from '../../lib/icons'
 import { useCategories, useCategoryMutations } from '../../lib/queries'
 import type { Category, CategoryKind } from '../../lib/types'
 
-const KIND_NAME: Record<CategoryKind, string> = { expense: 'Despesa', income: 'Receita' }
-
 type Editing = { mode: 'category' | 'sub'; parentId?: string; category?: Category }
 
 export default function Categories() {
+  const s = t().settings.categories
   const { data: categories = [], isLoading } = useCategories()
   const { update } = useCategoryMutations()
   const toast = useToast()
@@ -21,32 +21,32 @@ export default function Categories() {
   const [editing, setEditing] = useState<Editing | null>(null)
 
   const ofKind = categories.filter((c) => c.kind === kind && (showArchived || !c.archived))
-  const byName = (a: Category, b: Category) => a.name.localeCompare(b.name, 'pt-BR')
+  const byName = (a: Category, b: Category) => a.name.localeCompare(b.name, locale())
   const parents = ofKind.filter((c) => !c.parent_id).sort(byName)
   const archivedCount = categories.filter((c) => c.kind === kind && c.archived).length
 
   async function toggleArchive(c: Category) {
     await update.mutateAsync({ id: c.id, patch: { archived: !c.archived } })
-    toast(c.archived ? 'Categoria reativada.' : 'Categoria arquivada.')
+    toast(c.archived ? s.reactivated : s.archivedToast)
   }
 
   return (
     <>
       <header className="page-head">
         <div>
-          <h1>Categorias</h1>
-          <p>Como você separa o que entra e o que sai.</p>
+          <h1>{s.title}</h1>
+          <p>{s.intro}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setEditing({ mode: 'category' })}>
-          <CirclePlus size={18} /> Categoria de {KIND_NAME[kind].toLowerCase()}
+          <CirclePlus size={18} /> {s.addFor[kind]}
         </button>
       </header>
       <section className="card card-pad">
       <div className="tabs" style={{ maxWidth: 360 }}>
-        <button className={kind === 'expense' ? 'on' : ''} onClick={() => setKind('expense')}>Despesas</button>
-        <button className={kind === 'income' ? 'on' : ''} onClick={() => setKind('income')}>Receitas</button>
+        <button className={kind === 'expense' ? 'on' : ''} onClick={() => setKind('expense')}>{s.tabs.expense}</button>
+        <button className={kind === 'income' ? 'on' : ''} onClick={() => setKind('income')}>{s.tabs.income}</button>
       </div>
-      {isLoading && <p className="muted">Carregando…</p>}
+      {isLoading && <p className="muted">{s.loading}</p>}
       {parents.map((p) => (
         <div key={p.id}>
           <div className="list-row" style={{ opacity: p.archived ? 0.5 : 1 }}>
@@ -54,9 +54,9 @@ export default function Categories() {
             <button onClick={() => setEditing({ mode: 'category', category: p })}>{p.name}</button>
             <RowMenu
               items={[
-                ['Editar', () => setEditing({ mode: 'category', category: p })],
-                ...(!p.archived ? [['Nova subcategoria', () => setEditing({ mode: 'sub', parentId: p.id })] as MenuItem] : []),
-                [p.archived ? 'Reativar' : 'Arquivar', () => toggleArchive(p)],
+                [s.edit, () => setEditing({ mode: 'category', category: p })],
+                ...(!p.archived ? [[s.newSub, () => setEditing({ mode: 'sub', parentId: p.id })] as MenuItem] : []),
+                [p.archived ? s.reactivate : s.archive, () => toggleArchive(p)],
               ]}
             />
           </div>
@@ -66,8 +66,8 @@ export default function Categories() {
               <button onClick={() => setEditing({ mode: 'sub', parentId: p.id, category: c })}>{c.name}</button>
               <RowMenu
                 items={[
-                  ['Editar', () => setEditing({ mode: 'sub', parentId: p.id, category: c })],
-                  [c.archived ? 'Reativar' : 'Arquivar', () => toggleArchive(c)],
+                  [s.edit, () => setEditing({ mode: 'sub', parentId: p.id, category: c })],
+                  [c.archived ? s.reactivate : s.archive, () => toggleArchive(c)],
                 ]}
               />
             </div>
@@ -76,7 +76,7 @@ export default function Categories() {
       ))}
       {archivedCount > 0 && (
         <button className="link" style={{ marginTop: 14 }} onClick={() => setShowArchived((s) => !s)}>
-          {showArchived ? 'Esconder arquivadas' : `Mostrar arquivadas (${archivedCount})`}
+          {showArchived ? s.hideArchived : s.showArchived(archivedCount)}
         </button>
       )}
       </section>
@@ -99,7 +99,7 @@ function RowMenu({ items }: { items: MenuItem[] }) {
   return (
     <Popover
       className="row-menu"
-      trigger={(_, toggle) => <button className="icon-btn sm" onClick={toggle} aria-label="Opções"><Ellipsis size={18} /></button>}
+      trigger={(_, toggle) => <button className="icon-btn sm" onClick={toggle} aria-label={t().settings.categories.options}><Ellipsis size={18} /></button>}
     >
       {(close) => items.map(([label, run]) => (
         <button key={label} className="picker-item" onClick={() => { close(); run() }}>{label}</button>
@@ -116,6 +116,8 @@ function CategoryModal({
   parents: Category[]
   onClose: () => void
 }) {
+  const s = t().settings.categories
+  const cm = t().common
   const { insert, update } = useCategoryMutations()
   const toast = useToast()
   const existing = initial.category
@@ -135,23 +137,22 @@ function CategoryModal({
     try {
       if (existing) await update.mutateAsync({ id: existing.id, patch: row })
       else await insert.mutateAsync([{ ...row, archived: false }])
-      toast(existing ? 'Categoria atualizada.' : 'Categoria criada.')
+      toast(existing ? s.updated : s.created)
       onClose()
     } catch (e) {
       setError((e as Error).message)
     }
   }
 
-  const verb = existing ? 'Editar' : 'Criar nova'
   return (
     <Modal
-      title={<>{verb} {mode === 'category' ? 'categoria' : 'subcategoria'} de <span className="muted">{KIND_NAME[kind]}</span></>}
+      title={<>{s.modalTitle(!!existing, mode === 'sub')} <span className="muted">{s.kindName[kind]}</span></>}
       onClose={onClose}
       wide
     >
       <div className="stack">
         {!existing && (
-          <Segmented value={mode} onChange={setMode} options={[['category', 'Categoria'], ['sub', 'Subcategoria']]} />
+          <Segmented value={mode} onChange={setMode} options={[['category', s.category], ['sub', s.subcategory]]} />
         )}
         {mode === 'category' ? (
           <>
@@ -160,17 +161,17 @@ function CategoryModal({
                 <span className="avatar" style={{ width: 56, height: 56, background: 'var(--field)' }}><Image size={20} /></span>
               )}
               <div className="field" style={{ flex: 1 }}>
-                <label htmlFor="cat-name">Nome da categoria</label>
-                <input id="cat-name" className="input" placeholder="Escolha um nome para a categoria" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+                <label htmlFor="cat-name">{s.name}</label>
+                <input id="cat-name" className="input" placeholder={s.namePlaceholder} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
               </div>
             </div>
-            <div className="label">Escolha um ícone</div>
+            <div className="label">{s.pickIcon}</div>
             <div className="cat-icons">
               {Object.entries(CATEGORY_ICONS).map(([key, Icon]) => (
                 <button key={key} className={icon === key ? 'on' : ''} onClick={() => setIcon(key)} aria-label={key}><Icon size={16} /></button>
               ))}
             </div>
-            <div className="label">Escolha uma cor</div>
+            <div className="label">{s.pickColor}</div>
             <div className="swatches">
               {PALETTE.map((c) => (
                 <button key={c} className={`swatch ${color === c ? 'on' : ''}`} style={{ background: c }} onClick={() => setColor(c)} aria-label={c} />
@@ -180,11 +181,11 @@ function CategoryModal({
         ) : (
           <>
             <div className="field">
-              <label>Categoria principal</label>
+              <label>{s.parent}</label>
               <Popover
                 trigger={(_, toggle) => (
                   <button type="button" className="input" onClick={toggle}>
-                    {parent ? <><CategoryAvatar category={parent} size={20} /> {parent.name}</> : <span className="muted">Selecione a categoria pai</span>}
+                    {parent ? <><CategoryAvatar category={parent} size={20} /> {parent.name}</> : <span className="muted">{s.pickParent}</span>}
                     <span className="spacer" />
                     <ChevronDown size={16} className="muted" />
                   </button>
@@ -198,17 +199,17 @@ function CategoryModal({
               </Popover>
             </div>
             <div className="field">
-              <label htmlFor="sub-name">{existing ? 'Nome da subcategoria' : 'Nova subcategoria'}</label>
-              <input id="sub-name" className="input" placeholder="Escolha o nome da subcategoria" value={name} onChange={(e) => setName(e.target.value)} />
+              <label htmlFor="sub-name">{existing ? s.subName : s.newSub}</label>
+              <input id="sub-name" className="input" placeholder={s.subPlaceholder} value={name} onChange={(e) => setName(e.target.value)} />
             </div>
           </>
         )}
         {error && <div className="error">{error}</div>}
       </div>
       <div className="modal-foot">
-        <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-outline" onClick={onClose}>{cm.cancel}</button>
         <button className="btn btn-primary" disabled={!valid || insert.isPending || update.isPending} onClick={save}>
-          {existing ? 'Salvar' : mode === 'category' ? 'Criar categoria' : 'Criar subcategoria'}
+          {existing ? cm.save : mode === 'category' ? s.createCategory : s.createSub}
         </button>
       </div>
     </Modal>

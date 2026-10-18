@@ -1,7 +1,4 @@
-const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-]
+import { t } from './i18n'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -43,18 +40,47 @@ export function monthEnd(m: Month): string {
   return monthStart(addMonths(m, 1))
 }
 
+/** "Outubro 2026" / "October 2026" */
 export function monthLabel(m: Month): string {
-  return `${MONTHS[m.month - 1]} ${m.year}`
+  return `${t().common.months[m.month - 1]} ${m.year}`
 }
 
-/** "2026-10-01" → "01/10/26" */
+/** "outubro 2026" / "October 2026": the month switchers. */
+export function monthTitle(m: Month): string {
+  return t().common.monthYear(t().common.monthsInline[m.month - 1], m.year)
+}
+
+/** "outubro" / "October", for the middle of a sentence. Takes a Month or a YYYY-MM-DD date. */
+export function monthName(m: Month | string): string {
+  const month = typeof m === 'string' ? Number(m.slice(5, 7)) : m.month
+  return t().common.monthsInline[month - 1]
+}
+
+/** "sábado" / "Saturday" */
+export function weekdayName(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return t().common.weekdays[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
+}
+
+/** "sábado, 18 de outubro" / "Saturday, October 18" */
+export function weekdayDate(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return t().common.weekdayDate(weekdayName(iso), d, t().common.monthsInline[m - 1])
+}
+
+/** "2026-10-18" → "18/10" (Portuguese) or "10/18" (English) */
+export function dayMonth(iso: string): string {
+  const [, mo, d] = iso.split('-')
+  return t().common.dayMonthOrder === 'md' ? `${mo}/${d}` : `${d}/${mo}`
+}
+
+/** "2026-10-01" → "01/10/26" (Portuguese) or "10/01/26" (English) */
 export function shortDate(iso: string): string {
-  const [y, mo, d] = iso.split('-')
-  return `${d}/${mo}/${y.slice(2)}`
+  return `${dayMonth(iso)}/${iso.slice(2, 4)}`
 }
 
-/** "2026-10-01" → "01 de Outubro de 2026" */
+/** "2026-10-01" → "1 de outubro de 2026" / "October 1, 2026" */
 export function longDate(iso: string): string {
-  const [y, mo, d] = iso.split('-')
-  return `${Number(d)} de ${MONTHS[Number(mo) - 1].toLowerCase()} de ${y}`
+  const [y, mo, d] = iso.split('-').map(Number)
+  return t().common.longDate(d, t().common.monthsInline[mo - 1], y)
 }

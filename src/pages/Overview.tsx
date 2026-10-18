@@ -8,28 +8,23 @@ import { useTxForm } from '../components/TxFormContext'
 import { usePrefs } from '../lib/prefs'
 import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
-import { addDays, addMonths, currentMonth, monthEnd, monthLabel, monthStart, shortDate, today } from '../lib/dates'
+import { addDays, addMonths, currentMonth, dayMonth, monthEnd, monthName, monthStart, monthTitle, today, weekdayDate } from '../lib/dates'
+import { t as text } from '../lib/i18n'
 import { formatBRL, formatCents } from '../lib/money'
 import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { Transaction } from '../lib/types'
 import { tone } from '../lib/theme'
 
 function greeting() {
+  const s = text().overview
   const h = new Date().getHours()
-  if (h < 12) return 'Bom dia,'
-  if (h < 18) return 'Boa tarde,'
-  return 'Boa noite,'
-}
-
-const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
-const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
-/** "sábado, 18 de outubro" */
-function todayLabel(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}, ${d} de ${MONTHS[m - 1]}`
+  if (h < 12) return s.morning
+  if (h < 18) return s.afternoon
+  return s.evening
 }
 
 export default function Overview({ name }: { name: string }) {
+  const s = text().overview
   const { data: accounts = [], isSuccess: accountsLoaded } = useAccounts()
   const { data: categories = [] } = useCategories()
   const { data: txs = [], isSuccess: txsLoaded } = useTransactions()
@@ -93,26 +88,26 @@ export default function Overview({ name }: { name: string }) {
     .sort((a, b) => a.date.localeCompare(b.date))
   const nextHead = (
     <div className="section-title next-head">
-      <h3>Próximos</h3>
+      <h3>{s.next}</h3>
       {isCurrent && (
-        <div className="segmented days-pick" role="group" aria-label="Período de Próximos">
+        <div className="segmented days-pick" role="group" aria-label={s.nextPeriod}>
           {([7, 14, 30] as const).map((n) => (
-            <button key={n} className={prefs.nextDays === n ? 'on' : ''} aria-pressed={prefs.nextDays === n} onClick={() => setPrefs({ nextDays: n }).catch(() => {})}>{n} dias</button>
+            <button key={n} className={prefs.nextDays === n ? 'on' : ''} aria-pressed={prefs.nextDays === n} onClick={() => setPrefs({ nextDays: n }).catch(() => {})}>{s.days(n)}</button>
           ))}
         </div>
       )}
-      <Link to="/lancamentos" className="link">Ver tudo</Link>
+      <Link to="/lancamentos" className="link">{s.seeAll}</Link>
     </div>
   )
   const nothingNext = isCurrent
-    ? `Nada para pagar ou receber nos próximos ${prefs.nextDays} dias.`
-    : 'Nada pendente neste mês.'
+    ? s.nothingNext(prefs.nextDays)
+    : s.nothingThisMonth
   const kept = active.filter((a) => a.exclude_from_total)
   const keptTotal = kept.reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
   const entryName = (tx: Transaction) => {
     const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
-    if (card) return `Fatura ${card.name} ${monthLabel(toMonth(tx.invoice_month!)).split(' ')[0].toLowerCase()}`
-    return tx.description || (tx.category_id ? categoryMap.get(tx.category_id)?.name : '') || 'Sem descrição'
+    if (card) return s.cardInvoice(card.name, monthName(toMonth(tx.invoice_month!)))
+    return tx.description || (tx.category_id ? categoryMap.get(tx.category_id)?.name : '') || text().common.noDescription
   }
   const settle = (tx: Transaction) => {
     if (tx.virtual && tx.card_id) open({ kind: 'payment', cardId: tx.card_id, invoiceMonth: tx.invoice_month! })
@@ -127,7 +122,7 @@ export default function Overview({ name }: { name: string }) {
     const c = tx.category_id ? categoryMap.get(tx.category_id) : undefined
     const parent = c?.parent_id ? categoryMap.get(c.parent_id) : undefined
     const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
-    const when = tx.date === t ? 'hoje' : late ? `venceu ${shortDate(tx.date).slice(0, 5)}` : card ? `vence ${shortDate(tx.date).slice(0, 5)}` : shortDate(tx.date).slice(0, 5)
+    const when = tx.date === t ? s.today : late ? s.wasDue(dayMonth(tx.date)) : card ? s.due(dayMonth(tx.date)) : dayMonth(tx.date)
     const where = card ? '' : tx.account_id ? accountMap.get(tx.account_id)?.name : ''
     return (
       <div key={tx.id} className={`ph-next-row ${tx.id === selectedId ? 'selected' : ''}`} role="button" tabIndex={0}
@@ -144,7 +139,7 @@ export default function Overview({ name }: { name: string }) {
         <span className={`money ${tx.kind === 'income' ? 'income' : 'expense'}`}>
           {hidden ? '•••••' : `${tx.kind === 'income' ? '+' : '−'}${formatCents(tx.amount_cents)}`}
         </span>
-        <button className="paid-btn pending" onClick={(e) => { e.stopPropagation(); settle(tx) }} aria-label={card ? 'Pagar fatura' : 'Marcar como pago'} title={card ? 'Pagar fatura' : 'Marcar como pago'}>
+        <button className="paid-btn pending" onClick={(e) => { e.stopPropagation(); settle(tx) }} aria-label={card ? s.payInvoice : s.markPaid} title={card ? s.payInvoice : s.markPaid}>
           <ThumbsDown size={18} style={{ transform: 'scaleX(-1)' }} />
         </button>
       </div>
@@ -156,46 +151,46 @@ export default function Overview({ name }: { name: string }) {
       <header className="ph-head phone-only">
         <Mascot size={44} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1>{greeting()} {name}!</h1>
-          <small>{todayLabel(t)}</small>
+          <h1>{s.greeting(greeting(), name)}</h1>
+          <small>{weekdayDate(t)}</small>
         </div>
-        <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? 'Mostrar valores' : 'Esconder valores'}>
+        <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? s.showValues : s.hideValues}>
           {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
         </button>
       </header>
       <div className="ph-month phone-only">
         <div className="month-nav">
-          <button onClick={() => setM(addMonths(m, -1))} aria-label="Mês anterior"><ChevronLeft size={20} /></button>
-          <span>{monthLabel(m).toLowerCase()}</span>
-          <button onClick={() => setM(addMonths(m, 1))} aria-label="Próximo mês"><ChevronRight size={20} /></button>
+          <button onClick={() => setM(addMonths(m, -1))} aria-label={text().common.prevMonth}><ChevronLeft size={20} /></button>
+          <span>{monthTitle(m)}</span>
+          <button onClick={() => setM(addMonths(m, 1))} aria-label={text().common.nextMonth}><ChevronRight size={20} /></button>
         </div>
-        {!isCurrent && <button className="btn" onClick={() => setM(currentMonth())}>Hoje</button>}
+        {!isCurrent && <button className="btn" onClick={() => setM(currentMonth())}>{text().common.today}</button>}
       </div>
 
       <header className="page-head">
         <div>
-          <h1>{greeting()} {name}!</h1>
-          <p>Seu mês até agora, num olhar só.</p>
+          <h1>{s.greeting(greeting(), name)}</h1>
+          <p>{s.subtitle}</p>
         </div>
         <div className="head-actions">
           <div className="month-nav">
-            <button onClick={() => setM(addMonths(m, -1))} aria-label="Mês anterior"><ChevronLeft size={20} /></button>
-            <span>{monthLabel(m).toLowerCase()}</span>
-            <button onClick={() => setM(addMonths(m, 1))} aria-label="Próximo mês"><ChevronRight size={20} /></button>
+            <button onClick={() => setM(addMonths(m, -1))} aria-label={text().common.prevMonth}><ChevronLeft size={20} /></button>
+            <span>{monthTitle(m)}</span>
+            <button onClick={() => setM(addMonths(m, 1))} aria-label={text().common.nextMonth}><ChevronRight size={20} /></button>
           </div>
-          {!isCurrent && <button className="btn" onClick={() => setM(currentMonth())}>Hoje</button>}
-          <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? 'Mostrar valores' : 'Esconder valores'} title={hidden ? 'Mostrar valores' : 'Esconder valores'}>
+          {!isCurrent && <button className="btn" onClick={() => setM(currentMonth())}>{text().common.today}</button>}
+          <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? s.showValues : s.hideValues} title={hidden ? s.showValues : s.hideValues}>
             {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
       </header>
 
-      <section className="stats-grid stats" aria-label="Resumo do mês">
+      <section className="stats-grid stats" aria-label={s.monthSummary}>
         <div className="card stat hero toned" style={tone('var(--yellow)')}>
           <div className="hero-in">
-            <div className="k">Saldo geral</div>
+            <div className="k">{s.totalBalance}</div>
             <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
-            <div className="s">{!included.length ? 'Nenhuma conta ainda' : isCurrent ? included.map((a) => a.name).join(' + ') : `no fim de ${monthLabel(m).split(' ')[0].toLowerCase()}`}</div>
+            <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
             <div className="hero-pills">
               <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
               <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
@@ -205,20 +200,20 @@ export default function Overview({ name }: { name: string }) {
         </div>
         <div className="stats-rest">
         <div className="card stat toned" style={tone('var(--green)')}>
-          <div className="k">Receitas do mês <span className="ico"><ArrowUp size={16} /></span></div>
+          <div className="k">{s.monthIncome} <span className="ico"><ArrowUp size={16} /></span></div>
           <div className="v">{money(income)}</div>
-          <div className="s">{incomePending ? `${money(incomePending)} a receber` : income ? 'tudo recebido' : 'nada lançado ainda'}</div>
+          <div className="s">{incomePending ? s.toReceive(money(incomePending)) : income ? s.allReceived : s.nothingYet}</div>
         </div>
         <div className="card stat toned" style={tone('var(--pink)')}>
-          <div className="k">Despesas do mês <span className="ico"><ArrowDown size={16} /></span></div>
+          <div className="k">{s.monthExpense} <span className="ico"><ArrowDown size={16} /></span></div>
           <div className="v">{money(expense)}</div>
-          <div className="s">{expensePending ? `${money(expensePending)} ainda a pagar` : expense ? 'tudo pago' : 'nada lançado ainda'}</div>
+          <div className="s">{expensePending ? s.stillToPay(money(expensePending)) : expense ? s.allPaid : s.nothingYet}</div>
         </div>
         <button className="card stat toned" style={tone('var(--lavender)')} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
-          <div className="k">{isCurrent ? 'Faturas atuais' : `Faturas de ${monthLabel(m).split(' ')[0].toLowerCase()}`} <span className="ico"><CreditCard size={16} /></span></div>
+          <div className="k">{isCurrent ? s.currentInvoices : s.invoicesOf(monthName(m))} <span className="ico"><CreditCard size={16} /></span></div>
           <div className="v">{money(invoicesTotal)}</div>
           <div className="s">
-            {cards.length === 0 ? 'Adicionar cartão' : cards.length === 1 ? `vence ${shortDate(currentInvoices[0].due).slice(0, 5)}` : `${cards.length} cartões`}
+            {cards.length === 0 ? s.addCard : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}
           </div>
         </button>
         </div>
@@ -227,23 +222,23 @@ export default function Overview({ name }: { name: string }) {
       {loaded && (active.length === 0 || txs.length === 0) && <Welcome hasAccount={active.length > 0} hasCard={cards.length > 0} hasEntry={txs.length > 0} />}
 
       <div className="ph-home phone-only">
-        <section className="ph-tiles" aria-label="Resumo">
+        <section className="ph-tiles" aria-label={s.summary}>
           <button className="ph-tile toned" style={tone('var(--lavender)')} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
-            <span>Faturas</span><b>{money(invoicesTotal)}</b>
-            <small>{cards.length === 0 ? 'adicionar cartão' : cards.length === 1 ? `vence ${shortDate(currentInvoices[0].due).slice(0, 5)}` : `${cards.length} cartões`}</small>
+            <span>{s.invoices}</span><b>{money(invoicesTotal)}</b>
+            <small>{cards.length === 0 ? s.addCardLower : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}</small>
           </button>
           <Link className="ph-tile toned" to="/lancamentos" style={tone('var(--pink)')}>
-            <span>A pagar</span><b>{money(expensePending)}</b>
-            <small>{toPay.length === 0 ? 'nada pendente' : toPay.length === 1 ? '1 despesa' : `${toPay.length} despesas`}</small>
+            <span>{s.toPay}</span><b>{money(expensePending)}</b>
+            <small>{toPay.length === 0 ? s.nothingPending : s.expensesCount(toPay.length)}</small>
           </Link>
           <Link className="ph-tile toned" to="/lancamentos" style={tone('var(--green)')}>
-            <span>A receber</span><b>{money(incomePending)}</b>
-            <small>{incomePending ? 'ainda neste mês' : income ? 'tudo recebido' : 'nada lançado'}</small>
+            <span>{s.toReceiveTile}</span><b>{money(incomePending)}</b>
+            <small>{incomePending ? s.stillThisMonth : income ? s.allReceived : s.nothingEntered}</small>
           </Link>
           {kept.length > 0 && (
             <Link className="ph-tile toned" to="/configuracoes/contas" style={tone('var(--sand)')}>
-              <span>{kept.length === 1 ? kept[0].name : 'Guardado'}</span><b>{money(keptTotal)}</b>
-              <small>fora do saldo geral</small>
+              <span>{kept.length === 1 ? kept[0].name : s.keptAside}</span><b>{money(keptTotal)}</b>
+              <small>{s.outsideTotal}</small>
             </Link>
           )}
         </section>
@@ -252,23 +247,23 @@ export default function Overview({ name }: { name: string }) {
           <div className="ph-alert" role="alert">
             <AlertCircle size={20} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <b>{overdue.length === 1 ? entryName(overdue[0]) : `${overdue.length} contas atrasadas`}</b>
-              <small>{overdue.length === 1 ? `atrasada · venceu ${shortDate(overdue[0].date).slice(0, 5)} · ` : ''}{money(overdue.reduce((s, tx) => s + tx.amount_cents, 0))}</small>
+              <b>{overdue.length === 1 ? entryName(overdue[0]) : s.lateCount(overdue.length)}</b>
+              <small>{overdue.length === 1 ? s.lateOne(dayMonth(overdue[0].date)) : ''}{money(overdue.reduce((s, tx) => s + tx.amount_cents, 0))}</small>
             </div>
             {overdue.length === 1
-              ? <button className="btn" onClick={() => settle(overdue[0])}>Pagar</button>
-              : <Link className="btn" to="/lancamentos">Ver</Link>}
+              ? <button className="btn" onClick={() => settle(overdue[0])}>{s.pay}</button>
+              : <Link className="btn" to="/lancamentos">{s.see}</Link>}
           </div>
         )}
 
-        <section className="card card-pad" aria-label="Próximos">
+        <section className="card card-pad" aria-label={s.next}>
           {nextHead}
-          {upcoming.length === 0 ? <AllClear text={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
+          {upcoming.length === 0 ? <AllClear message={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
         </section>
 
-        <section className="card card-pad" aria-label="Minhas contas">
-          <div className="section-title"><h3>Minhas contas</h3><Link to="/configuracoes/contas" className="link">{active.length ? 'Gerenciar' : 'Adicionar'}</Link></div>
-          {active.length === 0 ? <p className="muted small" style={{ margin: 0 }}>Nenhuma conta ainda.</p> : active.map((a) => (
+        <section className="card card-pad" aria-label={s.myAccounts}>
+          <div className="section-title"><h3>{s.myAccounts}</h3><Link to="/configuracoes/contas" className="link">{active.length ? s.manage : s.add}</Link></div>
+          {active.length === 0 ? <p className="muted small" style={{ margin: 0 }}>{s.noAccountYetDot}</p> : active.map((a) => (
             <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
               <AccountAvatar account={a} />
               <b style={{ flex: 1, minWidth: 0 }}>{a.name}</b>
@@ -278,29 +273,29 @@ export default function Overview({ name }: { name: string }) {
         </section>
       </div>
 
-      <section className="quick" aria-label="Ações rápidas">
-        <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> Despesa <span className="kbd">D</span></button>
-        <button className="btn toned" style={tone('var(--green)')} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> Receita <span className="kbd">R</span></button>
-        <button className="btn btn-blue" onClick={() => open({ kind: 'transfer' })}><ArrowLeftRight size={18} /> Transferência <span className="kbd">T</span></button>
+      <section className="quick" aria-label={s.quickActions}>
+        <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> {s.expense} <span className="kbd">{text().entries.keys.expense}</span></button>
+        <button className="btn toned" style={tone('var(--green)')} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> {s.income} <span className="kbd">{text().entries.keys.income}</span></button>
+        <button className="btn btn-blue" onClick={() => open({ kind: 'transfer' })}><ArrowLeftRight size={18} /> {s.transfer} <span className="kbd">{text().entries.keys.transfer}</span></button>
       </section>
 
       <div className="ov-grid">
-          <section className="card card-pad" aria-label="Próximos">
+          <section className="card card-pad" aria-label={s.next}>
             {nextHead}
-            {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {overdue.length === 1 ? '1 atrasada' : `${overdue.length} atrasadas`}</div>}
+            {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {s.overdue(overdue.length)}</div>}
             {overdue.map((tx) => nextRow(tx, true))}
-            {upcoming.length === 0 && overdue.length === 0 ? <AllClear text={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
+            {upcoming.length === 0 && overdue.length === 0 ? <AllClear message={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
           </section>
 
           <section className="card card-pad">
-            <div className="section-title"><h3>Meus cartões</h3>{cards.length > 0 && <Link to="/configuracoes/contas#cartoes" className="link">Gerenciar</Link>}</div>
+            <div className="section-title"><h3>{s.myCards}</h3>{cards.length > 0 && <Link to="/configuracoes/contas#cartoes" className="link">{s.manage}</Link>}</div>
             {cards.length === 0 ? (
               <div className="placeholder">
                 <span className="ico"><CreditCard size={20} /></span>
-                <h3>Nenhum cartão ainda</h3>
-                <p>Aqui você poderá ver as faturas dos seus cartões.</p>
+                <h3>{s.noCardYet}</h3>
+                <p>{s.noCardText}</p>
                 <button className="btn btn-soft" style={{ marginTop: 14 }} onClick={() => navigate('/configuracoes/cartoes?novo=1')}>
-                  <CirclePlus size={16} /> Adicionar cartão
+                  <CirclePlus size={16} /> {s.addCard}
                 </button>
               </div>
             ) : cards.map((c) => {
@@ -313,27 +308,27 @@ export default function Overview({ name }: { name: string }) {
                 <div key={c.id} className="card-line" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18 }}>
                   <CardArt card={c} style={{ width: 'clamp(140px, 12vw, 180px)' }} />
                   <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className="row" style={{ justifyContent: 'space-between' }}><span className="muted small" style={{ fontWeight: 700 }}>Limite disponível</span><span className="money">{money(avail)}</span></div>
+                    <div className="row" style={{ justifyContent: 'space-between' }}><span className="muted small" style={{ fontWeight: 700 }}>{s.availableLimit}</span><span className="money">{money(avail)}</span></div>
                     <div className="limit-bar"><div style={{ width: `${used}%`, background: pastel(c.color, 0.4) }} /></div>
                     <div className="row" style={{ justifyContent: 'space-between' }}>
-                      <span className="muted small" style={{ fontWeight: 700 }}>Fatura atual · vence {shortDate(due).slice(0, 5)}</span>
+                      <span className="muted small" style={{ fontWeight: 700 }}>{s.currentInvoiceDue(dayMonth(due))}</span>
                       <span className="money expense">{money(inv.total)}</span>
                     </div>
-                    <button className="btn" style={{ alignSelf: 'flex-start', minHeight: 38, fontSize: 14 }} onClick={() => navigate(`/cartoes/${c.id}`)}>Ver fatura</button>
+                    <button className="btn" style={{ alignSelf: 'flex-start', minHeight: 38, fontSize: 14 }} onClick={() => navigate(`/cartoes/${c.id}`)}>{s.seeInvoice}</button>
                   </div>
                 </div>
               )
             })}
           </section>
           <section className="card card-pad ov-wide">
-            <div className="section-title"><h3>Minhas contas</h3>{active.length > 0 && <Link to="/configuracoes/contas" className="link">Gerenciar</Link>}</div>
+            <div className="section-title"><h3>{s.myAccounts}</h3>{active.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
             {active.length === 0 ? (
               <div className="placeholder">
                 <span className="ico"><Landmark size={20} /></span>
-                <h3>Nenhuma conta ainda</h3>
-                <p>Aqui você poderá ver todos os saldos das suas contas.</p>
+                <h3>{s.noAccountYet}</h3>
+                <p>{s.noAccountText}</p>
                 <button className="btn btn-soft" style={{ marginTop: 14 }} onClick={() => navigate('/configuracoes/contas?nova=1')}>
-                  <CirclePlus size={16} /> Adicionar conta
+                  <CirclePlus size={16} /> {s.addAccount}
                 </button>
               </div>
             ) : <div className="acc-tiles">{active.map((a) => (
@@ -341,7 +336,7 @@ export default function Overview({ name }: { name: string }) {
                 <AccountAvatar account={a} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b>{a.name}</b>
-                  <div className="muted small">{a.exclude_from_total ? 'fora do saldo geral' : 'conta manual'}</div>
+                  <div className="muted small">{a.exclude_from_total ? s.outsideTotal : s.manualAccount}</div>
                 </div>
                 <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
               </div>
@@ -354,11 +349,11 @@ export default function Overview({ name }: { name: string }) {
 }
 
 /** Nothing waiting to be paid or received: the coin says so. */
-function AllClear({ text }: { text: string }) {
+function AllClear({ message }: { message: string }) {
   return (
     <div className="all-clear">
       <Mascot size={52} />
-      <div><b>Tudo em dia!</b><small>{text}</small></div>
+      <div><b>{text().overview.allClear}</b><small>{message}</small></div>
     </div>
   )
 }
@@ -367,16 +362,17 @@ function AllClear({ text }: { text: string }) {
 function Welcome({ hasAccount, hasCard, hasEntry }: { hasAccount: boolean; hasCard: boolean; hasEntry: boolean }) {
   const navigate = useNavigate()
   const { open } = useTxForm()
+  const s = text().overview
   const steps = [
-    { done: hasAccount, title: 'Crie sua primeira conta', text: 'O banco onde seu dinheiro fica, com o saldo de hoje.', action: () => navigate('/configuracoes/contas?nova=1'), label: 'Criar conta' },
-    { done: hasCard, title: 'Adicione um cartão', text: 'Se você usa cartão de crédito. Dá pra pular.', action: () => navigate('/configuracoes/cartoes?novo=1'), label: 'Adicionar cartão' },
-    { done: hasEntry, title: 'Lance o primeiro gasto', text: 'Pode ser o café de hoje.', action: () => open({ kind: 'expense' }), label: 'Novo lançamento', locked: !hasAccount },
+    { done: hasAccount, title: s.step1, text: s.step1Text, action: () => navigate('/configuracoes/contas?nova=1'), label: s.step1Button },
+    { done: hasCard, title: s.step2, text: s.step2Text, action: () => navigate('/configuracoes/cartoes?novo=1'), label: s.addCard },
+    { done: hasEntry, title: s.step3, text: s.step3Text, action: () => open({ kind: 'expense' }), label: s.step3Button, locked: !hasAccount },
   ]
   return (
-    <section className="card welcome" aria-label="Primeiros passos">
+    <section className="card welcome" aria-label={s.firstSteps}>
       <div className="welcome-head">
         <Mascot size={64} />
-        <div><h2>Que bom ter você aqui!</h2><p>Três passos e o Tally já começa a contar pra você.</p></div>
+        <div><h2>{s.welcome}</h2><p>{s.welcomeText}</p></div>
       </div>
       <ol className="welcome-steps">
         {steps.map((st, i) => (

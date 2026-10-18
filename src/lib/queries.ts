@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { accountsTable, cardsTable, categoriesTable, seriesTable, tagsTable, transactionsTable, type Table } from './api'
-import { DEFAULT_CATEGORIES } from './defaults'
+import { defaultCategories } from './defaults'
 import type { Account, Card, Category, NewCategory, Series, Tag, Transaction } from './types'
 
 let seeding: Promise<Category[]> | null = null
@@ -11,7 +11,7 @@ async function loadCategories(): Promise<Category[]> {
   // First run: give the user Organizze's default categories.
   // Shared while in flight so parallel loads seed once; cleared after so the next account to sign in on this tab gets its own.
   seeding ??= categoriesTable.insert(
-    DEFAULT_CATEGORIES.map((c): NewCategory => ({ ...c, parent_id: null, archived: false })),
+    defaultCategories().map(({ key: _key, ...c }): NewCategory => ({ ...c, parent_id: null, archived: false })),
   ).finally(() => { seeding = null })
   return seeding
 }

@@ -1,6 +1,7 @@
 import { Minus, Plus, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { PeriodSummary } from '../lib/balances'
+import { t } from '../lib/i18n'
 import { formatBRL, formatCents } from '../lib/money'
 
 /**
@@ -24,10 +25,10 @@ export function SummaryCard({
   /** The filtered account or card, if any. */
   filter?: ReactNode
 }) {
-  const word = isMonth ? 'mês' : 'período'
+  const s = t().entries.card
   const toggle = onToggle && (
     <button className="summary-toggle" onClick={onToggle} aria-pressed={totalsOnly}
-      aria-label={totalsOnly ? 'Mostrar saldos' : 'Mostrar só entradas e saídas'} title={totalsOnly ? 'Mostrar saldos' : 'Mostrar só entradas e saídas'}>
+      aria-label={totalsOnly ? s.showBalances : s.showTotals} title={totalsOnly ? s.showBalances : s.showTotals}>
       {totalsOnly ? <Plus size={16} /> : <Minus size={16} />}
     </button>
   )
@@ -37,33 +38,33 @@ export function SummaryCard({
   if (totalsOnly) {
     const { income, expense, pendingIncome, pendingExpense } = totals
     return (
-      <section className="card summary-card" aria-label="Resumo">
+      <section className="card summary-card" aria-label={s.summary}>
         {head}
         <div className="sum-body">
           <div className="sum-hero">
             {heroFilter}
-            <div className="k">Saldo do período</div>
+            <div className="k">{s.periodBalance}</div>
             <div className="sum-big">{formatBRL(income - expense)}</div>
           </div>
           <div className="sum-side">
             {income + expense === 0 ? (
               <p className="sum-pending">
-                {pendingIncome + pendingExpense === 0 ? `Nenhum lançamento neste ${word}.` : (
+                {pendingIncome + pendingExpense === 0 ? s.nothing(isMonth) : (
                   <>
-                    <span>Ainda vai acontecer:</span>{' '}
-                    {pendingIncome > 0 && <b className="in">+{formatCents(pendingIncome)} entrando</b>}
+                    <span>{s.stillToCome}</span>{' '}
+                    {pendingIncome > 0 && <b className="in">{s.comingIn(formatCents(pendingIncome))}</b>}
                     {pendingIncome > 0 && pendingExpense > 0 && ' · '}
-                    {pendingExpense > 0 && <b className="out">−{formatCents(pendingExpense)} saindo</b>}
+                    {pendingExpense > 0 && <b className="out">{s.goingOut(formatCents(pendingExpense))}</b>}
                   </>
                 )}
               </p>
             ) : (
               <>
                 <div className="sum-split">
-                  {income > 0 && <i className="in" style={{ flex: income }}><span><em>Entradas </em>{formatCents(income)}</span></i>}
-                  {expense > 0 && <i className="out" style={{ flex: expense }}><span><em>Saídas </em>{formatCents(expense)}</span></i>}
+                  {income > 0 && <i className="in" style={{ flex: income }}><span><em>{s.incomeIn}</em>{formatCents(income)}</span></i>}
+                  {expense > 0 && <i className="out" style={{ flex: expense }}><span><em>{s.expenseIn}</em>{formatCents(expense)}</span></i>}
                 </div>
-                <div className="sum-split-legend"><small>entradas</small><small>saídas</small></div>
+                <div className="sum-split-legend"><small>{s.incomeLegend}</small><small>{s.expenseLegend}</small></div>
               </>
             )}
           </div>
@@ -78,25 +79,25 @@ export function SummaryCard({
   const short = Math.max(-forecast, 0)
   const whole = expensePaid + toPay + left
   return (
-    <section className="card summary-card" aria-label="Resumo">
+    <section className="card summary-card" aria-label={s.summary}>
       {head}
       <div className="sum-body">
         <div className="sum-hero">
           {heroFilter}
-          <div className="k">Previsto pro fim do {word}</div>
+          <div className="k">{s.forecastEnd(isMonth)}</div>
           <div className={`sum-big${forecast < 0 ? ' expense' : ''}`}>{formatBRL(forecast)}</div>
           <div className="sum-minis">
-            <div><span>Saldo anterior</span><b>{formatBRL(previous)}</b></div>
-            <div><span>Saldo atual</span><b>{formatBRL(balance)}</b></div>
+            <div><span>{s.previousBalance}</span><b>{formatBRL(previous)}</b></div>
+            <div><span>{s.currentBalance}</span><b>{formatBRL(balance)}</b></div>
           </div>
         </div>
         <div className="sum-side">
           <div className="sum-side-head">
-            <span className="k">Dinheiro do {word}</span>
-            <small className="sum-sum">{formatBRL(previous)} que já tinha + {formatBRL(incomeAll)} de receitas = <b>{formatBRL(previous + incomeAll)}</b></small>
+            <span className="k">{s.money(isMonth)}</span>
+            <small className="sum-sum">{s.moneySum(formatBRL(previous), formatBRL(incomeAll))}<b>{formatBRL(previous + incomeAll)}</b></small>
             <b className="sum-sum-short">{formatBRL(previous + incomeAll)}</b>
           </div>
-          <div className="sum-bar" role="img" aria-label={`Já pago ${formatBRL(expensePaid)}, a pagar ${formatBRL(toPay)}, ${short ? `${formatBRL(short)} negativo` : `sobra ${formatBRL(left)}`}`}>
+          <div className="sum-bar" role="img" aria-label={s.barAria(formatBRL(expensePaid), formatBRL(toPay), short ? formatBRL(short) : null, formatBRL(left))}>
             {whole === 0 ? <i style={{ flex: 1 }} /> : (
               <>
                 {expensePaid > 0 && <i className="paid" style={{ flex: expensePaid }} />}
@@ -106,11 +107,11 @@ export function SummaryCard({
             )}
           </div>
           <div className="sum-legend">
-            <span><b className="sw paid" /><span className="lbl">já pago</span> <b className="v">{formatCents(expensePaid)}</b><span className="lbl-after">pago</span></span>
-            <span><b className="sw topay" /><span className="lbl">a pagar</span> <b className="v">{formatCents(toPay)}</b><span className="lbl-after">a pagar</span></span>
+            <span><b className="sw paid" /><span className="lbl">{s.alreadyPaid}</span> <b className="v">{formatCents(expensePaid)}</b><span className="lbl-after">{s.paidAfter}</span></span>
+            <span><b className="sw topay" /><span className="lbl">{s.toPay}</span> <b className="v">{formatCents(toPay)}</b><span className="lbl-after">{s.toPay}</span></span>
             {short > 0
-              ? <span className="sum-neg"><TriangleAlert size={14} strokeWidth={2.5} aria-hidden="true" /><b className="v">{formatCents(short)}</b> negativo</span>
-              : <span><b className="sw left" /><span className="lbl">sobra</span> <b className="v">{formatCents(left)}</b><span className="lbl-after">sobra</span></span>}
+              ? <span className="sum-neg"><TriangleAlert size={14} strokeWidth={2.5} aria-hidden="true" /><b className="v">{formatCents(short)}</b>{s.negative}</span>
+              : <span><b className="sw left" /><span className="lbl">{s.left}</span> <b className="v">{formatCents(left)}</b><span className="lbl-after">{s.left}</span></span>}
           </div>
         </div>
       </div>

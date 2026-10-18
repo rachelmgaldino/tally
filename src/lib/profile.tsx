@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { DEMO } from './config'
+import { t } from './i18n'
 import { supabase } from './supabase'
 
 // The profile photo lives in the private attachments bucket, under the user's
@@ -49,13 +50,13 @@ export function useAvatarUrl(path: string | null) {
 
 /** Crops the picture to a centred square and shrinks it to 256px, so uploads stay tiny. */
 async function squareJpeg(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file).catch(() => { throw new Error('Não deu para ler essa imagem.') })
+  const bitmap = await createImageBitmap(file).catch(() => { throw new Error(t().settings.profile.unreadableImage) })
   const side = Math.min(bitmap.width, bitmap.height)
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = SIZE
   canvas.getContext('2d')!.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, SIZE, SIZE)
   bitmap.close()
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Não deu para ler essa imagem.'))), 'image/jpeg', 0.85))
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(t().settings.profile.unreadableImage))), 'image/jpeg', 0.85))
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -77,7 +78,7 @@ export async function uploadAvatar(file: File, previous: string | null): Promise
   }
   const { data } = await supabase.auth.getSession()
   const userId = data.session?.user.id
-  if (!userId) throw new Error('Sessão expirada.')
+  if (!userId) throw new Error(t().settings.sessionExpired)
   // A new name each time, so phones don't keep showing a cached old photo.
   const path = `${userId}/profile/avatar-${Date.now()}.jpg`
   const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg' })

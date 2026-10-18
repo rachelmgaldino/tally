@@ -1,5 +1,6 @@
 import type { Table } from './api'
-import { DEFAULT_CATEGORIES } from './defaults'
+import { defaultCategories, type CategoryKey } from './defaults'
+import { language, t as strings } from './i18n'
 import { dueDate, invoiceFor, invoiceOf } from './cards'
 import { addMonths, currentMonth, monthStart, today, type Month } from './dates'
 import { defaultHorizon, seriesRows } from './series'
@@ -9,12 +10,13 @@ import type { Card, NewTransaction, Period, Series, Transaction } from './types'
 // database: `npm run demo` locally, or any page under /demo on the live site.
 // It never reads or writes the real account.
 
-const KEY = 'tally-demo-5'
+// One store per language, so the sample data reads in the language picked.
+const key = () => `tally-demo-5${language() === 'pt-BR' ? '' : `-${language()}`}`
 type Store = Record<string, Record<string, unknown>[]>
 
 function load(): Store {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(key())
     if (raw) return JSON.parse(raw)
   } catch {
     // fall through to a fresh store
@@ -26,7 +28,7 @@ function load(): Store {
 
 function save(store: Store) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(store))
+    localStorage.setItem(key(), JSON.stringify(store))
   } catch {
     // demo data simply won't persist
   }
@@ -35,7 +37,7 @@ function save(store: Store) {
 /** Throws away the visitor's changes and starts again from the sample data. */
 export function resetDemo() {
   try {
-    localStorage.removeItem(KEY)
+    localStorage.removeItem(key())
     localStorage.removeItem('tally-demo-avatar')
   } catch {
     // nothing stored
@@ -60,6 +62,7 @@ function random(seedValue: number) {
 // About three months of an imaginary person's money, ending today, plus the
 // fixed bills and instalments that are still to come.
 function seed(): Store {
+  const s = strings().demo
   const rnd = random(42)
   const between = (lo: number, hi: number) => Math.round(lo + rnd() * (hi - lo))
   const t = today()
@@ -67,24 +70,24 @@ function seed(): Store {
   const first = months[0]
 
   const categories: Record<string, unknown>[] = []
-  for (const c of DEFAULT_CATEGORIES) {
-    categories.push({ id: id(), parent_id: null, archived: false, created_at: now(), ...c })
+  for (const { key, ...c } of defaultCategories()) {
+    categories.push({ id: id(), parent_id: null, archived: false, created_at: now(), key, ...c })
   }
-  const cat = (name: string) => categories.find((c) => c.name === name && !c.parent_id)!.id as string
-  const subs = cat('Assinaturas e serviços')
+  const cat = (key: CategoryKey) => categories.find((c) => c.key === key)!.id as string
+  const subs = cat('subscriptions')
   const sub = (name: string) => {
     const row = { id: id(), name, kind: 'expense', icon: '', color: '', parent_id: subs, archived: false, created_at: now() }
     categories.push(row)
     return row.id
   }
-  const streaming = sub('Streaming')
-  const celular = sub('Celular')
+  const streaming = sub(s.streaming)
+  const celular = sub(s.phone)
 
   const account = (name: string, icon: string, color: string, initial: number, exclude = false) =>
     ({ id: id(), name, icon, color, initial_balance_cents: initial, exclude_from_total: exclude, archived: false, created_at: now() })
   const nu = account('Nubank', 'bank:nubank', '#820ad1', 320000)
   const inter = account('Inter', 'bank:inter', '#ff7a00', 85000)
-  const savings = account('Caixinha', 'bank:nubank', '#820ad1', 800000, true)
+  const savings = account(s.savings, 'bank:nubank', '#820ad1', 800000, true)
 
   const card = (name: string, icon: string, color: string, limit: number, closing: number, due: number, pays: string): Card =>
     ({ id: id(), name, icon, color, limit_cents: limit, closing_day: closing, due_day: due, payment_account_id: pays, archived: false, created_at: now() })
@@ -92,7 +95,7 @@ function seed(): Store {
   const interCard = card('Inter Gold', 'bank:inter', '#ff7a00', 450000, 25, 5, inter.id)
   const cards = [nuCard, interCard]
 
-  const tags = [{ id: id(), name: 'Viagem', created_at: now() }, { id: id(), name: 'Trabalho', created_at: now() }]
+  const tags = [{ id: id(), name: s.tagTrip, created_at: now() }, { id: id(), name: s.tagWork, created_at: now() }]
   const [trip, work] = tags
 
   const base: NewTransaction = {
@@ -124,43 +127,43 @@ function seed(): Store {
     series.push(s)
     rows.push(...made)
   }
-  repeat({ kind: 'income', description: 'Salário', amount_cents: 680000, account_id: nu.id, category_id: cat('Salário') }, 5)
-  repeat({ description: 'Aluguel', amount_cents: 185000, account_id: nu.id, category_id: cat('Casa') }, 10)
-  repeat({ description: 'Internet', amount_cents: 11990, account_id: inter.id, category_id: cat('Casa') }, 15)
-  repeat({ description: 'Plano do celular', amount_cents: 4990, account_id: inter.id, category_id: celular }, 18)
-  repeat({ description: 'Academia', amount_cents: 10990, card_id: nuCard.id, category_id: cat('Saúde') }, 2)
+  repeat({ kind: 'income', description: s.salary, amount_cents: 680000, account_id: nu.id, category_id: cat('salary') }, 5)
+  repeat({ description: s.rent, amount_cents: 185000, account_id: nu.id, category_id: cat('home') }, 10)
+  repeat({ description: s.internet, amount_cents: 11990, account_id: inter.id, category_id: cat('home') }, 15)
+  repeat({ description: s.phonePlan, amount_cents: 4990, account_id: inter.id, category_id: celular }, 18)
+  repeat({ description: s.gym, amount_cents: 10990, card_id: nuCard.id, category_id: cat('health') }, 2)
   repeat({ description: 'Netflix', amount_cents: 4490, card_id: nuCard.id, category_id: streaming }, 12)
   repeat({ description: 'Spotify', amount_cents: 2190, card_id: interCard.id, category_id: streaming }, 20)
-  repeat({ description: 'Curso de inglês', amount_cents: 32000, account_id: inter.id, category_id: cat('Educação') }, 25)
-  repeat({ kind: 'transfer', description: 'Separar as contas do mês', amount_cents: 150000, account_id: nu.id, to_account_id: inter.id }, 6)
-  repeat({ kind: 'transfer', description: 'Guardar na caixinha', amount_cents: 50000, account_id: nu.id, to_account_id: savings.id }, 6)
-  repeat({ description: 'Notebook', amount_cents: 420000, card_id: interCard.id, category_id: cat('Trabalho'), tag_ids: [work.id] }, 14, 10, months[1])
-  repeat({ description: 'Óculos novos', amount_cents: 96000, card_id: nuCard.id, category_id: cat('Saúde') }, 22, 4, months[2])
+  repeat({ description: s.englishCourse, amount_cents: 32000, account_id: inter.id, category_id: cat('education') }, 25)
+  repeat({ kind: 'transfer', description: s.splitBills, amount_cents: 150000, account_id: nu.id, to_account_id: inter.id }, 6)
+  repeat({ kind: 'transfer', description: s.toSavings, amount_cents: 50000, account_id: nu.id, to_account_id: savings.id }, 6)
+  repeat({ description: s.laptop, amount_cents: 420000, card_id: interCard.id, category_id: cat('work'), tag_ids: [work.id] }, 14, 10, months[1])
+  repeat({ description: s.glasses, amount_cents: 96000, card_id: nuCard.id, category_id: cat('health') }, 22, 4, months[2])
 
   // Everyday spending, a little different each month.
   for (const m of months) {
-    for (const day of [4, 11, 19, 26]) swipe(nuCard, 'Mercado', between(16000, 34000), on(m, day), cat('Mercado'))
-    for (let i = 0; i < 4; i++) swipe(nuCard, pick(rnd, ['iFood', 'Restaurante japonês', 'Padaria', 'Pizzaria', 'Café com a Bia']), between(2800, 11500), on(m, between(1, 28)), cat('Bares e restaurantes'))
-    for (let i = 0; i < 5; i++) swipe(interCard, 'Uber', between(1400, 4200), on(m, between(1, 28)), cat('Transporte'))
-    spend('Conta de luz', between(12000, 19000), on(m, 22), cat('Casa'), inter.id)
-    spend('Farmácia', between(3500, 9000), on(m, between(1, 28)), cat('Saúde'), nu.id)
-    swipe(interCard, 'Ração e areia', between(14000, 19000), on(m, 8), cat('Pets'))
-    swipe(nuCard, pick(rnd, ['Cinema', 'Show', 'Livro', 'Jogo novo']), between(4000, 16000), on(m, between(1, 28)), cat('Lazer e hobbies'))
-    add({ kind: 'expense', description: 'Gasolina', amount_cents: between(18000, 25000), date: on(m, 16), account_id: inter.id, category_id: cat('Transporte') })
+    for (const day of [4, 11, 19, 26]) swipe(nuCard, s.groceries, between(16000, 34000), on(m, day), cat('groceries'))
+    for (let i = 0; i < 4; i++) swipe(nuCard, pick(rnd, s.eatingOut), between(2800, 11500), on(m, between(1, 28)), cat('bars'))
+    for (let i = 0; i < 5; i++) swipe(interCard, 'Uber', between(1400, 4200), on(m, between(1, 28)), cat('transport'))
+    spend(s.electricity, between(12000, 19000), on(m, 22), cat('home'), inter.id)
+    spend(s.pharmacy, between(3500, 9000), on(m, between(1, 28)), cat('health'), nu.id)
+    swipe(interCard, s.petFood, between(14000, 19000), on(m, 8), cat('pets'))
+    swipe(nuCard, pick(rnd, s.fun), between(4000, 16000), on(m, between(1, 28)), cat('leisure'))
+    add({ kind: 'expense', description: s.gas, amount_cents: between(18000, 25000), date: on(m, 16), account_id: inter.id, category_id: cat('transport') })
   }
   const [m3, m2, m1, m0] = months
-  add({ kind: 'income', description: 'Freela de design', amount_cents: 150000, date: on(m2, 21), account_id: inter.id, category_id: cat('Outras receitas'), tag_ids: [work.id] })
-  add({ kind: 'income', description: 'Freela de design', amount_cents: 120000, date: on(m0, 9), account_id: inter.id, category_id: cat('Outras receitas'), tag_ids: [work.id] })
-  add({ kind: 'income', description: 'Rendimento da caixinha', amount_cents: 7100, date: on(m1, 1), account_id: savings.id, category_id: cat('Investimentos'), notes: null })
-  swipe(nuCard, 'Presente da Ju', 18900, on(m3, 13), cat('Presentes e doações'))
-  swipe(nuCard, 'Tênis de corrida', 42990, on(m2, 9), cat('Roupas'))
-  swipe(interCard, 'Passagem para Floripa', 68400, on(m2, 3), cat('Viagem'), { tag_ids: [trip.id] })
-  swipe(interCard, 'Pousada em Floripa', 92000, on(m1, 12), cat('Viagem'), { tag_ids: [trip.id], notes: '3 noites, café incluso' })
-  swipe(nuCard, 'Passeio de barco', 15000, on(m1, 14), cat('Viagem'), { tag_ids: [trip.id] })
-  spend('Corte de cabelo', 9000, on(m0, 7), cat('Cuidados pessoais'), nu.id)
-  spend('IPVA', 64000, on(m3, 20), cat('Impostos e Taxas'), inter.id)
+  add({ kind: 'income', description: s.freelance, amount_cents: 150000, date: on(m2, 21), account_id: inter.id, category_id: cat('otherIncome'), tag_ids: [work.id] })
+  add({ kind: 'income', description: s.freelance, amount_cents: 120000, date: on(m0, 9), account_id: inter.id, category_id: cat('otherIncome'), tag_ids: [work.id] })
+  add({ kind: 'income', description: s.savingsYield, amount_cents: 7100, date: on(m1, 1), account_id: savings.id, category_id: cat('investmentIncome'), notes: null })
+  swipe(nuCard, s.giftJu, 18900, on(m3, 13), cat('gifts'))
+  swipe(nuCard, s.runningShoes, 42990, on(m2, 9), cat('clothes'))
+  swipe(interCard, s.flight, 68400, on(m2, 3), cat('travel'), { tag_ids: [trip.id] })
+  swipe(interCard, s.inn, 92000, on(m1, 12), cat('travel'), { tag_ids: [trip.id], notes: s.innNotes })
+  swipe(nuCard, s.boatTrip, 15000, on(m1, 14), cat('travel'), { tag_ids: [trip.id] })
+  spend(s.haircut, 9000, on(m0, 7), cat('personalCare'), nu.id)
+  spend(s.carTax, 64000, on(m3, 20), cat('taxes'), inter.id)
   // Still to pay this month, so Próximos has something in it.
-  rows.push({ ...base, description: 'Dentista', amount_cents: 25000, date: on(m0, 28), paid: false, account_id: nu.id, category_id: cat('Saúde') })
+  rows.push({ ...base, description: s.dentist, amount_cents: 25000, date: on(m0, 28), paid: false, account_id: nu.id, category_id: cat('health') })
 
   const transactions: Transaction[] = rows.map((r) => ({ id: id(), created_at: now(), ...r }))
 
@@ -173,12 +176,13 @@ function seed(): Store {
       const { total } = invoiceOf(c, transactions, month)
       if (total <= 0) continue
       transactions.push({
-        ...base, id: id(), created_at: now(), kind: 'payment', description: 'Pagamento de fatura', amount_cents: total,
+        ...base, id: id(), created_at: now(), kind: 'payment', description: s.billPayment, amount_cents: total,
         date: due, account_id: c.payment_account_id, card_id: c.id, invoice_month: month,
       })
     }
   }
 
+  for (const c of categories) delete c.key
   return {
     categories,
     accounts: [nu, inter, savings],

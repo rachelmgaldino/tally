@@ -5,6 +5,7 @@ import { UserAvatar } from '../components/Avatars'
 import { Mascot } from '../components/Sidebar'
 import { Toggle } from '../components/ui'
 import { DEMO } from '../lib/config'
+import { t } from '../lib/i18n'
 import { useAccounts, useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { tone } from '../lib/theme'
@@ -23,38 +24,39 @@ export default function More({ name }: { name: string }) {
     setHidden(v)
     try { localStorage.setItem('tally-hide-balance', v ? '1' : '0') } catch { /* ignore */ }
   }
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  const s = t().settings.more
+  const nav = t().common.nav
   return (
     <main className="page more">
-      <header className="page-head"><h1>Mais</h1></header>
+      <header className="page-head"><h1>{nav.more}</h1></header>
 
       <Link to="/perfil" className="card more-profile">
         <UserAvatar size={52} fontSize={18} />
-        <span style={{ flex: 1, minWidth: 0 }}><b>{name}</b><small>Meu perfil</small></span>
+        <span style={{ flex: 1, minWidth: 0 }}><b>{name}</b><small>{nav.myProfile}</small></span>
         <ChevronRight size={20} className="muted" />
       </Link>
 
       <div className="more-grid">
         <Link className="toned" to="/configuracoes/contas" style={tone('var(--lavender)')}>
           <span className="bi"><Wallet size={20} /></span>
-          <span><b>Contas e cartões</b><small>{plural(nAcc, 'conta', 'contas')}, {plural(nCard, 'cartão', 'cartões')}</small></span>
+          <span><b>{nav.accountsAndCards}</b><small>{s.counts(nAcc, nCard)}</small></span>
         </Link>
         <Link className="toned" to="/configuracoes/categorias" style={tone('var(--green)')}>
           <span className="bi"><Tag size={20} /></span>
-          <span><b>Categorias</b><small>despesas e receitas</small></span>
+          <span><b>{nav.categories}</b><small>{s.categoriesSub}</small></span>
         </Link>
         <Link className="toned" to="/configuracoes/preferencias" style={tone('var(--blue)')}>
           <span className="bi"><SlidersHorizontal size={20} /></span>
-          <span><b>Preferências</b><small>ordem, período, saldo</small></span>
+          <span><b>{nav.preferences}</b><small>{s.preferencesSub}</small></span>
         </Link>
       </div>
 
       <div className="card more-list">
-        <Toggle checked={hidden} onChange={toggleHidden} label={<span className="row" style={{ flex: 1, gap: 12 }}><Eye size={20} />Esconder valores</span>} />
-        <button className="expense" onClick={() => !DEMO && supabase.auth.signOut()}><LogOut size={20} /> Sair</button>
+        <Toggle checked={hidden} onChange={toggleHidden} label={<span className="row" style={{ flex: 1, gap: 12 }}><Eye size={20} />{s.hideValues}</span>} />
+        <button className="expense" onClick={() => !DEMO && supabase.auth.signOut()}><LogOut size={20} /> {nav.signOut}</button>
       </div>
 
-      <div className="more-foot"><Mascot size={40} /><span>tally · feito só pra você</span></div>
+      <div className="more-foot"><Mascot size={40} /><span>{s.footer}</span></div>
     </main>
   )
 }

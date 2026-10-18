@@ -1,8 +1,13 @@
-const brl = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+import { locale } from './i18n'
 
-/** 123456 → "1.234,56" */
+const formats = new Map<string, Intl.NumberFormat>()
+
+/** 123456 → "1.234,56" in Portuguese, "1,234.56" in English (still reais). */
 export function formatCents(cents: number): string {
-  return brl.format(cents / 100)
+  const loc = locale()
+  let f = formats.get(loc)
+  if (!f) formats.set(loc, (f = new Intl.NumberFormat(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })))
+  return f.format(cents / 100)
 }
 
 /** The real minus sign, which lines up with "+" (a hyphen is shorter). */

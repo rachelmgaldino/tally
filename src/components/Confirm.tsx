@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { t } from '../lib/i18n'
 
 interface ConfirmConfig {
   title: string
@@ -40,8 +41,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <h2>{shown.title}</h2>
             {shown.text && <p>{shown.text}</p>}
             <div className="confirm-foot">
-              <button className="btn" onClick={() => answer(false)}>Cancelar</button>
-              <button className="btn btn-danger" autoFocus onClick={() => answer(true)}>{shown.confirm ?? 'Excluir'}</button>
+              <button className="btn" onClick={() => answer(false)}>{t().common.cancel}</button>
+              <button className="btn btn-danger" autoFocus onClick={() => answer(true)}>{shown.confirm ?? t().common.delete}</button>
             </div>
           </div>
         </div>

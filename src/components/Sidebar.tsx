@@ -1,6 +1,7 @@
 import { CreditCard, House, List, LogOut, Plus, SlidersHorizontal, Tag, Wallet } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { DEMO } from '../lib/config'
+import { t } from '../lib/i18n'
 import { useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { UserAvatar } from './Avatars'
@@ -28,32 +29,33 @@ export function Sidebar({ name }: { name: string }) {
   const { data: cards = [] } = useCards()
   const { pathname } = useLocation()
   const firstCard = cards.find((c) => !c.archived)
+  const s = t().common.nav
   return (
     <aside className="side">
       <Link to="/" className="brand"><Mascot /><span>tally</span></Link>
-      <button className="btn btn-primary" onClick={() => open({ kind: 'expense' })}><Plus size={20} /> Novo lançamento</button>
-      <nav aria-label="Principal">
-        <NavLink to="/" end><House size={20} /> Visão geral</NavLink>
-        <NavLink to="/lancamentos"><List size={20} /> Lançamentos</NavLink>
+      <button className="btn btn-primary" onClick={() => open({ kind: 'expense' })}><Plus size={20} /> {s.newEntry}</button>
+      <nav aria-label={s.main}>
+        <NavLink to="/" end><House size={20} /> {s.overview}</NavLink>
+        <NavLink to="/lancamentos"><List size={20} /> {s.entries}</NavLink>
         <NavLink
           to={firstCard ? `/cartoes/${firstCard.id}` : '/configuracoes/contas#cartoes'}
           className={() => (pathname.startsWith('/cartoes/') ? 'active' : '')}
         >
-          <CreditCard size={20} /> Faturas
+          <CreditCard size={20} /> {s.invoices}
         </NavLink>
-        <div className="lbl">Ajustes</div>
+        <div className="lbl">{s.settings}</div>
         <NavLink to="/configuracoes/contas" className={() => (pathname.startsWith('/configuracoes/contas') || pathname.startsWith('/configuracoes/cartoes') ? 'active' : '')}>
-          <Wallet size={20} /> Contas e cartões
+          <Wallet size={20} /> {s.accountsAndCards}
         </NavLink>
-        <NavLink to="/configuracoes/categorias"><Tag size={20} /> Categorias</NavLink>
-        <NavLink to="/configuracoes/preferencias"><SlidersHorizontal size={20} /> Preferências</NavLink>
+        <NavLink to="/configuracoes/categorias"><Tag size={20} /> {s.categories}</NavLink>
+        <NavLink to="/configuracoes/preferencias"><SlidersHorizontal size={20} /> {s.preferences}</NavLink>
       </nav>
       <div className="profile">
         <Link to="/perfil">
           <UserAvatar size={40} />
-          <span style={{ minWidth: 0 }}><b>{name}</b><small>Meu perfil</small></span>
+          <span style={{ minWidth: 0 }}><b>{name}</b><small>{s.myProfile}</small></span>
         </Link>
-        <button className="icon-btn sm" aria-label="Sair" title="Sair" onClick={() => !DEMO && supabase.auth.signOut()}><LogOut size={16} /></button>
+        <button className="icon-btn sm" aria-label={s.signOut} title={s.signOut} onClick={() => !DEMO && supabase.auth.signOut()}><LogOut size={16} /></button>
       </div>
     </aside>
   )
