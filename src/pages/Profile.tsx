@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { Camera } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { UserAvatar } from '../components/Avatars'
 import { useToast } from '../components/Toast'
 import { Modal } from '../components/ui'
 import { DEMO } from '../lib/config'
+import { removeAvatar, uploadAvatar, useProfile } from '../lib/profile'
 import { supabase } from '../lib/supabase'
 
 export default function Profile({ name, email }: { name: string; email: string }) {
@@ -10,9 +13,7 @@ export default function Profile({ name, email }: { name: string; email: string }
     <main className="page page-narrow">
       <header className="page-head"><h1>Meu perfil</h1></header>
       <div className="card card-pad" style={{ textAlign: 'center', padding: '40px 24px', maxWidth: 520 }}>
-        <span className="avatar" style={{ width: 96, height: 96, background: 'var(--rose)', fontFamily: 'var(--display)', fontSize: 44, fontWeight: 600 }}>
-          {name.charAt(0).toUpperCase()}
-        </span>
+        <AvatarPicker />
         <h2 style={{ fontSize: 28, marginTop: 18 }}>{name}</h2>
         <div className="muted" style={{ marginTop: 4 }}>{email}</div>
         <div className="row" style={{ justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
@@ -23,6 +24,52 @@ export default function Profile({ name, email }: { name: string; email: string }
       {editing === 'name' && <NameModal current={name} onClose={() => setEditing(null)} />}
       {editing === 'password' && <PasswordModal onClose={() => setEditing(null)} />}
     </main>
+  )
+}
+
+function AvatarPicker() {
+  const { avatarPath, setAvatarPath } = useProfile()
+  const toast = useToast()
+  const input = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function pick(file: File | undefined) {
+    if (!file) return
+    setBusy(true)
+    try {
+      setAvatarPath(await uploadAvatar(file, avatarPath))
+      toast('Foto atualizada.')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Não deu para salvar a foto.')
+    } finally {
+      setBusy(false)
+      if (input.current) input.current.value = ''
+    }
+  }
+
+  async function remove() {
+    if (!avatarPath) return
+    setBusy(true)
+    try {
+      await removeAvatar(avatarPath)
+      setAvatarPath(null)
+      toast('Foto removida.')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Não deu para remover a foto.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="avatar-picker">
+      <button className="avatar-edit" onClick={() => input.current?.click()} disabled={busy} aria-label={avatarPath ? 'Trocar foto' : 'Adicionar foto'} title={avatarPath ? 'Trocar foto' : 'Adicionar foto'}>
+        <UserAvatar size={96} fontSize={44} />
+        <span className="cam"><Camera size={16} /></span>
+      </button>
+      <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
+      {avatarPath && <button className="link" onClick={remove} disabled={busy}>Remover foto</button>}
+    </div>
   )
 }
 

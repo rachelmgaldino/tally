@@ -9,6 +9,7 @@ import { ToastProvider } from './components/Toast'
 import { DEMO } from './lib/config'
 import { useSeriesUpkeep } from './lib/entries'
 import { PrefsProvider } from './lib/prefs'
+import { ProfileProvider } from './lib/profile'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Invoice from './pages/Invoice'
@@ -42,6 +43,7 @@ export default function App() {
   const name = (session?.user.user_metadata?.name as string | undefined) || capitalize(email.split(/[@.]/)[0])
 
   return (
+    <ProfileProvider name={name} email={email} avatarPath={session?.user.user_metadata?.avatar_path as string | undefined}>
     <PrefsProvider saved={session?.user.user_metadata?.prefs}>
     <ToastProvider>
       <TxFormProvider>
@@ -70,6 +72,7 @@ export default function App() {
       </TxFormProvider>
     </ToastProvider>
     </PrefsProvider>
+    </ProfileProvider>
   )
 }
 

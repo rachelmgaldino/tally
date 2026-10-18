@@ -1,5 +1,6 @@
 import { ChevronRight, LogOut, SlidersHorizontal, Tag, Upload, Wallet } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { UserAvatar } from '../components/Avatars'
 import { Mascot } from '../components/Sidebar'
 import { DEMO } from '../lib/config'
 import { useAccounts, useCards } from '../lib/queries'
@@ -17,7 +18,7 @@ export default function More({ name }: { name: string }) {
       <header className="page-head"><h1>Mais</h1></header>
 
       <Link to="/perfil" className="card more-profile">
-        <span className="avatar" style={{ width: 52, height: 52, background: 'var(--rose)', fontSize: 18 }}>{name.charAt(0).toUpperCase()}</span>
+        <UserAvatar size={52} fontSize={18} />
         <span style={{ flex: 1, minWidth: 0 }}><b>{name}</b><small>Meu perfil</small></span>
         <ChevronRight size={20} className="muted" />
       </Link>
