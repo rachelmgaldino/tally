@@ -135,6 +135,17 @@ export default function Transactions() {
   const simpleTotal = totalsOnly || !!filteredCard
   const filteredAccount = accountFilter ? accountMap.get(accountFilter) : undefined
 
+  // In/out totals of the rows in view. An invoice payment is money leaving the account, so in
+  // Fluxo de caixa it counts as an expense (the full list hides payments and counts the purchases instead).
+  const totals = useMemo(() => {
+    const t = { income: 0, expense: 0, pendingIncome: 0, pendingExpense: 0 }
+    for (const tx of rows) {
+      if (tx.kind === 'income') t[tx.paid ? 'income' : 'pendingIncome'] += tx.amount_cents
+      else if (tx.kind === 'expense' || tx.kind === 'payment') t[tx.paid ? 'expense' : 'pendingExpense'] += tx.amount_cents
+    }
+    return t
+  }, [rows])
+
   // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
   const dayBalance = useMemo(() => {
     const out = new Map<string, number>()
@@ -465,12 +476,7 @@ export default function Transactions() {
         <div id="tx-summary">
         <SummaryCard
           summary={summary}
-          totals={{
-            income: rows.filter((tx) => tx.kind === 'income' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
-            expense: rows.filter((tx) => tx.kind === 'expense' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
-            pendingIncome: rows.filter((tx) => tx.kind === 'income' && !tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
-            pendingExpense: rows.filter((tx) => tx.kind === 'expense' && !tx.paid).reduce((s, tx) => s + tx.amount_cents, 0),
-          }}
+          totals={totals}
           totalsOnly={simpleTotal}
           onToggle={filteredCard ? undefined : () => setTotalsOnly(!totalsOnly)}
           title={span.kind === 'month' ? `Resumo de ${spanLabel(span)}` : `Resumo · ${spanLabel(span)}`}
@@ -485,7 +491,7 @@ export default function Transactions() {
         {rows.length > 0 && (
           <SummaryPill
             label={simpleTotal ? 'Saldo do período' : 'Previsto'}
-            cents={simpleTotal ? rows.filter((tx) => tx.kind === 'income' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0) - rows.filter((tx) => tx.kind === 'expense' && tx.paid).reduce((s, tx) => s + tx.amount_cents, 0) : summary.forecast}
+            cents={simpleTotal ? totals.income - totals.expense : summary.forecast}
           />
         )}
       {selecting && (
