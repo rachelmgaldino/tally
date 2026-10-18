@@ -13,7 +13,8 @@ export function SummaryCard({
   summary, totals, totalsOnly, onToggle, title, isMonth, filter,
 }: {
   summary: PeriodSummary
-  totals: { income: number; expense: number }
+  /** Paid in and out, plus what is still pending (shown when nothing is paid yet). */
+  totals: { income: number; expense: number; pendingIncome: number; pendingExpense: number }
   totalsOnly: boolean
   /** Left out when only totals make sense (a card is filtered). */
   onToggle?: () => void
@@ -34,7 +35,7 @@ export function SummaryCard({
   const heroFilter = filter && <div className="sum-hero-filter">{filter}</div>
 
   if (totalsOnly) {
-    const { income, expense } = totals
+    const { income, expense, pendingIncome, pendingExpense } = totals
     return (
       <section className="card summary-card" aria-label="Resumo">
         {head}
@@ -45,15 +46,26 @@ export function SummaryCard({
             <div className="sum-big">{formatBRL(income - expense)}</div>
           </div>
           <div className="sum-side">
-            <div className="sum-split">
-              {income + expense === 0 ? <i style={{ flex: 1 }} /> : (
-                <>
+            {income + expense === 0 ? (
+              <p className="sum-pending">
+                {pendingIncome + pendingExpense === 0 ? `Nenhum lançamento neste ${word}.` : (
+                  <>
+                    <span>Ainda vai acontecer:</span>{' '}
+                    {pendingIncome > 0 && <b className="in">+{formatCents(pendingIncome)} entrando</b>}
+                    {pendingIncome > 0 && pendingExpense > 0 && ' · '}
+                    {pendingExpense > 0 && <b className="out">−{formatCents(pendingExpense)} saindo</b>}
+                  </>
+                )}
+              </p>
+            ) : (
+              <>
+                <div className="sum-split">
                   {income > 0 && <i className="in" style={{ flex: income }}><span><em>Entradas </em>{formatCents(income)}</span></i>}
                   {expense > 0 && <i className="out" style={{ flex: expense }}><span><em>Saídas </em>{formatCents(expense)}</span></i>}
-                </>
-              )}
-            </div>
-            {income + expense > 0 && <div className="sum-split-legend"><small>entradas</small><small>saídas</small></div>}
+                </div>
+                <div className="sum-split-legend"><small>entradas</small><small>saídas</small></div>
+              </>
+            )}
           </div>
         </div>
       </section>

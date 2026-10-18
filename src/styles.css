@@ -298,6 +298,10 @@ select.input { appearance: auto; }
 .sum-split .in { background: var(--green); }
 .sum-split .out { background: var(--pink); }
 .sum-split em { font-style: normal; }
+.sum-pending { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
+.sum-pending b { font-weight: 800; white-space: nowrap; }
+.sum-pending b.in { color: var(--income); }
+.sum-pending b.out { color: var(--ink); }
 .sum-split-legend { display: none; justify-content: space-between; margin-top: 6px; }
 .sum-split-legend small { font-size: 12px; font-weight: 700; color: var(--muted); }
 .empty { text-align: center; padding: 40px 20px; }
