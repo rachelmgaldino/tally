@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
@@ -318,7 +318,22 @@ export function TransactionForm({
           </>
         )}
         </div>
-        <div className="option-icons">
+        <div className="ph-more phone-only">
+          <button type="button" onClick={() => toggle('repeat')} disabled={inSeries} aria-expanded={show.repeat}>
+            <Repeat2 size={20} />
+            <span><small>Repetir</small>{inSeries ? 'Já se repete' : !show.repeat ? 'Não repete' : repeatKind === 'fixed' ? `Fixo · ${PERIODS[period].adjective}` : `Parcelado em ${installments}x`}</span>
+            <ChevronRight size={18} className={show.repeat ? 'turned' : ''} />
+          </button>
+          <button type="button" onClick={() => {
+            const open = !(show.tags || show.notes || show.files)
+            setShow((s) => ({ ...s, tags: open, notes: open, files: open }))
+          }} aria-expanded={show.tags || show.notes || show.files}>
+            <Plus size={20} />
+            <span><small>Mais detalhes</small>Tags, observação, anexo</span>
+            <ChevronDown size={18} className={show.tags || show.notes || show.files ? 'flipped' : ''} />
+          </button>
+        </div>
+        <div className="option-icons desk-only">
           <button
             type="button"
             className={show.repeat ? 'on' : ''}
