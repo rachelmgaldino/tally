@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Transaction, TxKind } from '../lib/types'
+import { PromptCard, type PromptConfig } from './Prompt'
 import { TransactionForm } from './TransactionForm'
 
 interface FormState {
@@ -8,13 +9,17 @@ interface FormState {
   /** Pre-filled values for a copy. */
   copyOf?: Transaction
   accountId?: string
+  /** Open with the Repetir section showing ("Repetir" in the side panel). */
+  repeat?: boolean
 }
 
 interface Ctx {
   open: (state: FormState) => void
+  /** Show a question card in the corner; it stays up after the form closes. */
+  ask: (prompt: PromptConfig) => void
 }
 
-const TxFormContext = createContext<Ctx>({ open: () => {} })
+const TxFormContext = createContext<Ctx>({ open: () => {}, ask: () => {} })
 
 function typing(target: EventTarget | null) {
   const el = target as HTMLElement | null
@@ -23,7 +28,10 @@ function typing(target: EventTarget | null) {
 
 export function TxFormProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FormState | null>(null)
+  const [prompt, setPrompt] = useState<PromptConfig | null>(null)
   const open = useCallback((s: FormState) => setState(s), [])
+  const ask = useCallback((p: PromptConfig) => setPrompt(p), [])
+  const closePrompt = useCallback(() => setPrompt(null), [])
 
   // Organizze's shortcuts: D = despesa, R = receita, T = transferência.
   useEffect(() => {
@@ -41,7 +49,7 @@ export function TxFormProvider({ children }: { children: ReactNode }) {
   }, [state])
 
   return (
-    <TxFormContext.Provider value={{ open }}>
+    <TxFormContext.Provider value={{ open, ask }}>
       {children}
       {state && (
         <TransactionForm
@@ -50,9 +58,11 @@ export function TxFormProvider({ children }: { children: ReactNode }) {
           editing={state.editing}
           copyOf={state.copyOf}
           defaultAccountId={state.accountId}
+          startRepeat={state.repeat}
           onClose={() => setState(null)}
         />
       )}
+      {prompt && <PromptCard prompt={prompt} onClose={closePrompt} />}
     </TxFormContext.Provider>
   )
 }

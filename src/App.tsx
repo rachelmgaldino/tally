@@ -6,6 +6,7 @@ import { TopBar } from './components/TopBar'
 import { TxFormProvider } from './components/TxFormContext'
 import { ToastProvider } from './components/Toast'
 import { DEMO } from './lib/config'
+import { useSeriesUpkeep } from './lib/entries'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Overview from './pages/Overview'
@@ -39,6 +40,7 @@ export default function App() {
   return (
     <ToastProvider>
       <TxFormProvider>
+        <SeriesUpkeep />
         <TopBar />
         <Routes>
           <Route path="/" element={<Overview name={name} />} />
@@ -55,6 +57,12 @@ export default function App() {
       </TxFormProvider>
     </ToastProvider>
   )
+}
+
+/** Creates upcoming entries of fixed (recurring) lançamentos as time passes. */
+function SeriesUpkeep() {
+  useSeriesUpkeep()
+  return null
 }
 
 function capitalize(s: string) {

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { accountsTable, categoriesTable, transactionsTable, type Table } from './api'
+import { accountsTable, categoriesTable, seriesTable, tagsTable, transactionsTable, type Table } from './api'
 import { DEFAULT_CATEGORIES } from './defaults'
-import type { Account, Category, NewCategory, Transaction } from './types'
+import type { Account, Category, NewCategory, Series, Tag, Transaction } from './types'
 
 let seeding: Promise<Category[]> | null = null
 
@@ -24,6 +24,12 @@ export const useCategories = () =>
 export const useTransactions = () =>
   useQuery({ queryKey: ['transactions'], queryFn: () => transactionsTable.list() })
 
+export const useSeries = () =>
+  useQuery({ queryKey: ['series'], queryFn: () => seriesTable.list() })
+
+export const useTags = () =>
+  useQuery({ queryKey: ['tags'], queryFn: () => tagsTable.list() })
+
 /** Insert, update and delete for one table, refreshing what depends on it. */
 function useTableMutations<Row extends { id: string }, New>(key: string, table: Table<Row, New>) {
   const qc = useQueryClient()
@@ -41,9 +47,10 @@ function useTableMutations<Row extends { id: string }, New>(key: string, table: 
 export const useAccountMutations = () => useTableMutations('accounts', accountsTable)
 export const useCategoryMutations = () => useTableMutations('categories', categoriesTable)
 export const useTransactionMutations = () => useTableMutations('transactions', transactionsTable)
+export const useTagMutations = () => useTableMutations('tags', tagsTable)
 
 export function byId<T extends { id: string }>(rows: T[] | undefined): Map<string, T> {
   return new Map((rows ?? []).map((r) => [r.id, r]))
 }
 
-export type { Account, Category, Transaction }
+export type { Account, Category, Series, Tag, Transaction }
