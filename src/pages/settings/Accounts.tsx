@@ -11,6 +11,7 @@ import { ACCOUNT_ICONS } from '../../lib/icons'
 import { formatBRL } from '../../lib/money'
 import { useAccountMutations, useAccounts, useTransactions } from '../../lib/queries'
 import type { Account } from '../../lib/types'
+import { tone } from '../../lib/theme'
 
 export default function Accounts() {
   const { data: accounts = [] } = useAccounts()
@@ -34,7 +35,7 @@ export default function Accounts() {
         {sorted.map((a) => {
           const balance = accountBalance(a, txs).current
           return (
-          <button key={a.id} className={`acc ${a.archived ? 'archived' : ''}`} style={{ background: pastel(a.color, 0.7) }} onClick={() => setEditing(a)}>
+          <button key={a.id} className={`acc toned ${a.archived ? 'archived' : ''}`} style={tone(pastel(a.color, 0.7))} onClick={() => setEditing(a)}>
             <div className="top">
               <AccountAvatar account={a} />
               <b>{a.name}</b>
