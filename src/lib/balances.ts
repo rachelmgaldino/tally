@@ -3,10 +3,12 @@ import type { Account, Transaction } from './types'
 /**
  * How a transaction changes one account's balance, in centavos.
  * Transfers take money out of account_id and put it into to_account_id.
+ * Card purchases have no account, so they change no account balance; the
+ * invoice payment ("payment") is what takes the money out.
  */
 export function effectOn(tx: Transaction, accountId: string): number {
   if (tx.kind === 'income') return tx.account_id === accountId ? tx.amount_cents : 0
-  if (tx.kind === 'expense') return tx.account_id === accountId ? -tx.amount_cents : 0
+  if (tx.kind === 'expense' || tx.kind === 'payment') return tx.account_id === accountId ? -tx.amount_cents : 0
   let delta = 0
   if (tx.account_id === accountId) delta -= tx.amount_cents
   if (tx.to_account_id === accountId) delta += tx.amount_cents
