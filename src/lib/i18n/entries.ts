@@ -23,6 +23,7 @@ export const pt = {
   newIncome: 'Nova receita',
   newTransfer: 'Nova transferência',
   /** Keyboard shortcuts shown next to the new-entry options. */
+  /** Keyboard shortcuts for a new expense, income or transfer (Organizze's in Portuguese). */
   keys: { expense: 'D', income: 'R', transfer: 'T' },
 
   // Filters
@@ -170,7 +171,7 @@ export const en: typeof pt = {
   newExpense: 'New expense',
   newIncome: 'New income',
   newTransfer: 'New transfer',
-  keys: { expense: 'D', income: 'R', transfer: 'T' },
+  keys: { expense: 'E', income: 'I', transfer: 'T' },
 
   everything: 'All',
   kindFilters: { expense: 'Expenses', income: 'Income', transfer: 'Transfers', payment: 'Bill payments' },

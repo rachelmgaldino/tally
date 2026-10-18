@@ -936,6 +936,11 @@ select.input { appearance: auto; }
 @media (max-width: 760px) {
   .day-chip { min-height: 36px; padding: 0 14px; }
 }
+/* "Yesterday" is longer than "Ontem": slimmer chips so the Date label keeps its room on small phones. */
+@media (max-width: 420px) {
+  html:lang(en) .f-date-in { gap: 4px; }
+  html:lang(en) .f-date-in .day-chip { padding: 0 10px; }
+}
 
 /* Faturas (desktop): limit and dates in the hero, categories as a legend */
 .inv-limit { display: flex; flex-direction: column; gap: 6px; max-width: 420px; margin-top: 4px; }

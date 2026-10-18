@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { t } from '../lib/i18n'
 import type { Transaction, TxKind } from '../lib/types'
 import { PromptCard, type PromptConfig } from './Prompt'
 import { PayInvoiceModal } from './PayInvoiceModal'
@@ -37,12 +38,14 @@ export function TxFormProvider({ children }: { children: ReactNode }) {
   const ask = useCallback((p: PromptConfig) => setPrompt(p), [])
   const closePrompt = useCallback(() => setPrompt(null), [])
 
-  // Organizze's shortcuts: D = despesa, R = receita, T = transferência.
+  // Organizze's shortcuts: D = despesa, R = receita, T = transferência (E, I, T in English).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (state || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
       if (document.querySelector('.overlay')) return
-      const kind = ({ d: 'expense', r: 'income', t: 'transfer' } as const)[e.key.toLowerCase() as 'd' | 'r' | 't']
+      const keys = t().entries.keys
+      const key = e.key.toUpperCase()
+      const kind = key === keys.expense ? 'expense' : key === keys.income ? 'income' : key === keys.transfer ? 'transfer' : null
       if (kind) {
         e.preventDefault()
         setState({ kind })

@@ -274,9 +274,9 @@ export default function Overview({ name }: { name: string }) {
       </div>
 
       <section className="quick" aria-label={s.quickActions}>
-        <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> {s.expense} <span className="kbd">D</span></button>
-        <button className="btn toned" style={tone('var(--green)')} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> {s.income} <span className="kbd">R</span></button>
-        <button className="btn btn-blue" onClick={() => open({ kind: 'transfer' })}><ArrowLeftRight size={18} /> {s.transfer} <span className="kbd">T</span></button>
+        <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> {s.expense} <span className="kbd">{text().entries.keys.expense}</span></button>
+        <button className="btn toned" style={tone('var(--green)')} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> {s.income} <span className="kbd">{text().entries.keys.income}</span></button>
+        <button className="btn btn-blue" onClick={() => open({ kind: 'transfer' })}><ArrowLeftRight size={18} /> {s.transfer} <span className="kbd">{text().entries.keys.transfer}</span></button>
       </section>
 
       <div className="ov-grid">
