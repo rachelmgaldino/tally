@@ -94,4 +94,16 @@ describe('balances', () => {
     expect(accountBalance(accounts[1], later, undefined, '2026-10-18')).toEqual({ current: -20000, forecast: 30000 })
     expect(accountBalance(accounts[1], later, undefined, '2026-11-06').current).toBe(30000)
   })
+  it('shows money moved into a kept account as saved, not spent', () => {
+    const saving = [...txs,
+      tx({ kind: 'transfer', amount_cents: 50000, date: '2026-10-06', account_id: 'nu', to_account_id: 'poupanca' }),
+      tx({ kind: 'transfer', amount_cents: 10000, date: '2026-10-20', account_id: 'poupanca', to_account_id: 'nu' }),
+    ]
+    const plain = periodSummary(accounts.slice(0, 2), txs, '2026-10-01', '2026-11-01')
+    const s = periodSummary(accounts.slice(0, 2), saving, '2026-10-01', '2026-11-01', new Set(['poupanca']))
+    expect(s.saved).toBe(40000)
+    expect(s.expenseAll).toBe(plain.expenseAll)
+    expect(s.incomeAll).toBe(plain.incomeAll)
+    expect(s.forecast).toBe(plain.forecast - 40000)
+  })
 })
