@@ -566,7 +566,7 @@ function PeriodNav({ span, setSpan }: { span: Span; setSpan: (s: Span) => void }
   )
 }
 
-/** Phone: the period's total floating above the tab bar until the summary card itself scrolls into view; a tap goes there. */
+/** The period's total floating at the bottom (above the tab bar on the phone) until the summary card itself scrolls into view; a tap goes there. */
 function SummaryPill({ label, cents }: { label: string; cents: number }) {
   const [cardVisible, setCardVisible] = useState(false)
   useEffect(() => {
@@ -578,7 +578,7 @@ function SummaryPill({ label, cents }: { label: string; cents: number }) {
   }, [])
   if (cardVisible) return null
   return (
-    <button className="sum-pill phone-only" onClick={() => document.getElementById('tx-summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+    <button className="sum-pill" onClick={() => document.getElementById('tx-summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
       <span>{label}</span>
       <b className={cents < 0 ? 'expense' : ''}>{formatBRL(cents)}</b>
       <ChevronUp size={18} />
