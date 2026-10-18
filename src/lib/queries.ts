@@ -9,9 +9,10 @@ async function loadCategories(): Promise<Category[]> {
   const rows = await categoriesTable.list()
   if (rows.length > 0) return rows
   // First run: give the user Organizze's default categories.
+  // Shared while in flight so parallel loads seed once; cleared after so the next account to sign in on this tab gets its own.
   seeding ??= categoriesTable.insert(
     DEFAULT_CATEGORIES.map((c): NewCategory => ({ ...c, parent_id: null, archived: false })),
-  )
+  ).finally(() => { seeding = null })
   return seeding
 }
 
