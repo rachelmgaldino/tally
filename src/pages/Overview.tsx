@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, Receipt, ThumbsDown } from 'lucide-react'
+import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
@@ -55,7 +55,11 @@ export default function Overview({ name }: { name: string }) {
   const from = monthStart(m)
   const to = monthEnd(m)
   const t = today()
-  const inMonth = txs.filter((tx) => tx.date >= from && tx.date < to)
+  // Savings ("Não somar no Saldo Geral") stay out of sight here: their entries don't count
+  // in the month's totals, Próximos or Minhas contas.
+  const keptIds = new Set(accounts.filter((a) => a.exclude_from_total).map((a) => a.id))
+  const dayToDay = (tx: Transaction) => !tx.account_id || !keptIds.has(tx.account_id)
+  const inMonth = txs.filter((tx) => tx.date >= from && tx.date < to && dayToDay(tx))
   const income = inMonth.filter((tx) => tx.kind === 'income').reduce((s, tx) => s + tx.amount_cents, 0)
   const expense = inMonth.filter((tx) => tx.kind === 'expense').reduce((s, tx) => s + tx.amount_cents, 0)
 
@@ -68,7 +72,7 @@ export default function Overview({ name }: { name: string }) {
 
   const categoryMap = byId(categories)
   const accountMap = byId(accounts)
-  const toPay = ledger.filter((tx) => tx.kind === 'expense' && !tx.paid && tx.date < to && (tx.date >= from || tx.date < t)).sort((a, b) => a.date.localeCompare(b.date))
+  const toPay = ledger.filter((tx) => tx.kind === 'expense' && !tx.paid && dayToDay(tx) && tx.date < to && (tx.date >= from || tx.date < t)).sort((a, b) => a.date.localeCompare(b.date))
   const overdue = toPay.filter((tx) => tx.date < t)
 
   const cardMap = byId(allCards)
@@ -84,7 +88,7 @@ export default function Overview({ name }: { name: string }) {
   // Próximos: unpaid bills and incomes in the next 7, 14 or 30 days (a saved choice); another month shows that month.
   const horizon = addDays(t, prefs.nextDays)
   const upcoming = ledger
-    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && (isCurrent ? tx.date >= t && tx.date <= horizon : tx.date >= from && tx.date < to))
+    .filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.paid && dayToDay(tx) && (isCurrent ? tx.date >= t && tx.date <= horizon : tx.date >= from && tx.date < to))
     .sort((a, b) => a.date.localeCompare(b.date))
   const nextHead = (
     <div className="section-title next-head">
@@ -104,6 +108,12 @@ export default function Overview({ name }: { name: string }) {
     : s.nothingThisMonth
   const kept = active.filter((a) => a.exclude_from_total)
   const keptTotal = kept.reduce((s, a) => s + (balances.get(a.id) ?? 0), 0)
+  // Net moved into the kept accounts this month (transfers in minus transfers out).
+  const savedMonth = txs.reduce((sum, tx) => {
+    if (tx.kind !== 'transfer' || tx.date < from || tx.date >= to) return sum
+    const into = keptIds.has(tx.to_account_id ?? ''), outOf = keptIds.has(tx.account_id ?? '')
+    return into === outOf ? sum : sum + (into ? tx.amount_cents : -tx.amount_cents)
+  }, 0)
   const entryName = (tx: Transaction) => {
     const card = tx.virtual && tx.card_id ? cardMap.get(tx.card_id) : undefined
     if (card) return s.cardInvoice(card.name, monthName(toMonth(tx.invoice_month!)))
@@ -191,6 +201,12 @@ export default function Overview({ name }: { name: string }) {
             <div className="k">{s.totalBalance}</div>
             <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
             <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
+            {prefs.showSaved && kept.length > 0 && (
+              <div className="hero-kept">
+                <span><PiggyBank size={16} /><b className="money">{money(keptTotal)}</b></span>
+                <small>{savedMonth === 0 ? s.keptLine : s.keptLineMonth(`${savedMonth > 0 ? '+' : '−'}${hidden ? '•••••' : formatCents(Math.abs(savedMonth))}`)}</small>
+              </div>
+            )}
             <div className="hero-pills">
               <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
               <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
@@ -235,12 +251,6 @@ export default function Overview({ name }: { name: string }) {
             <span>{s.toReceiveTile}</span><b>{money(incomePending)}</b>
             <small>{incomePending ? s.stillThisMonth : income ? s.allReceived : s.nothingEntered}</small>
           </Link>
-          {kept.length > 0 && (
-            <Link className="ph-tile toned" to="/configuracoes/contas" style={tone('var(--sand)')}>
-              <span>{kept.length === 1 ? kept[0].name : s.keptAside}</span><b>{money(keptTotal)}</b>
-              <small>{s.outsideTotal}</small>
-            </Link>
-          )}
         </section>
 
         {overdue.length > 0 && (
@@ -262,8 +272,8 @@ export default function Overview({ name }: { name: string }) {
         </section>
 
         <section className="card card-pad" aria-label={s.myAccounts}>
-          <div className="section-title"><h3>{s.myAccounts}</h3><Link to="/configuracoes/contas" className="link">{active.length ? s.manage : s.add}</Link></div>
-          {active.length === 0 ? <p className="muted small" style={{ margin: 0 }}>{s.noAccountYetDot}</p> : active.map((a) => (
+          <div className="section-title"><h3>{s.myAccounts}</h3><Link to="/configuracoes/contas" className="link">{included.length ? s.manage : s.add}</Link></div>
+          {included.length === 0 ? <p className="muted small" style={{ margin: 0 }}>{s.noAccountYetDot}</p> : included.map((a) => (
             <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
               <AccountAvatar account={a} />
               <b style={{ flex: 1, minWidth: 0 }}>{a.name}</b>
@@ -321,8 +331,8 @@ export default function Overview({ name }: { name: string }) {
             })}
           </section>
           <section className="card card-pad ov-wide">
-            <div className="section-title"><h3>{s.myAccounts}</h3>{active.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
-            {active.length === 0 ? (
+            <div className="section-title"><h3>{s.myAccounts}</h3>{included.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
+            {included.length === 0 ? (
               <div className="placeholder">
                 <span className="ico"><Landmark size={20} /></span>
                 <h3>{s.noAccountYet}</h3>
@@ -331,12 +341,12 @@ export default function Overview({ name }: { name: string }) {
                   <CirclePlus size={16} /> {s.addAccount}
                 </button>
               </div>
-            ) : <div className="acc-tiles">{active.map((a) => (
+            ) : <div className="acc-tiles">{included.map((a) => (
               <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
                 <AccountAvatar account={a} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b>{a.name}</b>
-                  <div className="muted small">{a.exclude_from_total ? s.outsideTotal : s.manualAccount}</div>
+                  <div className="muted small">{s.manualAccount}</div>
                 </div>
                 <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{money(balances.get(a.id) ?? 0)}</span>
               </div>

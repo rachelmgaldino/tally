@@ -134,6 +134,7 @@ export const pt = {
     expenseIn: 'Saídas ',
     incomeLegend: 'entradas',
     expenseLegend: 'saídas',
+    keptLegend: 'guardado',
     forecastEnd: (isMonth: boolean): string => (isMonth ? 'Previsto pro fim do mês' : 'Previsto pro fim do período'),
     previousBalance: 'Saldo anterior',
     currentBalance: 'Saldo atual',
@@ -147,6 +148,7 @@ export const pt = {
     toPay: 'a pagar',
     negative: ' negativo',
     left: 'sobra',
+    kept: 'guardado',
   },
 }
 
@@ -270,6 +272,7 @@ export const en: typeof pt = {
     expenseIn: 'Out ',
     incomeLegend: 'money in',
     expenseLegend: 'money out',
+    keptLegend: 'set aside',
     forecastEnd: (isMonth) => (isMonth ? 'Forecast for end of month' : 'Forecast for end of period'),
     previousBalance: 'Previous balance',
     currentBalance: 'Current balance',
@@ -282,5 +285,6 @@ export const en: typeof pt = {
     toPay: 'to pay',
     negative: ' short',
     left: 'left',
+    kept: 'set aside',
   },
 }

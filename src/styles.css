@@ -296,6 +296,7 @@ select.input { appearance: auto; }
 .sum-bar .paid, .sw.paid { background: #d9707f; }
 .sum-bar .topay, .sw.topay { background: repeating-linear-gradient(135deg, var(--pink) 0 6px, #fbe3e8 6px 12px); }
 .sum-bar .left, .sw.left { background: var(--green); }
+.sum-bar .kept, .sw.kept { background: #8fb0e3; }
 .sum-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 12px; font-weight: 800; color: var(--muted); }
 .sum-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .sum-legend .v { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 14px; color: var(--ink); }
@@ -307,6 +308,9 @@ select.input { appearance: auto; }
 .sum-split i { min-width: max-content; overflow: hidden; display: flex; align-items: center; padding: 0 12px; font-style: normal; font-family: var(--display); font-weight: 500; font-size: 14px; white-space: nowrap; }
 .sum-split .in { background: var(--green); }
 .sum-split .out { background: var(--pink); }
+.sum-split .kept { background: #8fb0e3; min-width: 0; padding: 0; }
+.sum-split-kept { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.sum-split-kept .v { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 14px; color: var(--ink); }
 .sum-split em { font-style: normal; }
 .sum-pending { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
 .sum-pending b { font-weight: 800; white-space: nowrap; }
@@ -627,9 +631,8 @@ select.input { appearance: auto; }
   .sum-side { margin-top: 14px; }
   .sum-sum { display: none; }
   .sum-sum-short { display: inline; }
-  .sum-legend { flex-wrap: nowrap; justify-content: center; gap: 4px; font-size: 10.5px; white-space: nowrap; }
+  .sum-legend { flex-wrap: wrap; justify-content: center; gap: 4px 10px; font-size: 10.5px; white-space: nowrap; }
   .sum-legend > span { gap: 3px; }
-  .sum-legend > span + span::before { content: '·'; margin-right: 1px; }
   .sum-legend .lbl { display: none; }
   .sum-legend .lbl-after { display: inline; }
   .sum-legend .v { font-size: 12.5px; }
@@ -1173,3 +1176,9 @@ select.input { appearance: auto; }
 @media (min-width: 1200px) and (max-width: 1600px) {
   .tx-page.with-panel .sum-body { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-right: 0; }
 }
+
+/* Saldo geral: the savings line, when "Mostrar o dinheiro guardado" is on. */
+.hero-kept { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; padding-top: 8px; border-top: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); max-width: calc(100% - 64px); font-size: 13px; color: var(--ink); }
+.hero-kept span { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; }
+.hero-kept svg { flex-shrink: 0; }
+.hero-kept small { font-weight: 600; color: var(--muted); padding-left: 22px; }

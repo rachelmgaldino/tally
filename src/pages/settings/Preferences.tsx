@@ -40,6 +40,14 @@ export default function Preferences() {
       </section>
 
       <section className="card card-pad prefs">
+        <h3 className="section-h">{s.overview}</h3>
+        <div className="pref-row">
+          <div><b>{s.showSaved}</b><small>{s.showSavedNote}</small></div>
+          <Toggle checked={prefs.showSaved} onChange={(showSaved) => change({ showSaved })} label={<span className="sr-only">{s.showSaved}</span>} />
+        </div>
+      </section>
+
+      <section className="card card-pad prefs">
         <h3 className="section-h">{s.entries}</h3>
         <div className="pref-row">
           <div><b>{s.order}</b><small>{s.orderNote}</small></div>

@@ -18,9 +18,11 @@ export interface Prefs {
   nextDays: 7 | 14 | 30
   /** "Idioma / Language". Português unless the account was made on an English sign-up screen. */
   language: Language
+  /** Show the total of the kept accounts (savings) on the Saldo geral card. Off: they stay out of sight. */
+  showSaved: boolean
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR' }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false }
 const KEY = 'tally-prefs'
 /** The last language used on this device, for the login screen. */
 const LANGUAGE_KEY = 'tally-language'
