@@ -36,7 +36,7 @@ export function deviceLanguage(): Language {
   return browserLanguage()
 }
 
-function rememberLanguage(lang: Language) {
+export function rememberLanguage(lang: Language) {
   try { localStorage.setItem(LANGUAGE_KEY, lang) } catch { /* ignore */ }
 }
 
