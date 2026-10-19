@@ -71,6 +71,10 @@ a { color: var(--ink); }
 .side .new-entry { box-shadow: var(--shadow); }
 .side .new-entry:hover { background: #f2d077; }
 .side .new-entry:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shade); }
+/* The sidebar scrolls on short screens, so the menu stays inside its width. */
+.side .new-entry-menu .kinds-menu { left: auto; right: 0; min-width: 0; width: 200px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 12px 30px rgb(0 0 0 / 18%); }
+.side .kinds-menu button { min-height: 42px; border: 1.5px solid var(--edge); }
+.side .kinds-menu button:hover { filter: brightness(0.97); background: var(--tone); }
 .side .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .side .brand span { font-family: var(--display); font-size: 30px; font-weight: 600; }
 .side nav { display: flex; flex-direction: column; gap: 4px; }
@@ -437,7 +441,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .stat .v { font-size: 30px; margin-top: 10px; }
 .stat .s { font-size: 13px; font-weight: 700; margin-top: 6px; }
 .stat .mascot { position: absolute; right: -8px; bottom: -14px; }
-.quick { display: flex; gap: 10px; flex-wrap: wrap; }
 .ov-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .account-line { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 18px; margin-bottom: 8px; }
 .account-line .money { font-size: 18px; }
@@ -610,7 +613,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .stats-rest .stat .k .ico { display: none; }
   .stats-rest .stat .v { font-size: 20px; margin-top: 4px; }
   .stats-rest .stat .s { font-size: 12px; margin-top: 2px; }
-  .quick { display: none; }
   .card-pad { padding: 16px; }
   .section-title h3 { font-size: 20px; }
   .account-line { padding: 8px; gap: 12px; }
