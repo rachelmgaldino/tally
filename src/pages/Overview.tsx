@@ -122,7 +122,7 @@ export default function Overview({ name }: { name: string }) {
   // The slip's print time: now, or the last day of another month.
   const now = new Date()
   const stamp = isCurrent ? `${shortDate(t)} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` : shortDate(addDays(to, -1))
-  // Preferências › Resumo do mês: the receipt (default) or the four boxes, on desktop.
+  // Preferências › Resumo do mês: the four boxes (default) or the receipt, on desktop.
   const boxes = prefs.homeSummary === 'boxes'
   const nothingNext = isCurrent
     ? s.nothingNext(prefs.nextDays)

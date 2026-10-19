@@ -29,7 +29,7 @@ export interface Prefs {
   homeSummary: 'receipt' | 'boxes'
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false, homeSummary: 'receipt' }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false, homeSummary: 'boxes' }
 const KEY = 'tally-prefs'
 /** The last language used on this device, for the login screen. */
 const LANGUAGE_KEY = 'tally-language'
