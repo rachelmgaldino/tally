@@ -432,7 +432,7 @@ select.input { appearance: auto; }
 .limit-bar > div { height: 100%; background: var(--peach); }
 
 /* Overview */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.stats-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .stat { min-height: 150px; padding: 20px; position: relative; overflow: hidden; text-align: left; }
 /* A button centres its content by default; keep the bills card top-aligned like the others. */
 button.stat { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
@@ -564,7 +564,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 
 /* Phone: bottom tab bar, sheets from the bottom, sideways cards. Desktop never sees these. */
 .tabbar, .hero-pills { display: none; }
-.stats-rest { display: contents; }
 .more-profile { display: flex; align-items: center; gap: 12px; padding: 14px; text-decoration: none; }
 .more-profile b { display: block; font-family: var(--display); font-size: 20px; font-weight: 500; }
 .more-profile small { color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -606,13 +605,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .stat.hero .mascot svg { width: 60px; height: 60px; }
   .hero-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .hero-pills span { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: var(--border); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
-  .stats-rest { display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none; }
-  .stats-rest::-webkit-scrollbar { display: none; }
-  .stats-rest .stat { flex: none; width: 160px; min-height: 0; padding: 14px; border-radius: 22px; scroll-snap-align: start; }
-  .stats-rest .stat .k { min-height: 0; font-size: 13px; }
-  .stats-rest .stat .k .ico { display: none; }
-  .stats-rest .stat .v { font-size: 20px; margin-top: 4px; }
-  .stats-rest .stat .s { font-size: 12px; margin-top: 2px; }
   .card-pad { padding: 16px; }
   .section-title h3 { font-size: 20px; }
   .account-line { padding: 8px; gap: 12px; }
@@ -696,7 +688,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .desk-only { display: none !important; }
 
   /* Início */
-  .ov-page > .page-head, .ov-page .stats-rest, .ov-page .ov-grid { display: none; }
+  .ov-page > .page-head, .ov-page .ov-grid { display: none; }
   .ph-head { display: flex; align-items: center; gap: 10px; }
   .ph-head h1 { margin: 0; font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.1; }
   .ph-head small { display: block; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -1219,4 +1211,38 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .fx-box .input { min-height: 48px; border: var(--border) !important; border-radius: 16px !important; background: var(--card) !important; padding: 0 14px !important; display: flex; align-items: center; gap: 8px; font-size: 18px; }
   .fx-box .input input { font-family: var(--display); font-size: 20px; }
   .pref-select { width: 100%; }
+}
+
+/* Início summary: one panel, Saldo geral in yellow on the left half (lined up with the
+   cards below), the month's income, spending and bills as three columns on the right.
+   Inside the yellow half the balance sits beside its extras (other currencies, savings). */
+.hero-main, .hero-extra { display: contents; }
+.panel-cols { display: none; }
+.stats-panel { display: contents; }
+@media (min-width: 761px) {
+  .stats-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; padding: 0; overflow: hidden; }
+  .stats-panel .stat.hero { min-height: 0; padding: 18px 20px; border: 0; border-right: var(--border); border-radius: 0; box-shadow: none; display: flex; flex-direction: column; justify-content: center; }
+  .stats-panel .hero-in { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 24px; }
+  .stats-panel .hero-main { display: block; }
+  .stats-panel .hero-main .v { margin-top: 6px; }
+  .stats-panel .hero-extra { display: flex; flex-direction: column; gap: 8px; padding-left: 20px; border-left: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); min-width: 0; }
+  .stats-panel .hero-extra:empty { display: none; }
+  .stats-panel .hero-fx { margin-top: 0; padding-right: 0; gap: 6px; }
+  .stats-panel .fx-conv { font-size: 12.5px; }
+  .stats-panel .hero-kept { margin-top: 0; padding-top: 8px; max-width: none; margin-right: 44px; }
+  .stats-panel .stat.hero .mascot svg { width: 60px; height: 60px; }
+
+  .panel-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; align-content: center; padding: 18px 0; }
+  .panel-col { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 18px; border-left: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent); text-align: left; color: var(--ink); }
+  .panel-col:first-child { border-left: 0; padding-left: 0; }
+  .panel-col .dot { width: 32px; height: 32px; border-radius: 50%; border: var(--border); display: grid; place-items: center; color: var(--ink); margin-bottom: 6px; }
+  .panel-col .k { font-size: 13px; font-weight: 800; }
+  .panel-col .v { font-family: var(--display); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .panel-col .s { font-size: 12px; font-weight: 700; color: var(--muted); }
+}
+/* Too narrow for two halves: the three columns go under the yellow part. */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .stats-panel { grid-template-columns: 1fr; }
+  .stats-panel .stat.hero { border-right: 0; border-bottom: var(--border); }
+  .panel-cols { padding: 16px 20px; }
 }

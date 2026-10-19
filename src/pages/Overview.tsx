@@ -212,52 +212,59 @@ export default function Overview({ name }: { name: string }) {
       </header>
 
       <section className="stats-grid stats" aria-label={s.monthSummary}>
-        <div className="card stat hero toned" style={tone('var(--yellow)')}>
-          <div className="hero-in">
-            <div className="k">{s.totalBalance}</div>
-            <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
-            <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
-            {abroad.length > 0 && (
-              <div className="hero-fx">
-                {abroad.map((a) => (
-                  <span key={a.id} className="fx-pill"><AccountAvatar account={a} size={20} /><b className="money">{accountMoney(a)}</b></span>
-                ))}
-                {prefs.convertTotal && converted != null && rates && (
-                  <small className="fx-conv">≈ <b className="money">{money(converted)}</b> {s.convertedNote(dayMonth(rates.date))}</small>
-                )}
-              </div>
-            )}
-            {prefs.showSaved && kept.length > 0 && (
-              <div className="hero-kept">
-                <span><PiggyBank size={16} /><b className="money">{money(keptTotal)}</b></span>
-                <small>{savedMonth === 0 ? s.keptLine : s.keptLineMonth(`${savedMonth > 0 ? '+' : '−'}${hidden ? '•••••' : formatCents(Math.abs(savedMonth))}`)}</small>
-              </div>
-            )}
-            <div className="hero-pills">
-              <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
-              <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
+        <div className="card stats-panel">
+      <div className="card stat hero toned" style={tone('var(--yellow)')}>
+        <div className="hero-in">
+          <div className="hero-main">
+          <div className="k">{s.totalBalance}</div>
+          <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
+          <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
+          </div>
+          <div className="hero-extra">
+          {abroad.length > 0 && (
+            <div className="hero-fx">
+              {abroad.map((a) => (
+                <span key={a.id} className="fx-pill"><AccountAvatar account={a} size={20} /><b className="money">{accountMoney(a)}</b></span>
+              ))}
+              {prefs.convertTotal && converted != null && rates && (
+                <small className="fx-conv">≈ <b className="money">{money(converted)}</b> {s.convertedNote(dayMonth(rates.date))}</small>
+              )}
             </div>
+          )}
+          {prefs.showSaved && kept.length > 0 && (
+            <div className="hero-kept">
+              <span><PiggyBank size={16} /><b className="money">{money(keptTotal)}</b></span>
+              <small>{savedMonth === 0 ? s.keptLine : s.keptLineMonth(`${savedMonth > 0 ? '+' : '−'}${hidden ? '•••••' : formatCents(Math.abs(savedMonth))}`)}</small>
+            </div>
+          )}
           </div>
-          <span className="mascot"><Mascot size={72} plain /></span>
-        </div>
-        <div className="stats-rest">
-        <div className="card stat toned" style={tone('var(--green)')}>
-          <div className="k">{s.monthIncome} <span className="ico"><ArrowUp size={16} /></span></div>
-          <div className="v">{money(income)}</div>
-          <div className="s">{incomePending ? s.toReceive(money(incomePending)) : income ? s.allReceived : s.nothingYet}</div>
-        </div>
-        <div className="card stat toned" style={tone('var(--pink)')}>
-          <div className="k">{s.monthExpense} <span className="ico"><ArrowDown size={16} /></span></div>
-          <div className="v">{money(expense)}</div>
-          <div className="s">{expensePending ? s.stillToPay(money(expensePending)) : expense ? s.allPaid : s.nothingYet}</div>
-        </div>
-        <button className="card stat toned" style={tone('var(--lavender)')} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
-          <div className="k">{isCurrent ? s.currentInvoices : s.invoicesOf(monthName(m))} <span className="ico"><CreditCard size={16} /></span></div>
-          <div className="v">{money(invoicesTotal)}</div>
-          <div className="s">
-            {cards.length === 0 ? s.addCard : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}
+          <div className="hero-pills">
+            <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
+            <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
           </div>
-        </button>
+        </div>
+        <span className="mascot"><Mascot size={72} plain /></span>
+      </div>
+          <div className="panel-cols">
+            <div className="panel-col">
+              <span className="dot toned" style={tone('var(--green)')}><ArrowUp size={16} /></span>
+              <div className="k">{s.monthIncome}</div>
+              <div className="v">{money(income)}</div>
+              <div className="s">{incomePending ? s.toReceive(money(incomePending)) : income ? s.allReceived : s.nothingYet}</div>
+            </div>
+            <div className="panel-col">
+              <span className="dot toned" style={tone('var(--pink)')}><ArrowDown size={16} /></span>
+              <div className="k">{s.monthExpense}</div>
+              <div className="v">{money(expense)}</div>
+              <div className="s">{expensePending ? s.stillToPay(money(expensePending)) : expense ? s.allPaid : s.nothingYet}</div>
+            </div>
+            <button className="panel-col" onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
+              <span className="dot toned" style={tone('var(--lavender)')}><CreditCard size={16} /></span>
+              <div className="k">{s.currentInvoices}</div>
+              <div className="v">{money(invoicesTotal)}</div>
+              <div className="s">{cards.length === 0 ? s.addCard : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}</div>
+            </button>
+          </div>
         </div>
       </section>
 
