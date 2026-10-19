@@ -25,9 +25,11 @@ export interface Prefs {
   homeCurrency: Currency
   /** Adds an approximate total in the Moeda principal, at today's rate, under the other currencies on the Saldo geral card. */
   convertTotal: boolean
+  /** How Início sums up the month on desktop: a receipt in its own column, or four boxes in a row. */
+  homeSummary: 'receipt' | 'boxes'
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false, homeSummary: 'boxes' }
 const KEY = 'tally-prefs'
 /** The last language used on this device, for the login screen. */
 const LANGUAGE_KEY = 'tally-language'
