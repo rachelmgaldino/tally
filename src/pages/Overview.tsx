@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowUp, CirclePlus, CreditCard, Eye, EyeOff, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
+import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowUp, CirclePlus, CreditCard, Eye, EyeOff, Landmark, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
@@ -10,7 +10,7 @@ import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
 import { addDays, addMonths, currentMonth, dayMonth, monthEnd, monthName, monthStart, monthTitle, shortDate, today, weekdayDate } from '../lib/dates'
 import { t as text } from '../lib/i18n'
-import { currencyOf, formatMoney, formatCents, homeCurrency, isForeign, symbol } from '../lib/money'
+import { currencyName, currencyOf, formatMoney, formatCents, homeCurrency, isForeign, symbol } from '../lib/money'
 import { convert, useRates } from '../lib/rates'
 import { CurrencyTag } from '../components/Selects'
 import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
@@ -122,6 +122,8 @@ export default function Overview({ name }: { name: string }) {
   // The slip's print time: now, or the last day of another month.
   const now = new Date()
   const stamp = isCurrent ? `${shortDate(t)} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` : shortDate(addDays(to, -1))
+  // Preferências › Resumo do mês: the receipt (default) or the four boxes, on desktop.
+  const boxes = prefs.homeSummary === 'boxes'
   const nothingNext = isCurrent
     ? s.nothingNext(prefs.nextDays)
     : s.nothingThisMonth
@@ -214,7 +216,7 @@ export default function Overview({ name }: { name: string }) {
         </div>
       </header>
 
-      <section className="stats-grid stats phone-only" aria-label={s.monthSummary}>
+      <section className={`stats-grid stats ${boxes ? 'stats-boxes' : 'phone-only'}`} aria-label={s.monthSummary}>
         <div className="card stat hero toned" style={tone('var(--yellow)')}>
           <div className="hero-in">
             <div className="k">{s.totalBalance}</div>
@@ -242,6 +244,25 @@ export default function Overview({ name }: { name: string }) {
             </div>
           </div>
           <span className="mascot"><Mascot size={72} plain /></span>
+        </div>
+        <div className="stats-rest">
+        <div className="card stat toned" style={tone('var(--green)')}>
+          <div className="k">{s.monthIncome} <span className="ico"><ArrowUp size={16} /></span></div>
+          <div className="v">{money(income)}</div>
+          <div className="s">{incomePending ? s.toReceive(money(incomePending)) : income ? s.allReceived : s.nothingYet}</div>
+        </div>
+        <div className="card stat toned" style={tone('var(--pink)')}>
+          <div className="k">{s.monthExpense} <span className="ico"><ArrowDown size={16} /></span></div>
+          <div className="v">{money(expense)}</div>
+          <div className="s">{expensePending ? s.stillToPay(money(expensePending)) : expense ? s.allPaid : s.nothingYet}</div>
+        </div>
+        <button className="card stat toned" style={tone('var(--lavender)')} onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
+          <div className="k">{isCurrent ? s.currentInvoices : s.invoicesOf(monthName(m))} <span className="ico"><CreditCard size={16} /></span></div>
+          <div className="v">{money(invoicesTotal)}</div>
+          <div className="s">
+            {cards.length === 0 ? s.addCard : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}
+          </div>
+        </button>
         </div>
       </section>
 
@@ -293,7 +314,7 @@ export default function Overview({ name }: { name: string }) {
         </section>
       </div>
 
-      <div className="ov-grid">
+      <div className={`ov-grid ${boxes ? 'ov-boxes' : 'ov-receipt'}`}>
         <div className="ov-col">
           <section className="card card-pad" aria-label={s.next}>
             {nextHead}
@@ -338,6 +359,30 @@ export default function Overview({ name }: { name: string }) {
         </div>
 
         {/* The month as a till slip: every account, the month's in and out, and what's left over. */}
+        {boxes ? (
+        <section className="card card-pad ov-wide">
+            <div className="section-title"><h3>{s.myAccounts}</h3>{listed.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
+            {listed.length === 0 ? (
+              <div className="placeholder">
+                <span className="ico"><Landmark size={20} /></span>
+                <h3>{s.noAccountYet}</h3>
+                <p>{s.noAccountText}</p>
+                <button className="btn btn-soft" style={{ marginTop: 14 }} onClick={() => navigate('/configuracoes/contas?nova=1')}>
+                  <CirclePlus size={16} /> {s.addAccount}
+                </button>
+              </div>
+            ) : <div className="acc-tiles">{listed.map((a) => (
+              <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
+                <AccountAvatar account={a} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b>{a.name}<CurrencyTag of={a} /></b>
+                  <div className="muted small">{isForeign(a) ? currencyName(currencyOf(a)) : s.manualAccount}</div>
+                </div>
+                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{accountMoney(a)}</span>
+              </div>
+            ))}</div>}
+          </section>
+        ) : (
         <aside className="receipt" aria-label={s.monthSummary}>
           <div className="rc-paper">
             <div className="rc-top"><span>{s.totalBalance}</span><span>{stamp}</span></div>
@@ -385,6 +430,7 @@ export default function Overview({ name }: { name: string }) {
           </svg>
           <span className="rc-coin"><Mascot size={64} lookUp /></span>
         </aside>
+        )}
       </div>
       {selected && <TransactionPanel tx={selected} onClose={() => setSelectedId(null)} onNavigate={setSelectedId} />}
     </main>

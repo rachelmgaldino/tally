@@ -564,6 +564,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 
 /* Phone: bottom tab bar, sheets from the bottom, sideways cards. Desktop never sees these. */
 .tabbar, .hero-pills { display: none; }
+.stats-rest { display: contents; }
 .more-profile { display: flex; align-items: center; gap: 12px; padding: 14px; text-decoration: none; }
 .more-profile b { display: block; font-family: var(--display); font-size: 20px; font-weight: 500; }
 .more-profile small { color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -605,6 +606,13 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .stat.hero .mascot svg { width: 60px; height: 60px; }
   .hero-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .hero-pills span { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: var(--border); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+  .stats-rest { display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none; }
+  .stats-rest::-webkit-scrollbar { display: none; }
+  .stats-rest .stat { flex: none; width: 160px; min-height: 0; padding: 14px; border-radius: 22px; scroll-snap-align: start; }
+  .stats-rest .stat .k { min-height: 0; font-size: 13px; }
+  .stats-rest .stat .k .ico { display: none; }
+  .stats-rest .stat .v { font-size: 20px; margin-top: 4px; }
+  .stats-rest .stat .s { font-size: 12px; margin-top: 2px; }
   .card-pad { padding: 16px; }
   .section-title h3 { font-size: 20px; }
   .account-line { padding: 8px; gap: 12px; }
@@ -688,7 +696,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .desk-only { display: none !important; }
 
   /* Início */
-  .ov-page > .page-head, .ov-page .ov-grid { display: none; }
+  .ov-page > .page-head, .ov-page .stats-rest, .ov-page .ov-grid { display: none; }
   .ph-head { display: flex; align-items: center; gap: 10px; }
   .ph-head h1 { margin: 0; font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.1; }
   .ph-head small { display: block; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -1012,8 +1020,30 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .ov-col > section[aria-label="Próximos"] > .all-clear { justify-content: center; }
 
 /* Início (desktop): Próximos and cartões on the left, the month as a receipt in its own column. */
-.ov-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
-.ov-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.ov-grid.ov-receipt { grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.ov-receipt .ov-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+/* Or, in Preferências, the four boxes: kept short, the coin up in the Saldo geral's corner and the
+   other currencies on one line. Próximos and cartões share a row, contas run full width underneath. */
+.ov-grid.ov-boxes { align-items: stretch; }
+.ov-boxes .ov-col { display: contents; }
+.ov-boxes .ov-col > section[aria-label="Próximos"] { display: flex; flex-direction: column; }
+.ov-boxes .ov-col > section[aria-label="Próximos"] > .all-clear { margin: auto 0; justify-content: center; }
+.ov-boxes .ov-wide { grid-column: 1 / -1; }
+.acc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.acc-tiles .account-line { margin-bottom: 0; }
+.acc-tiles .account-line b, .acc-tiles .account-line .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 761px) {
+  .stats-boxes .stat { min-height: 0; padding: 16px 20px; }
+  .stats-boxes .stat .v { margin-top: 6px; }
+  .stats-boxes .stat .s { margin-top: 4px; }
+  .stats-boxes .stat.hero .k { padding-right: 52px; }
+  .stats-boxes .stat.hero .mascot { top: 8px; right: 10px; bottom: auto; }
+  .stats-boxes .stat.hero .mascot svg { width: 46px; height: 46px; }
+  .stats-boxes .hero-fx { padding-right: 0; gap: 4px; margin-top: 8px; }
+  .stats-boxes .fx-pill { gap: 4px; padding: 2px 7px 2px 3px; }
+  .stats-boxes .fx-pill .money { font-size: 13px; }
+  .stats-boxes .hero-kept { max-width: none; margin-top: 8px; }
+}
 .receipt { position: relative; align-self: start; filter: drop-shadow(4px 4px 0 var(--shade)); margin-bottom: 30px; }
 .rc-paper { background: var(--card); border: var(--border); border-bottom: 0; border-radius: 22px 22px 0 0; padding: 20px 22px 10px; }
 .rc-top { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -1041,7 +1071,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .rc-tear path { fill: var(--card); stroke: var(--edge); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .rc-coin { position: absolute; right: -20px; bottom: -32px; transform: rotate(-10deg); line-height: 0; }
 @media (max-width: 1000px) {
-  .ov-grid { grid-template-columns: 1fr; }
+  .ov-grid.ov-receipt, .ov-grid.ov-boxes { grid-template-columns: 1fr; }
   .receipt { order: -1; width: min(100%, 460px); }
 }
 
