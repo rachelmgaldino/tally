@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowLeftRight, ArrowUp, CircleMinus, CirclePlus, CreditCard, Eye, EyeOff, Landmark, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
+import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowUp, CirclePlus, CreditCard, Eye, EyeOff, Landmark, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
@@ -308,12 +308,6 @@ export default function Overview({ name }: { name: string }) {
           ))}
         </section>
       </div>
-
-      <section className="quick" aria-label={s.quickActions}>
-        <button className="btn btn-pink" onClick={() => open({ kind: 'expense' })}><CircleMinus size={18} /> {s.expense} <span className="kbd">{text().entries.keys.expense}</span></button>
-        <button className="btn toned" style={tone('var(--green)')} onClick={() => open({ kind: 'income' })}><CirclePlus size={18} /> {s.income} <span className="kbd">{text().entries.keys.income}</span></button>
-        <button className="btn btn-blue" onClick={() => open({ kind: 'transfer' })}><ArrowLeftRight size={18} /> {s.transfer} <span className="kbd">{text().entries.keys.transfer}</span></button>
-      </section>
 
       <div className="ov-grid">
           <section className="card card-pad" aria-label={s.next}>
