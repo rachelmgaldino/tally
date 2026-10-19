@@ -85,6 +85,8 @@ Both come from your project's API settings. The publishable key is meant to be p
 - [ ] No password reset on the sign-in screen
 - [ ] The app loads every transaction into the browser and computes totals there. That's instant for one person's history, but it would need database-side aggregates for years of heavy use
 
+AI disclosure: Tally was built with Claude Code. I set the product direction and design, and reviewed, tested and merged every change; Claude drafted much of the implementation.
+
 ## Contact
 
 **Rachel Galdino**
