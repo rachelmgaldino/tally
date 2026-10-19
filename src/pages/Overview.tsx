@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowUp, CirclePlus, CreditCard, Eye, EyeOff, Landmark, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
+import { AlertCircle, ArrowDown, Check, ChevronLeft, ChevronRight, ArrowUp, CirclePlus, CreditCard, Eye, EyeOff, PiggyBank, Receipt, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AccountAvatar, CardArt, CategoryAvatar, pastel } from '../components/Avatars'
@@ -8,9 +8,9 @@ import { useTxForm } from '../components/TxFormContext'
 import { usePrefs } from '../lib/prefs'
 import { accountBalance } from '../lib/balances'
 import { availableLimit, cashFlow, dueDate, invoiceFor, invoiceOf, monthKey, toMonth } from '../lib/cards'
-import { addDays, addMonths, currentMonth, dayMonth, monthEnd, monthName, monthStart, monthTitle, today, weekdayDate } from '../lib/dates'
+import { addDays, addMonths, currentMonth, dayMonth, monthEnd, monthName, monthStart, monthTitle, shortDate, today, weekdayDate } from '../lib/dates'
 import { t as text } from '../lib/i18n'
-import { currencyName, currencyOf, formatMoney, formatCents, homeCurrency, isForeign, symbol } from '../lib/money'
+import { currencyOf, formatMoney, formatCents, homeCurrency, isForeign, symbol } from '../lib/money'
 import { convert, useRates } from '../lib/rates'
 import { CurrencyTag } from '../components/Selects'
 import { byId, useAccounts, useCards, useCategories, useTransactionMutations, useTransactions } from '../lib/queries'
@@ -119,6 +119,9 @@ export default function Overview({ name }: { name: string }) {
       <Link to="/lancamentos" className="link">{s.seeAll}</Link>
     </div>
   )
+  // The slip's print time: now, or the last day of another month.
+  const now = new Date()
+  const stamp = isCurrent ? `${shortDate(t)} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` : shortDate(addDays(to, -1))
   const nothingNext = isCurrent
     ? s.nothingNext(prefs.nextDays)
     : s.nothingThisMonth
@@ -211,60 +214,34 @@ export default function Overview({ name }: { name: string }) {
         </div>
       </header>
 
-      <section className="stats-grid stats" aria-label={s.monthSummary}>
-        <div className="card stats-panel">
-      <div className="card stat hero toned" style={tone('var(--yellow)')}>
-        <div className="hero-in">
-          <div className="hero-main">
-          <div className="k">{s.totalBalance}</div>
-          <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
-          <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
-          </div>
-          <div className="hero-extra">
-          {abroad.length > 0 && (
-            <div className="hero-fx">
-              {abroad.map((a) => (
-                <span key={a.id} className="fx-pill"><AccountAvatar account={a} size={20} /><b className="money">{accountMoney(a)}</b></span>
-              ))}
-              {prefs.convertTotal && converted != null && rates && (
-                <small className="fx-conv">≈ <b className="money">{money(converted)}</b> {s.convertedNote(dayMonth(rates.date))}</small>
-              )}
+      <section className="stats-grid stats phone-only" aria-label={s.monthSummary}>
+        <div className="card stat hero toned" style={tone('var(--yellow)')}>
+          <div className="hero-in">
+            <div className="k">{s.totalBalance}</div>
+            <div className={`v ${!hidden && total < 0 ? 'expense' : ''}`} style={{ fontSize: 34 }}>{money(total)}</div>
+            <div className="s">{!included.length ? s.noAccountYet : isCurrent ? included.map((a) => a.name).join(' + ') : s.atEndOf(monthName(m))}</div>
+            {abroad.length > 0 && (
+              <div className="hero-fx">
+                {abroad.map((a) => (
+                  <span key={a.id} className="fx-pill"><AccountAvatar account={a} size={20} /><b className="money">{accountMoney(a)}</b></span>
+                ))}
+                {prefs.convertTotal && converted != null && rates && (
+                  <small className="fx-conv">≈ <b className="money">{money(converted)}</b> {s.convertedNote(dayMonth(rates.date))}</small>
+                )}
+              </div>
+            )}
+            {prefs.showSaved && kept.length > 0 && (
+              <div className="hero-kept">
+                <span><PiggyBank size={16} /><b className="money">{money(keptTotal)}</b></span>
+                <small>{savedMonth === 0 ? s.keptLine : s.keptLineMonth(`${savedMonth > 0 ? '+' : '−'}${hidden ? '•••••' : formatCents(Math.abs(savedMonth))}`)}</small>
+              </div>
+            )}
+            <div className="hero-pills">
+              <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
+              <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
             </div>
-          )}
-          {prefs.showSaved && kept.length > 0 && (
-            <div className="hero-kept">
-              <span><PiggyBank size={16} /><b className="money">{money(keptTotal)}</b></span>
-              <small>{savedMonth === 0 ? s.keptLine : s.keptLineMonth(`${savedMonth > 0 ? '+' : '−'}${hidden ? '•••••' : formatCents(Math.abs(savedMonth))}`)}</small>
-            </div>
-          )}
           </div>
-          <div className="hero-pills">
-            <span><ArrowUp size={14} className="income" /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></span>
-            <span><ArrowDown size={14} className="expense" /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></span>
-          </div>
-        </div>
-        <span className="mascot"><Mascot size={72} plain /></span>
-      </div>
-          <div className="panel-cols">
-            <div className="panel-col">
-              <span className="dot toned" style={tone('var(--green)')}><ArrowUp size={16} /></span>
-              <div className="k">{s.incomes}</div>
-              <div className="v">{money(income)}</div>
-              <div className="s">{incomePending ? s.toReceive(money(incomePending)) : income ? s.allReceived : s.nothingYet}</div>
-            </div>
-            <div className="panel-col">
-              <span className="dot toned" style={tone('var(--pink)')}><ArrowDown size={16} /></span>
-              <div className="k">{s.expenses}</div>
-              <div className="v">{money(expense)}</div>
-              <div className="s">{expensePending ? s.stillToPay(money(expensePending)) : expense ? s.allPaid : s.nothingYet}</div>
-            </div>
-            <button className="panel-col" onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
-              <span className="dot toned" style={tone('var(--lavender)')}><CreditCard size={16} /></span>
-              <div className="k">{isCurrent ? s.invoices : s.invoicesOf(monthName(m))}</div>
-              <div className="v">{money(invoicesTotal)}</div>
-              <div className="s">{cards.length === 0 ? s.addCard : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}</div>
-            </button>
-          </div>
+          <span className="mascot"><Mascot size={72} plain /></span>
         </div>
       </section>
 
@@ -317,6 +294,7 @@ export default function Overview({ name }: { name: string }) {
       </div>
 
       <div className="ov-grid">
+        <div className="ov-col">
           <section className="card card-pad" aria-label={s.next}>
             {nextHead}
             {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {s.overdue(overdue.length)}</div>}
@@ -357,28 +335,56 @@ export default function Overview({ name }: { name: string }) {
               )
             })}
           </section>
-          <section className="card card-pad ov-wide">
-            <div className="section-title"><h3>{s.myAccounts}</h3>{listed.length > 0 && <Link to="/configuracoes/contas" className="link">{s.manage}</Link>}</div>
-            {listed.length === 0 ? (
-              <div className="placeholder">
-                <span className="ico"><Landmark size={20} /></span>
-                <h3>{s.noAccountYet}</h3>
-                <p>{s.noAccountText}</p>
-                <button className="btn btn-soft" style={{ marginTop: 14 }} onClick={() => navigate('/configuracoes/contas?nova=1')}>
-                  <CirclePlus size={16} /> {s.addAccount}
-                </button>
-              </div>
-            ) : <div className="acc-tiles">{listed.map((a) => (
-              <div key={a.id} className="account-line toned" style={tone(pastel(a.color, 0.82))}>
-                <AccountAvatar account={a} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <b>{a.name}<CurrencyTag of={a} /></b>
-                  <div className="muted small">{isForeign(a) ? currencyName(currencyOf(a)) : s.manualAccount}</div>
-                </div>
-                <span className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{accountMoney(a)}</span>
-              </div>
-            ))}</div>}
-          </section>
+        </div>
+
+        {/* The month as a till slip: every account, the month's in and out, and what's left over. */}
+        <aside className="receipt" aria-label={s.monthSummary}>
+          <div className="rc-paper">
+            <div className="rc-top"><span>{s.totalBalance}</span><span>{stamp}</span></div>
+            <div className={`rc-total money ${!hidden && total < 0 ? 'expense' : ''}`}>{money(total)}</div>
+            {!isCurrent && <div className="rc-note">{s.atEndOf(monthName(m))}</div>}
+            <hr />
+            {included.length === 0 && abroad.length === 0 && (
+              <Link to="/configuracoes/contas?nova=1" className="rc-line rc-add"><CirclePlus size={18} /><span>{s.addAccount}</span></Link>
+            )}
+            {included.map((a) => (
+              <div key={a.id} className="rc-line"><AccountAvatar account={a} size={24} /><span>{a.name}</span><i /><b className={`money ${!hidden && (balances.get(a.id) ?? 0) < 0 ? 'expense' : ''}`}>{accountMoney(a)}</b></div>
+            ))}
+            {abroad.map((a) => (
+              <div key={a.id} className="rc-line"><AccountAvatar account={a} size={24} /><span>{a.name} <small>{s.notInTotal}</small></span><i /><b className="money">{accountMoney(a)}</b></div>
+            ))}
+            {abroad.length > 0 && prefs.convertTotal && converted != null && rates && (
+              <>
+                <div className="rc-line rc-soft"><span>≈ {s.allTogether}</span><i /><b className="money">{money(converted)}</b></div>
+                <div className="rc-sub">{s.rateOf(dayMonth(rates.date))}</div>
+              </>
+            )}
+            {prefs.showSaved && kept.length > 0 && (
+              <>
+                <div className="rc-line"><PiggyBank size={18} className="rc-pig" /><span>{s.keptRow}</span><i /><b className="money">{money(keptTotal)}</b></div>
+                {savedMonth !== 0 && <div className="rc-sub">{s.keptRowMonth(`${savedMonth > 0 ? '+' : '−'}${hidden ? '•••••' : formatCents(Math.abs(savedMonth))}`)}</div>}
+              </>
+            )}
+            <hr />
+            <div className="rc-month">{monthName(m)}</div>
+            <div className="rc-line"><span>{s.receiptIn}</span><i /><b className="money income">{hidden ? '•••••' : `+${formatCents(income)}`}</b></div>
+            {incomePending > 0 && <div className="rc-sub">{s.toReceive(money(incomePending))}</div>}
+            <div className="rc-line"><span>{s.receiptOut}</span><i /><b className="money expense">{hidden ? '•••••' : `−${formatCents(expense)}`}</b></div>
+            {expensePending > 0 && <div className="rc-sub">{s.stillToPay(money(expensePending))}</div>}
+            <button className="rc-line rc-bills" onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
+              <span>{isCurrent ? s.invoices : s.invoicesOf(monthName(m))}</span><i /><b className="money">{cards.length === 0 ? s.addCardLower : money(invoicesTotal)}</b>
+            </button>
+            <div className="rc-total-line">
+              <span>{s.receiptLeft}</span>
+              <b className={`money ${!hidden && income - expense < 0 ? 'expense' : ''}`}>{hidden ? `${symbol()} •••••` : `${income - expense < 0 ? '−' : ''}${formatMoney(Math.abs(income - expense))}`}</b>
+            </div>
+            <div className="rc-thanks">{s.receiptThanks}</div>
+          </div>
+          <svg className="rc-tear" viewBox="0 0 340 16" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 0H340V2L330 14L320 2L310 14L300 2L290 14L280 2L270 14L260 2L250 14L240 2L230 14L220 2L210 14L200 2L190 14L180 2L170 14L160 2L150 14L140 2L130 14L120 2L110 14L100 2L90 14L80 2L70 14L60 2L50 14L40 2L30 14L20 2L10 14L0 2Z" />
+          </svg>
+          <span className="rc-coin"><Mascot size={64} lookUp /></span>
+        </aside>
       </div>
       {selected && <TransactionPanel tx={selected} onClose={() => setSelectedId(null)} onNavigate={setSelectedId} />}
     </main>
