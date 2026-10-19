@@ -2,6 +2,7 @@ import { CreditCard, House, List, LogOut, Plus, SlidersHorizontal, Tag, Wallet }
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { DEMO } from '../lib/config'
 import { t } from '../lib/i18n'
+import { tone } from '../lib/theme'
 import { useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { UserAvatar } from './Avatars'
@@ -32,8 +33,10 @@ export function Sidebar({ name }: { name: string }) {
   const s = t().common.nav
   return (
     <aside className="side">
-      <Link to="/" className="brand"><Mascot /><span>tally</span></Link>
-      <button className="btn btn-primary" onClick={() => open({ kind: 'expense' })}><Plus size={20} /> {s.newEntry}</button>
+      <div className="brand-row">
+        <Link to="/" className="brand"><Mascot /><span>tally</span></Link>
+        <button className="icon-btn toned new-entry" style={tone('var(--yellow)')} onClick={() => open({ kind: 'expense' })} aria-label={s.newEntry} title={s.newEntry}><Plus size={22} strokeWidth={2.5} /></button>
+      </div>
       <nav aria-label={s.main}>
         <NavLink to="/" end><House size={20} /> {s.overview}</NavLink>
         <NavLink to="/lancamentos"><List size={20} /> {s.entries}</NavLink>

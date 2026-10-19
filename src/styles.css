@@ -67,6 +67,10 @@ a { color: var(--ink); }
 .app { display: flex; gap: 24px; padding: 24px; max-width: 1440px; margin: 0 auto; align-items: flex-start; }
 .app-main { flex: 1; min-width: 0; }
 .side { width: 240px; flex: none; position: sticky; top: 24px; display: flex; flex-direction: column; gap: 20px; background: var(--card); border: var(--border); border-radius: 28px; padding: 20px; }
+.side .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.side .new-entry { box-shadow: var(--shadow); }
+.side .new-entry:hover { background: #f2d077; }
+.side .new-entry:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shade); }
 .side .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .side .brand span { font-family: var(--display); font-size: 30px; font-weight: 600; }
 .side nav { display: flex; flex-direction: column; gap: 4px; }
