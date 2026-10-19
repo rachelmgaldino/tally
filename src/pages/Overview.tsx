@@ -248,19 +248,19 @@ export default function Overview({ name }: { name: string }) {
           <div className="panel-cols">
             <div className="panel-col">
               <span className="dot toned" style={tone('var(--green)')}><ArrowUp size={16} /></span>
-              <div className="k">{s.monthIncome}</div>
+              <div className="k">{s.incomes}</div>
               <div className="v">{money(income)}</div>
               <div className="s">{incomePending ? s.toReceive(money(incomePending)) : income ? s.allReceived : s.nothingYet}</div>
             </div>
             <div className="panel-col">
               <span className="dot toned" style={tone('var(--pink)')}><ArrowDown size={16} /></span>
-              <div className="k">{s.monthExpense}</div>
+              <div className="k">{s.expenses}</div>
               <div className="v">{money(expense)}</div>
               <div className="s">{expensePending ? s.stillToPay(money(expensePending)) : expense ? s.allPaid : s.nothingYet}</div>
             </div>
             <button className="panel-col" onClick={() => navigate(cards[0] ? `/cartoes/${cards[0].id}` : '/configuracoes/cartoes?novo=1')}>
               <span className="dot toned" style={tone('var(--lavender)')}><CreditCard size={16} /></span>
-              <div className="k">{s.currentInvoices}</div>
+              <div className="k">{isCurrent ? s.invoices : s.invoicesOf(monthName(m))}</div>
               <div className="v">{money(invoicesTotal)}</div>
               <div className="s">{cards.length === 0 ? s.addCard : cards.length === 1 ? s.due(dayMonth(currentInvoices[0].due)) : s.cardsCount(cards.length)}</div>
             </button>

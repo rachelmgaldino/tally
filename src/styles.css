@@ -1213,29 +1213,32 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .pref-select { width: 100%; }
 }
 
-/* Início summary: one panel, Saldo geral in yellow on the left half (lined up with the
-   cards below), the month's income, spending and bills as three columns on the right.
+/* Início summary: one panel split in half, Saldo geral in yellow on the left, the month's
+   income, spending and bills as three columns on the right.
    Inside the yellow half the balance sits beside its extras (other currencies, savings). */
 .hero-main, .hero-extra { display: contents; }
 .panel-cols { display: none; }
 .stats-panel { display: contents; }
 @media (min-width: 761px) {
-  .stats-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; padding: 0; overflow: hidden; }
-  .stats-panel .stat.hero { min-height: 0; padding: 18px 20px; border: 0; border-right: var(--border); border-radius: 0; box-shadow: none; display: flex; flex-direction: column; justify-content: center; }
+  .stats-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0; overflow: hidden; }
+  .stats-panel .stat.hero { min-height: 0; padding: 16px 20px; border: 0; border-right: var(--border); border-radius: 0; box-shadow: none; display: flex; flex-direction: column; justify-content: center; }
   .stats-panel .hero-in { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 24px; }
   .stats-panel .hero-main { display: block; }
-  .stats-panel .hero-main .v { margin-top: 6px; }
-  .stats-panel .hero-extra { display: flex; flex-direction: column; gap: 8px; padding-left: 20px; border-left: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); min-width: 0; }
+  .stats-panel .hero-main .v { margin-top: 2px; }
+  .stats-panel .hero-extra { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding-left: 20px; border-left: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); min-width: 0; }
   .stats-panel .hero-extra:empty { display: none; }
   .stats-panel .hero-fx { margin-top: 0; padding-right: 0; gap: 6px; }
   .stats-panel .fx-conv { font-size: 12.5px; }
   .stats-panel .hero-kept { margin-top: 0; padding-top: 8px; max-width: none; margin-right: 44px; }
   .stats-panel .stat.hero .mascot svg { width: 60px; height: 60px; }
 
-  .panel-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; align-content: center; padding: 18px 0; }
-  .panel-col { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 18px; border-left: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent); text-align: left; color: var(--ink); }
+  .panel-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; align-content: center; padding: 16px 0 16px 20px; }
+  .panel-col { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 1px; padding: 0 18px; border-left: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent); text-align: left; color: var(--ink); }
   .panel-col:first-child { border-left: 0; padding-left: 0; }
-  .panel-col .dot { width: 32px; height: 32px; border-radius: 50%; border: var(--border); display: grid; place-items: center; color: var(--ink); margin-bottom: 6px; }
+  .panel-col .dot { width: 26px; height: 26px; border-radius: 50%; border: var(--border); display: grid; place-items: center; color: var(--ink); }
+  .panel-col .dot svg { width: 14px; height: 14px; }
+  .panel-col .v, .panel-col .s { grid-column: 1 / -1; }
+  .panel-col .v { margin-top: 4px; }
   .panel-col .k { font-size: 13px; font-weight: 800; }
   .panel-col .v { font-family: var(--display); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
   .panel-col .s { font-size: 12px; font-weight: 700; color: var(--muted); }
