@@ -1,4 +1,4 @@
-import { CreditCard, House, List, LogOut, Plus, SlidersHorizontal, Tag, Wallet } from 'lucide-react'
+import { ArrowLeftRight, CircleMinus, CirclePlus, CreditCard, House, List, LogOut, Plus, SlidersHorizontal, Tag, Wallet } from 'lucide-react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { DEMO } from '../lib/config'
 import { t } from '../lib/i18n'
@@ -6,6 +6,7 @@ import { tone } from '../lib/theme'
 import { useCards } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { UserAvatar } from './Avatars'
+import { Popover } from './Picker'
 import { useTxForm } from './TxFormContext'
 
 /** The coin mascot. `plain` is the white version without the stem and cheeks, used on the yellow stat card. */
@@ -25,17 +26,38 @@ export function Mascot({ size = 44, plain }: { size?: number; plain?: boolean })
   )
 }
 
+/** What the + offers, in the same colours the entry form uses for each kind. */
+const KINDS = [
+  ['expense', CircleMinus, 'var(--pink)'],
+  ['income', CirclePlus, 'var(--green)'],
+  ['transfer', ArrowLeftRight, 'var(--blue)'],
+] as const
+
 export function Sidebar({ name }: { name: string }) {
   const { open } = useTxForm()
   const { data: cards = [] } = useCards()
   const { pathname } = useLocation()
   const firstCard = cards.find((c) => !c.archived)
   const s = t().common.nav
+  const kinds = t().common.kinds
+  const keys = t().entries.keys
   return (
     <aside className="side">
       <div className="brand-row">
         <Link to="/" className="brand"><Mascot /><span>tally</span></Link>
-        <button className="icon-btn toned new-entry" style={tone('var(--yellow)')} onClick={() => open({ kind: 'expense' })} aria-label={s.newEntry} title={s.newEntry}><Plus size={22} strokeWidth={2.5} /></button>
+        <Popover
+          className="new-entry-menu"
+          popClassName="menu-dark kinds-menu"
+          trigger={(on, toggle) => (
+            <button className="icon-btn toned new-entry" style={tone('var(--yellow)')} onClick={toggle} aria-label={s.newEntry} title={s.newEntry} aria-expanded={on}><Plus size={22} strokeWidth={2.5} /></button>
+          )}
+        >
+          {(close) => KINDS.map(([kind, Icon, color]) => (
+            <button key={kind} className="toned" style={tone(color)} onClick={() => { close(); open({ kind }) }}>
+              <Icon size={18} /> {kinds[kind]} <span className="kbd">{keys[kind]}</span>
+            </button>
+          ))}
+        </Popover>
       </div>
       <nav aria-label={s.main}>
         <NavLink to="/" end><House size={20} /> {s.overview}</NavLink>
