@@ -10,15 +10,16 @@ import { Popover } from './Picker'
 import { useTxForm } from './TxFormContext'
 
 /** The coin mascot. `plain` is the white version without the stem and cheeks, used on the yellow stat card. */
-export function Mascot({ size = 44, plain }: { size?: number; plain?: boolean }) {
+/** `lookUp`: eyes up and to the left, for when it sits under something it's reading. */
+export function Mascot({ size = 44, plain, lookUp }: { size?: number; plain?: boolean; lookUp?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
       <circle cx="32" cy="34" r="26" fill={plain ? '#FFFDF8' : '#F6D98B'} stroke="#2B2A33" strokeWidth="3" />
       {!plain && <path d="M32 8c0-4 4-6 7-5" fill="none" stroke="#2B2A33" strokeWidth="3" strokeLinecap="round" />}
       <ellipse cx="24" cy="31" rx="6" ry="7" fill="#fff" stroke="#2B2A33" strokeWidth="2.5" />
       <ellipse cx="40" cy="31" rx="6" ry="7" fill="#fff" stroke="#2B2A33" strokeWidth="2.5" />
-      <circle cx="25.5" cy={plain ? 29.5 : 32.5} r="3" fill="#2B2A33" />
-      <circle cx="41.5" cy={plain ? 29.5 : 32.5} r="3" fill="#2B2A33" />
+      <circle cx={lookUp ? 21.8 : 25.5} cy={lookUp ? 28.6 : plain ? 29.5 : 32.5} r="3" fill="#2B2A33" />
+      <circle cx={lookUp ? 37.8 : 41.5} cy={lookUp ? 28.6 : plain ? 29.5 : 32.5} r="3" fill="#2B2A33" />
       <path d="M27 43q5 5 10 0" fill="none" stroke="#2B2A33" strokeWidth="2.5" strokeLinecap="round" />
       {!plain && <circle cx="17" cy="41" r="3.5" fill="#EFB3C3" />}
       {!plain && <circle cx="47" cy="41" r="3.5" fill="#EFB3C3" />}

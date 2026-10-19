@@ -1013,19 +1013,67 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .next-head h3 { flex: 1; }
 .days-pick { padding: 2px; }
 .days-pick button { min-height: 30px; padding: 0 10px; font-size: 13px; }
-/* Início: Próximos and cartões share a row at the same height; contas run full width underneath */
-.ov-grid { align-items: stretch; }
-.ov-grid .ov-wide { grid-column: 1 / -1; }
-.acc-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.acc-tiles .account-line { margin-bottom: 0; }
 @media (max-width: 760px) {
   .next-head { flex-wrap: wrap; }
   .next-head .days-pick { order: 3; width: 100%; }
 }
-.ov-grid > section[aria-label="Próximos"] { display: flex; flex-direction: column; }
-.ov-grid > section[aria-label="Próximos"] > .all-clear { margin: auto 0; justify-content: center; }
-.acc-tiles { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.ov-col > section[aria-label="Próximos"] > .all-clear { justify-content: center; }
+
+/* Início (desktop): Próximos and cartões on the left, the month as a receipt in its own column. */
+.ov-grid.ov-receipt { grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.ov-receipt .ov-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+/* Or, in Preferências, the four boxes: kept short, the coin up in the Saldo geral's corner and the
+   other currencies on one line. Próximos and cartões share a row, contas run full width underneath. */
+.ov-grid.ov-boxes { align-items: stretch; }
+.ov-boxes .ov-col { display: contents; }
+.ov-boxes .ov-col > section[aria-label="Próximos"] { display: flex; flex-direction: column; }
+.ov-boxes .ov-col > section[aria-label="Próximos"] > .all-clear { margin: auto 0; justify-content: center; }
+.ov-boxes .ov-wide { grid-column: 1 / -1; }
+.acc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.acc-tiles .account-line { margin-bottom: 0; }
 .acc-tiles .account-line b, .acc-tiles .account-line .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 761px) {
+  .stats-boxes .stat { min-height: 0; padding: 16px 20px; }
+  .stats-boxes .stat .v { margin-top: 6px; }
+  .stats-boxes .stat .s { margin-top: 4px; }
+  .stats-boxes .stat.hero .k { padding-right: 52px; }
+  .stats-boxes .stat.hero .mascot { top: 8px; right: 10px; bottom: auto; }
+  .stats-boxes .stat.hero .mascot svg { width: 46px; height: 46px; }
+  .stats-boxes .hero-fx { padding-right: 0; gap: 4px; margin-top: 8px; }
+  .stats-boxes .fx-pill { gap: 4px; padding: 2px 7px 2px 3px; }
+  .stats-boxes .fx-pill .money { font-size: 13px; }
+  .stats-boxes .hero-kept { max-width: none; margin-top: 8px; }
+}
+.receipt { position: relative; align-self: start; filter: drop-shadow(4px 4px 0 var(--shade)); margin-bottom: 30px; }
+.rc-paper { background: var(--card); border: var(--border); border-bottom: 0; border-radius: 22px 22px 0 0; padding: 20px 22px 10px; }
+.rc-top { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.rc-top span:first-child { letter-spacing: .12em; text-transform: uppercase; }
+.rc-total { display: block; font-size: 40px; line-height: 1.1; margin: 6px 0 2px; overflow-wrap: anywhere; }
+.rc-note { font-size: 13px; font-weight: 700; color: var(--muted); }
+.receipt hr { border: 0; border-top: 2px dashed var(--line-strong); margin: 12px 0 6px; }
+.rc-line { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 0; font-size: 14px; font-weight: 700; color: var(--ink); text-align: left; text-decoration: none; }
+.rc-line > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-line small { font-size: 12px; font-weight: 700; color: var(--muted); }
+.rc-line i { flex: 1; min-width: 12px; align-self: flex-end; margin-bottom: 7px; border-bottom: 2px dotted var(--line-strong); }
+.rc-line b { font-size: 16px; white-space: nowrap; }
+.rc-soft > span { color: var(--muted); font-size: 13px; }
+.rc-pig { flex: none; color: var(--muted); }
+.rc-add { color: var(--muted); }
+.rc-bills { border: 0; background: none; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; border-radius: 10px; }
+.rc-bills:hover span { text-decoration: underline; }
+.rc-month { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
+.rc-sub { margin: -4px 0 2px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.rc-total-line { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 10px; padding-top: 6px; border-top: 4px double var(--edge); }
+.rc-total-line span { font-family: var(--display); font-size: 20px; font-weight: 600; }
+.rc-total-line b { font-size: 26px; }
+.rc-thanks { margin: 14px 64px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .06em; }
+.rc-tear { display: block; width: 100%; height: 16px; margin-top: -1px; }
+.rc-tear path { fill: var(--card); stroke: var(--edge); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.rc-coin { position: absolute; right: -20px; bottom: -32px; transform: rotate(-10deg); line-height: 0; }
+@media (max-width: 1000px) {
+  .ov-grid.ov-receipt, .ov-grid.ov-boxes { grid-template-columns: 1fr; }
+  .receipt { order: -1; width: min(100%, 460px); }
+}
 
 /* Pastel surfaces set from the code (style={tone(...)}). */
 .toned { background: var(--tone); }

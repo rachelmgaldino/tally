@@ -42,6 +42,10 @@ export default function Preferences() {
 
       <section className="card card-pad prefs">
         <h3 className="section-h">{s.overview}</h3>
+        <div className="pref-row desk-only">
+          <div><b>{s.homeSummary}</b><small>{s.homeSummaryNote}</small></div>
+          <Segmented<Prefs['homeSummary']> value={prefs.homeSummary} onChange={(homeSummary) => change({ homeSummary })} options={[['receipt', s.receipt], ['boxes', s.boxes]]} />
+        </div>
         <div className="pref-row">
           <div><b>{s.showSaved}</b><small>{s.showSavedNote}</small></div>
           <Toggle checked={prefs.showSaved} onChange={(showSaved) => change({ showSaved })} label={<span className="sr-only">{s.showSaved}</span>} />
