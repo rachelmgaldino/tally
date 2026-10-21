@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountBalance, periodSummary } from './balances'
+import { accountBalance, periodSummary, withoutPrevious } from './balances'
 import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
 import { centsFromTyping, formatMoney, formatCents, formatSigned } from './money'
 import type { Account, Transaction } from './types'
@@ -81,6 +81,13 @@ describe('balances', () => {
     expect(s.balance).toBe(203150)
     expect(s.incomeAll).toBe(180000)
     expect(s.forecast).toBe(383150)
+  })
+  it('leaves the Saldo anterior out when asked', () => {
+    const nov = withoutPrevious(periodSummary([accounts[0]], txs, '2026-11-01', '2026-12-01'))
+    expect(nov.previous).toBe(0)
+    expect(nov.balance).toBe(0)
+    expect(nov.forecast).toBe(180000)
+    expect(nov.incomeAll).toBe(180000)
   })
   it('starts a month from the last one\'s Previsto, unpaid bills included', () => {
     const late = [...txs, tx({ kind: 'expense', amount_cents: 35792, date: '2026-10-05', paid: false })]

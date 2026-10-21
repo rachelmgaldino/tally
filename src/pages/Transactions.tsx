@@ -13,7 +13,7 @@ import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { Modal, Segmented } from '../components/ui'
-import { effectOnSet, periodSummary } from '../lib/balances'
+import { effectOnSet, periodSummary, withoutPrevious } from '../lib/balances'
 import { transactionsTable } from '../lib/api'
 import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
 import { deleteEntries, useRefresh, useSeriesUpkeep } from '../lib/entries'
@@ -68,7 +68,7 @@ export default function Transactions() {
   const s = t().entries
   const c = t().common
 
-  const { prefs } = usePrefs()
+  const { prefs, setPrefs } = usePrefs()
   const [spanState, setSpan] = useState<Span>(() => spanAt(prefs.period, today()))
   // A change of "Período padrão" keeps the same moment in view.
   const span = spanState.kind === prefs.period ? spanState : spanAt(prefs.period, spanState.start)
@@ -529,6 +529,8 @@ export default function Transactions() {
           title={span.kind === 'month' ? s.summaryMonth(spanLabel(span)) : s.summarySpan(spanLabel(span))}
           isMonth={span.kind === 'month'}
           currency={summaryCurrency}
+          withPrevious={prefs.previousInForecast}
+          onWithPrevious={(previousInForecast) => setPrefs({ previousInForecast })}
           filter={
             filteredAccount ? <span className="sum-filter"><AccountAvatar account={filteredAccount} size={20} />{filteredAccount.name}</span>
             : filteredCard ? <span className="sum-filter"><AccountIcon icon={filteredCard.icon} color={filteredCard.color} size={20} />{filteredCard.name}</span>
@@ -539,7 +541,7 @@ export default function Transactions() {
         {rows.length > 0 && (
           <SummaryPill
             label={simpleTotal ? s.periodBalance : s.forecast}
-            cents={simpleTotal ? totals.income - totals.expense - totals.saved - totals.sent : summary.forecast}
+            cents={simpleTotal ? totals.income - totals.expense - totals.saved - totals.sent : (prefs.previousInForecast ? summary : withoutPrevious(summary)).forecast}
             currency={summaryCurrency}
           />
         )}

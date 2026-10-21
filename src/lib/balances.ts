@@ -65,6 +65,15 @@ export interface PeriodSummary {
 }
 
 /**
+ * The same summary with the Saldo anterior left out, for when the forecast
+ * should only count the period's own money. Saldo atual drops it too, so it
+ * reads as "this period so far".
+ */
+export function withoutPrevious(summary: PeriodSummary): PeriodSummary {
+  return { ...summary, previous: 0, balance: summary.balance - summary.previous, forecast: summary.forecast - summary.previous }
+}
+
+/**
  * The footer of the Lançamentos screen for one period [from, to).
  * Transfers between the selected accounts cancel out; a transfer into or out of
  * the selection counts as income or expense for it, except one into or out of

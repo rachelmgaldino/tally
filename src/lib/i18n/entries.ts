@@ -146,6 +146,10 @@ export const pt = {
     money: (isMonth: boolean): string => (isMonth ? 'Dinheiro do mês' : 'Dinheiro do período'),
     /** "R$ 1.000,00 que já tinha + R$ 500,00 de receitas = " (the total follows in bold) */
     moneySum: (previous: string, income: string) => `${previous} que já tinha + ${income} de receitas = `,
+    /** With the Saldo anterior left out: the amount (in bold) and then this. */
+    incomeOnly: ' de receitas',
+    previousOn: 'Deixar o saldo anterior fora do previsto',
+    previousOff: 'Somar o saldo anterior no previsto',
     barAria: (paid: string, toPay: string, short: string | null, left: string) =>
       `Já pago ${paid}, a pagar ${toPay}, ${short ? `${short} negativo` : `sobra ${left}`}`,
     alreadyPaid: 'já pago',
@@ -289,6 +293,9 @@ export const en: typeof pt = {
     currentBalance: 'Current balance',
     money: (isMonth) => (isMonth ? "This month's money" : "This period's money"),
     moneySum: (previous, income) => `${previous} you had + ${income} income = `,
+    incomeOnly: ' income',
+    previousOn: 'Leave the previous balance out of the forecast',
+    previousOff: 'Add the previous balance to the forecast',
     barAria: (paid, toPay, short, left) =>
       `Paid ${paid}, to pay ${toPay}, ${short ? `${short} short` : `${left} left over`}`,
     alreadyPaid: 'paid',
