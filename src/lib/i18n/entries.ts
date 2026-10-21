@@ -68,6 +68,10 @@ export const pt = {
   pendingTitle: 'Pendente. Clique para marcar como pago',
   paidAria: 'Pago. Desmarcar',
   markPaid: 'Marcar como pago',
+  doneTitle: 'Feita. Clique para marcar como pendente',
+  pendingDoneTitle: 'Pendente. Clique para marcar como feita',
+  doneAria: 'Feita. Desmarcar',
+  markDone: 'Marcar como feita',
 
   // Summary
   summaryMonth: (month: string) => `Resumo de ${month}`,
@@ -215,6 +219,10 @@ export const en: typeof pt = {
   pendingTitle: 'Pending. Click to mark as paid',
   paidAria: 'Paid. Unmark',
   markPaid: 'Mark as paid',
+  doneTitle: 'Done. Click to mark as pending',
+  pendingDoneTitle: 'Pending. Click to mark as done',
+  doneAria: 'Done. Unmark',
+  markDone: 'Mark as done',
 
   summaryMonth: (month) => `${month} summary`,
   summarySpan: (span) => `Summary · ${span}`,
