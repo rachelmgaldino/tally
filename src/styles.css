@@ -128,6 +128,8 @@ a { color: var(--ink); }
 .btn-pink:hover:not(:disabled) { background: #eeb0bd; }
 .btn-blue { background: var(--blue); }
 .btn-blue:hover:not(:disabled) { background: #b0cfe8; }
+.btn-lav { background: var(--lavender); }
+.btn-lav:hover:not(:disabled) { background: #c8bfea; }
 .btn-ghost-green { width: 100%; background: var(--green); }
 .btn-text-green { color: var(--income); font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .btn-text-green:hover { text-decoration: underline; }
@@ -204,6 +206,11 @@ select.input { appearance: auto; }
 .detail .value { font-family: var(--display); font-size: 20px; font-weight: 500; }
 .drawer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .drawer-actions .btn { width: 100%; }
+.drawer-actions .pay-act { background: var(--green); }
+/* Delete gets the last row to itself; a button left alone in the row above it stretches too. */
+@media (min-width: 761px) {
+  .drawer-actions .btn-pink, .drawer-actions > .btn:nth-last-child(2):nth-child(odd) { grid-column: 1 / -1; }
+}
 
 /* Avatars */
 .avatar { border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; overflow: hidden; border: var(--border); }
@@ -839,7 +846,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .drawer-actions { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin-top: auto; }
   .drawer-actions .btn { flex-direction: column; gap: 4px; min-height: 66px; padding: 8px 4px; border-radius: 18px; font-size: 13px; box-shadow: none; }
   .drawer-actions .btn-primary { background: var(--card); }
-  .drawer-actions .pay-act { order: -1; background: var(--green); }
+  .drawer-actions .pay-act { order: -1; }
 }
 .more-list > * + * { border-top: 1.5px dashed var(--line); }
 .more-list > .toggle { flex-direction: row-reverse; font-size: inherit; }
@@ -1133,7 +1140,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 :root[data-theme='dark'] :is(.btn-pink, .btn-danger, .chip-kind.expense, .chip-kind.payment, .kind-tabs button.on.expense, .overdue, .ph-alert,
   .status-late, .tile.pink, .mini-btn) { --tone: var(--pink); }
 :root[data-theme='dark'] :is(.btn-blue, .segmented button.on, .chip-kind.transfer, .kind-tabs button.on.transfer, .status-future, .form-section.repeat) { --tone: var(--blue); }
-:root[data-theme='dark'] :is(.status-closed, .series-nav, .tx-desc .part) { --tone: var(--lavender); }
+:root[data-theme='dark'] :is(.status-closed, .series-nav, .tx-desc .part, .btn-lav) { --tone: var(--lavender); }
 :root[data-theme='dark'] .tile.sand { --tone: var(--sand); }
 /* The period summary goes lilac at night so it stands out from the peach Saldo geral. */
 :root[data-theme='dark'] :is(.summary-card, .sum-pill) { --tone: var(--lavender); }
@@ -1143,7 +1150,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 :root[data-theme='dark'] :is(.toned, .side nav a.active, .btn-primary, .prompt-option.primary, .save-btn, .ph-card-pick button.on, .cat-icons button.on,
   .filter-bar > .picker > button.on, .option-icons button.on > span, .tabs button.on, .fil.on, .pick.on, .day-chip.on, .tx-page .icon-btn.on,
   .status-current, .welcome, .btn-soft, .btn-ghost-green, .chip-kind, .kind-tabs button.on, .status-paid, .inv-paid, .ph-inv-done,
-  .drawer-actions .pay-act, .ph-det-status.paid, .btn-pink, .btn-danger, .overdue, .ph-alert, .status-late, .tile, .mini-btn, .btn-blue,
+  .drawer-actions .pay-act, .ph-det-status.paid, .btn-pink, .btn-danger, .overdue, .ph-alert, .status-late, .tile, .mini-btn, .btn-blue, .btn-lav,
   .segmented button.on, .status-future, .form-section.repeat, .status-closed, .series-nav, .tx-desc .part, .summary-card, .sum-pill, .demo-banner,
   .invoice-banner, .invoice-head, .paid-btn.invoice, .chip, .tx-row.selected) {
   --ink: #3a3358;
@@ -1162,7 +1169,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   border-color: var(--tone);
   color: var(--ink);
 }
-:root[data-theme='dark'] :is(.toned, .btn-primary, .btn-soft, .btn-pink, .btn-blue, .btn-danger, .btn-ghost-green, .prompt-option.primary, .save-btn, .mini-btn):hover:not(:disabled) {
+:root[data-theme='dark'] :is(.toned, .btn-primary, .btn-soft, .btn-pink, .btn-blue, .btn-lav, .btn-danger, .btn-ghost-green, .prompt-option.primary, .save-btn, .mini-btn):hover:not(:disabled) {
   background: color-mix(in oklch, var(--tone) 88%, white);
 }
 

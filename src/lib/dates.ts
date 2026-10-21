@@ -62,24 +62,24 @@ export function weekdayName(iso: string): string {
   return t().common.weekdays[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
 }
 
-/** "sábado, 18 de outubro" / "Saturday, October 18" */
+/** "sábado, 18 de outubro" / "Saturday, 18 October" */
 export function weekdayDate(iso: string): string {
   const [, m, d] = iso.split('-').map(Number)
   return t().common.weekdayDate(weekdayName(iso), d, t().common.monthsInline[m - 1])
 }
 
-/** "2026-10-18" → "18/10" (Portuguese) or "10/18" (English) */
+/** "2026-10-18" → "18/10", day first in both languages (English follows Canada, not the US). */
 export function dayMonth(iso: string): string {
   const [, mo, d] = iso.split('-')
-  return t().common.dayMonthOrder === 'md' ? `${mo}/${d}` : `${d}/${mo}`
+  return `${d}/${mo}`
 }
 
-/** "2026-10-01" → "01/10/26" (Portuguese) or "10/01/26" (English) */
+/** "2026-10-01" → "01/10/26" */
 export function shortDate(iso: string): string {
   return `${dayMonth(iso)}/${iso.slice(2, 4)}`
 }
 
-/** "2026-10-01" → "1 de outubro de 2026" / "October 1, 2026" */
+/** "2026-10-01" → "1 de outubro de 2026" / "1 October 2026" */
 export function longDate(iso: string): string {
   const [y, mo, d] = iso.split('-').map(Number)
   return t().common.longDate(d, t().common.monthsInline[mo - 1], y)
