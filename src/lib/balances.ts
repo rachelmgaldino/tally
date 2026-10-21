@@ -32,9 +32,9 @@ export interface AccountBalance {
 }
 
 /**
- * A transfer is saved as done even when it is dated later (a fixed transfer
- * creates a year of them), so the current balance also leaves out anything
- * dated after `on`.
+ * Something marked done can still be dated later (older fixed transfers were
+ * saved as done a year ahead), so the current balance also leaves out anything
+ * dated after `on`. A pending transfer only counts in the forecast.
  */
 export function accountBalance(account: Account, txs: Transaction[], until?: string, on = today()): AccountBalance {
   let current = account.initial_balance_cents
@@ -80,8 +80,8 @@ export function periodSummary(
   abroadIds: Set<string> = new Set(),
 ): PeriodSummary {
   const ids = new Set(accounts.map((a) => a.id))
-  let saved = 0
-  let sent = 0
+  let saved = 0, savedPaid = 0
+  let sent = 0, sentPaid = 0
   let previous = 0
   for (const a of accounts) previous += a.initial_balance_cents
   let incomePaid = 0, incomeAll = 0, expensePaid = 0, expenseAll = 0
@@ -96,11 +96,13 @@ export function periodSummary(
     // Money moved into or out of a kept account is "guardado", not spending.
     if (tx.kind === 'transfer' && (keptIds.has(tx.to_account_id ?? '') || keptIds.has(tx.account_id ?? ''))) {
       saved -= d
+      if (tx.paid) savedPaid -= d
       continue
     }
     // Money changed into another currency left this one without being spent.
     if (tx.kind === 'transfer' && (abroadIds.has(tx.to_account_id ?? '') || abroadIds.has(tx.account_id ?? ''))) {
       sent -= d
+      if (tx.paid) sentPaid -= d
       continue
     }
     if (d > 0) {
@@ -117,7 +119,8 @@ export function periodSummary(
     incomeAll,
     expensePaid,
     expenseAll,
-    balance: previous + incomePaid - expensePaid - saved - sent,
+    // A transfer still pending (not done yet) waits for the forecast, like an unpaid bill.
+    balance: previous + incomePaid - expensePaid - savedPaid - sentPaid,
     forecast: previous + incomeAll - expenseAll - saved - sent,
     saved,
     sent,

@@ -166,6 +166,8 @@ export default function Transactions() {
       // A transfer into savings (or back out) is "guardado": it leaves the day-to-day money without being spent.
       // One into another currency (or back) goes apart the same way, counted on the side in this currency.
       if (tx.kind === 'transfer') {
+        // A transfer not made yet moves nothing until it is marked done.
+        if (!tx.paid) continue
         const into = keptIds.has(tx.to_account_id ?? ''), outOf = keptIds.has(tx.account_id ?? '')
         if (into !== outOf) sum.saved += into ? tx.amount_cents : -tx.amount_cents
         const abroad = abroadIds.has(tx.to_account_id ?? ''), back = abroadIds.has(tx.account_id ?? '')
@@ -495,15 +497,15 @@ export default function Transactions() {
                       {isCardPurchase(tx) ? <span className="paid-spacer" /> : (
                         <button
                           className={`paid-btn ${tx.paid ? '' : 'pending'}`}
-                          title={tx.virtual ? s.payBill : tx.paid ? s.paidTitle : s.pendingTitle}
-                          aria-label={tx.virtual ? s.payBill : tx.paid ? s.paidAria : s.markPaid}
+                          title={tx.virtual ? s.payBill : tx.kind === 'transfer' ? (tx.paid ? s.doneTitle : s.pendingDoneTitle) : tx.paid ? s.paidTitle : s.pendingTitle}
+                          aria-label={tx.virtual ? s.payBill : tx.kind === 'transfer' ? (tx.paid ? s.doneAria : s.markDone) : tx.paid ? s.paidAria : s.markPaid}
                           onClick={(e) => {
                             e.stopPropagation()
                             if (selecting) return openRow()
                             if (tx.virtual) open({ kind: 'payment', cardId: tx.card_id!, invoiceMonth: tx.invoice_month! })
                             else update.mutate({ id: tx.id, patch: { paid: !tx.paid } })
                           }}
-                          disabled={tx.kind === 'transfer' || tx.kind === 'payment'}
+                          disabled={tx.kind === 'payment'}
                         >
                           {tx.paid ? <ThumbsUp size={18} /> : <ThumbsDown size={18} style={{ transform: 'scaleX(-1)' }} />}
                         </button>
