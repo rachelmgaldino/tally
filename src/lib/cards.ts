@@ -28,23 +28,45 @@ export function monthsBetween(a: string, b: string): number {
   return (y.year - x.year) * 12 + (y.month - x.month)
 }
 
-/** The invoice closes in its due month when the due day comes after the closing day, otherwise the month before. */
-const closesMonthsBefore = (card: Pick<Card, 'closing_day' | 'due_day'>) => (card.due_day > card.closing_day ? 0 : 1)
+type Days = Pick<Card, 'closing_day' | 'due_day'>
+/** A card's days, plus a change saved "from the next bill" if there is one. */
+export type CardDays = Days & Partial<Pick<Card, 'old_closing_day' | 'old_due_day' | 'days_from'>>
 
-/** The invoice a purchase on `date` falls into. A purchase on the closing day goes to the next invoice. */
-export function invoiceFor(card: Pick<Card, 'closing_day' | 'due_day'>, date: string): string {
+/** The closing and due day that apply to one invoice: the old ones before a scheduled change. */
+export function daysFor(card: CardDays, invoice: string): Days {
+  if (card.days_from && invoice < card.days_from && card.old_closing_day && card.old_due_day) {
+    return { closing_day: card.old_closing_day, due_day: card.old_due_day }
+  }
+  return card
+}
+
+/** The invoice closes in its due month when the due day comes after the closing day, otherwise the month before. */
+const closesMonthsBefore = (card: Days) => (card.due_day > card.closing_day ? 0 : 1)
+
+function invoiceWith(card: Days, date: string): string {
   const m = toMonth(date)
   const closesThisMonth = date < dayIn(m, card.closing_day)
   const closingMonth = closesThisMonth ? m : addMonths(m, 1)
   return monthKey(addMonths(closingMonth, closesMonthsBefore(card)))
 }
 
-export function closingDate(card: Pick<Card, 'closing_day' | 'due_day'>, invoice: string): string {
-  return dayIn(addMonths(toMonth(invoice), -closesMonthsBefore(card)), card.closing_day)
+/** The invoice a purchase on `date` falls into. A purchase on the closing day goes to the next invoice. */
+export function invoiceFor(card: CardDays, date: string): string {
+  if (!card.days_from || !card.old_closing_day || !card.old_due_day) return invoiceWith(card, date)
+  // Before a scheduled change the old days decide; from it on, the new ones (never landing before it).
+  const before = invoiceWith({ closing_day: card.old_closing_day, due_day: card.old_due_day }, date)
+  if (before < card.days_from) return before
+  const after = invoiceWith(card, date)
+  return after < card.days_from ? card.days_from : after
 }
 
-export function dueDate(card: Pick<Card, 'due_day'>, invoice: string): string {
-  return dayIn(toMonth(invoice), card.due_day)
+export function closingDate(card: CardDays, invoice: string): string {
+  const d = daysFor(card, invoice)
+  return dayIn(addMonths(toMonth(invoice), -closesMonthsBefore(d)), d.closing_day)
+}
+
+export function dueDate(card: CardDays, invoice: string): string {
+  return dayIn(toMonth(invoice), daysFor(card, invoice).due_day)
 }
 
 /** "Fatura Outubro 2026" / "October 2026 bill" */

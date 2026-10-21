@@ -1,7 +1,7 @@
 import type { Table } from './api'
 import { defaultCategories, type CategoryKey } from './defaults'
 import { language, t as strings } from './i18n'
-import { dueDate, invoiceFor, invoiceOf } from './cards'
+import { dueDate, invoiceFor, invoiceOf, shiftInvoice } from './cards'
 import { addMonths, currentMonth, monthStart, today, type Month } from './dates'
 import { defaultHorizon, seriesRows } from './series'
 import type { Card, NewTransaction, Period, Series, Transaction } from './types'
@@ -125,7 +125,7 @@ function seed(): Store {
     }
     const row = { ...base, ...template, date: s.start_date }
     const made = seriesRows(row, s, 0, defaultHorizon(), true).map((r) =>
-      r.card_id ? { ...r, invoice_month: invoiceFor(cards.find((c) => c.id === r.card_id)!, r.date) } : r)
+      r.card_id ? { ...r, invoice_month: shiftInvoice(invoiceFor(cards.find((c) => c.id === r.card_id)!, r.date), installments ? r.series_index! - 1 : 0) } : r)
     s.generated_count = made.length
     series.push(s)
     rows.push(...made)

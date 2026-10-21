@@ -42,6 +42,15 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
   )
 }
 
+/**
+ * Amounts fill in from the right as digits are typed, so the caret just waits at the end
+ * instead of selecting the whole number (which browsers paint bright blue).
+ */
+export function caretToEnd(e: React.FocusEvent<HTMLInputElement>) {
+  const el = e.target
+  requestAnimationFrame(() => el.setSelectionRange(el.value.length, el.value.length))
+}
+
 export function MoneyInput({ value, onChange, autoFocus, prefix, id, label }: {
   value: number
   onChange: (cents: number) => void
@@ -61,7 +70,7 @@ export function MoneyInput({ value, onChange, autoFocus, prefix, id, label }: {
         value={formatCents(value)}
         autoFocus={autoFocus}
         onChange={(e) => onChange(centsFromTyping(e.target.value))}
-        onFocus={(e) => e.target.select()}
+        onFocus={caretToEnd}
       />
     </div>
   )

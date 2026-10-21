@@ -50,3 +50,19 @@ describe('invoices', () => {
     expect([invoice.amount_cents, invoice.date, invoice.account_id]).toEqual([6000, '2026-11-05', 'a1'])
   })
 })
+
+describe('a change of days from the next bill', () => {
+  // Was "fecha 29, vence 5"; from the December bill on it is "fecha 10, vence 17".
+  const c = { closing_day: 10, due_day: 17, old_closing_day: 29, old_due_day: 5, days_from: '2026-12-01' }
+  it('keeps the old days on the bills before it', () => {
+    expect(dueDate(c, '2026-11-01')).toBe('2026-11-05')
+    expect(closingDate(c, '2026-11-01')).toBe('2026-10-29')
+    expect(invoiceFor(c, '2026-10-20')).toBe('2026-11-01')
+  })
+  it('uses the new days from it on', () => {
+    expect(dueDate(c, '2026-12-01')).toBe('2026-12-17')
+    expect(closingDate(c, '2026-12-01')).toBe('2026-12-10')
+    expect(invoiceFor(c, '2026-11-02')).toBe('2026-12-01')
+    expect(invoiceFor(c, '2026-12-12')).toBe('2027-01-01')
+  })
+})

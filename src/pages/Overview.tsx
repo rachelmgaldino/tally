@@ -284,22 +284,11 @@ export default function Overview({ name }: { name: string }) {
           </Link>
         </section>
 
-        {overdue.length > 0 && (
-          <div className="ph-alert" role="alert">
-            <AlertCircle size={20} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <b>{overdue.length === 1 ? entryName(overdue[0]) : s.lateCount(overdue.length)}</b>
-              <small>{overdue.length === 1 ? s.lateOne(dayMonth(overdue[0].date)) : ''}{money(overdue.reduce((s, tx) => s + tx.amount_cents, 0))}</small>
-            </div>
-            {overdue.length === 1
-              ? <button className="btn" onClick={() => settle(overdue[0])}>{s.pay}</button>
-              : <Link className="btn" to="/lancamentos">{s.see}</Link>}
-          </div>
-        )}
-
         <section className="card card-pad" aria-label={s.next}>
           {nextHead}
-          {upcoming.length === 0 ? <AllClear message={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
+          {overdue.length > 0 && <div className="overdue"><AlertCircle size={18} /> {s.overdue(overdue.length)}</div>}
+          {overdue.map((tx) => nextRow(tx, true))}
+          {upcoming.length === 0 && overdue.length === 0 ? <AllClear message={nothingNext} /> : upcoming.map((tx) => nextRow(tx))}
         </section>
 
         <section className="card card-pad" aria-label={s.myAccounts}>

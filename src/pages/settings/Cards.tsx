@@ -5,9 +5,10 @@ import { AccountIconPicker, type IconChoice } from '../../components/AccountIcon
 import { AccountIcon, CardArt, pastel } from '../../components/Avatars'
 import { AccountSelect } from '../../components/Selects'
 import { useToast } from '../../components/Toast'
-import { Modal, MoneyInput } from '../../components/ui'
+import { Modal, MoneyInput, Segmented } from '../../components/ui'
 import { findBank } from '../../lib/banks'
-import { availableLimit } from '../../lib/cards'
+import { availableLimit, daysFor, invoiceFor, shiftInvoice, toMonth } from '../../lib/cards'
+import { monthName, today } from '../../lib/dates'
 import { ACCOUNT_ICONS } from '../../lib/icons'
 import { t, locale } from '../../lib/i18n'
 import { currencyOf, formatMoney, homeCurrency, isForeign, symbol } from '../../lib/money'
@@ -96,6 +97,12 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
   const [limit, setLimit] = useState(card?.limit_cents ?? 0)
   const [closing, setClosing] = useState(card?.closing_day ?? 1)
   const [due, setDue] = useState(card?.due_day ?? 1)
+  // Changing the days of an existing card: right away (default) or only from the next bill.
+  const current = card ? invoiceFor(card, today()) : null
+  const nowDays = card && current ? daysFor(card, current) : null
+  const daysChanged = !!card && (closing !== card.closing_day || due !== card.due_day)
+  const [when, setWhen] = useState<'now' | 'next'>('now')
+  const scheduled = card?.days_from && current && card.days_from > current ? card.days_from : null
   const [accountId, setAccountId] = useState<string | null>(card?.payment_account_id ?? active[0]?.id ?? null)
   const [error, setError] = useState<string | null>(null)
   const payer = accounts.find((a) => a.id === accountId)
@@ -128,6 +135,13 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
       due_day: due,
       payment_account_id: accountId,
       currency,
+      // The old days stay on the open bill; only sent when there is a change to keep or clear,
+      // so cards keep saving on a database without these columns.
+      ...(daysChanged && when === 'next' && nowDays && current
+        ? { old_closing_day: nowDays.closing_day, old_due_day: nowDays.due_day, days_from: shiftInvoice(current, 1) }
+        : daysChanged && card?.days_from
+          ? { old_closing_day: null, old_due_day: null, days_from: null }
+          : {}),
     }
     try {
       if (card) await update.mutateAsync({ id: card.id, patch: row })
@@ -191,6 +205,17 @@ function CardModal({ card, onClose }: { card?: Card; onClose: () => void }) {
             </select>
           </div>
         </div>
+        {daysChanged && current && nowDays ? (
+          <div className="field days-when">
+            <label>{s.daysWhen}</label>
+            <Segmented value={when} onChange={setWhen} options={[['now', s.daysNow], ['next', s.daysNext]]} />
+            <p className="muted small" style={{ margin: 0 }}>
+              {when === 'now' ? s.daysNowNote(monthName(toMonth(current))) : s.daysNextNote(monthName(toMonth(current)), nowDays.closing_day, nowDays.due_day)}
+            </p>
+          </div>
+        ) : scheduled && (
+          <p className="muted small" style={{ margin: 0 }}><Info size={14} style={{ verticalAlign: '-2px' }} /> {s.daysScheduled(monthName(toMonth(scheduled)))}</p>
+        )}
         <div className="field">
           <label className="row" style={{ gap: 6 }}>
             {s.paymentAccount}

@@ -32,12 +32,15 @@ function invoiceOffset(entry: Pick<NewTransaction, 'card_id' | 'date' | 'invoice
   return card && entry.invoice_month ? monthsBetween(invoiceFor(card, entry.date), entry.invoice_month) : 0
 }
 
-/** Card entries of a series each go to the invoice of their own date, keeping the first entry's offset. */
-function alignInvoices(template: NewTransaction, rows: NewTransaction[], cards: Card[]): NewTransaction[] {
+/**
+ * Card entries of a series each go to the invoice of their own date, keeping the first entry's offset.
+ * Instalments share the purchase date, so the k-th one goes k-1 invoices after the first.
+ */
+function alignInvoices(template: NewTransaction, rows: NewTransaction[], cards: Card[], installments = false): NewTransaction[] {
   const card = cards.find((c) => c.id === template.card_id)
   if (!card) return rows
   const offset = invoiceOffset(template, card)
-  return rows.map((r) => ({ ...r, invoice_month: shiftInvoice(invoiceFor(card, r.date), offset) }))
+  return rows.map((r) => ({ ...r, invoice_month: shiftInvoice(invoiceFor(card, r.date), offset + (installments ? (r.series_index ?? 1) - 1 : 0)) }))
 }
 
 async function attach(tx: Transaction, files: File[]): Promise<Transaction> {
@@ -71,7 +74,7 @@ export async function createEntry(row: NewTransaction, repeat: RepeatOptions | n
     return attach(tx, files)
   }
   const series = await newSeries(row, repeat)
-  const rows = alignInvoices(row, seriesRows(row, series, 0, horizonFor(row.date), row.paid), cards)
+  const rows = alignInvoices(row, seriesRows(row, series, 0, horizonFor(row.date), row.paid), cards, repeat.kind === 'installment')
   const created = await transactionsTable.insert(rows)
   await seriesTable.update(series.id, { generated_count: rows.length })
   return attach(created.find((t) => t.series_index === 1) ?? created[0], files)
@@ -82,7 +85,7 @@ export async function convertEntry(existing: Transaction, row: NewTransaction, r
   const series = await newSeries(row, repeat)
   const firstAmount = repeat.kind === 'installment' ? splitInstallments(row.amount_cents, repeat.installments)[0] : row.amount_cents
   const first = await transactionsTable.update(existing.id, { ...row, amount_cents: firstAmount, series_id: series.id, series_index: 1 })
-  const rest = alignInvoices(row, seriesRows(row, series, 1, horizonFor(row.date), row.paid), cards)
+  const rest = alignInvoices(row, seriesRows(row, series, 1, horizonFor(row.date), row.paid), cards, repeat.kind === 'installment')
   if (rest.length) await transactionsTable.insert(rest)
   await seriesTable.update(series.id, { generated_count: rest.length + 1 })
   return attach(first, files)
@@ -103,7 +106,17 @@ export async function applyToNext(before: Transaction, after: Transaction, all: 
   const { patch, dayShift } = seriesChanges(before, after)
   const next = laterInSeries(after, all)
   const card = cards.find((c) => c.id === after.card_id)
-  if (dayShift || 'card_id' in patch || 'account_id' in patch) {
+  const invoiceMoved = !!card && before.card_id === after.card_id && !!before.invoice_month && before.invoice_month !== after.invoice_month
+  if (series?.kind === 'installment' && card && before.card_id === after.card_id && (dayShift || invoiceMoved)) {
+    // Card instalments keep one purchase date and sit an invoice apart: move them all together.
+    const moved = invoiceMoved ? monthsBetween(before.invoice_month!, after.invoice_month!) : 0
+    await inBatches(next, (t) => transactionsTable.update(t.id, {
+      ...patch,
+      date: shiftDate(t.date, dayShift),
+      invoice_month: t.invoice_month ? shiftInvoice(t.invoice_month, moved) : t.invoice_month,
+    }))
+    if (dayShift) await seriesTable.update(series.id, { start_date: shiftDate(series.start_date, dayShift) })
+  } else if (dayShift || 'card_id' in patch || 'account_id' in patch) {
     // Dates or the card changed, so each entry's invoice is worked out again.
     const offset = invoiceOffset(after, card)
     await inBatches(next, (t) => {

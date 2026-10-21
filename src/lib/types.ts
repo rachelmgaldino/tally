@@ -83,6 +83,13 @@ export interface Card {
   limit_cents: number
   closing_day: number
   due_day: number
+  /**
+   * A change of closing/due day saved "from the next bill": invoices before
+   * days_from (YYYY-MM-01) keep the old days. Null when there is none.
+   */
+  old_closing_day?: number | null
+  old_due_day?: number | null
+  days_from?: string | null
   payment_account_id: string | null
   /** The currency the invoice is in. */
   currency: string
