@@ -56,7 +56,7 @@ export const pt = {
   todayDay: (day: string) => `Hoje · ${day}`,
   /** "sábado, 18/10" */
   dayLabel: (weekday: string, dayMonth: string) => `${weekday}, ${dayMonth}`,
-  dayBalanceShort: (amount: string) => `saldo ${amount}`,
+  dayBalanceShort: (amount: string) => `saldo no fim do dia ${amount}`,
   unpickDay: 'desmarcar dia',
   pickDay: 'marcar dia',
   pickEntry: (description: string) => `Selecionar ${description}`,
@@ -203,7 +203,7 @@ export const en: typeof pt = {
   addEntry: 'Add transaction',
   todayDay: (day) => `Today · ${day}`,
   dayLabel: (weekday, dayMonth) => `${weekday}, ${dayMonth}`,
-  dayBalanceShort: (amount) => `balance ${amount}`,
+  dayBalanceShort: (amount) => `end-of-day balance ${amount}`,
   unpickDay: 'unselect day',
   pickDay: 'select day',
   pickEntry: (description) => `Select ${description}`,

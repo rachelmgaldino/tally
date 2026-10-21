@@ -545,14 +545,9 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 /* "Saldo no fim de cada dia": the balance sits quietly at the end of the date line. */
 .day-head-bal { margin-left: auto; font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .day-head-bal.expense { color: var(--expense); }
-/* TEMPORARY: three looks for the day balance (A quiet text, B dashed tag, C yellow band), picked with the A/B/C buttons. */
-.bal-try { display: inline-flex; gap: 4px; }
-.bal-try button { width: 26px; height: 26px; border-radius: 50%; border: var(--border); background: var(--card); font-size: 12px; font-weight: 800; color: var(--ink); }
-.bal-try button.on { background: var(--yellow); }
-.tx-list.bal-b .day-head-bal { color: var(--ink); background: var(--card); border: 1.5px dashed var(--faint); border-radius: 999px; padding: 3px 12px; font-size: 13px; }
-.tx-list.bal-b .day-head-bal.expense { color: var(--expense); }
-.tx-list.bal-c .day-head { background: color-mix(in srgb, var(--yellow) 28%, transparent); border-radius: 14px; padding: 8px 14px; margin: 12px 0 6px; }
-.tx-list.bal-c .day-head-bal { color: var(--ink); }
+/* With the day balance on, each date line is a soft yellow band with the balance at its right end. */
+.tx-list.with-bal .day-head { background: color-mix(in srgb, var(--yellow) 28%, transparent); border-radius: 14px; padding: 8px 14px; margin: 12px 0 6px; }
+.tx-list.with-bal .day-head-bal { color: var(--ink); }
 @media (max-width: 760px) { .day-head-bal { font-size: 13px; } }
 .day-pick { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
 .bulk-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; background: var(--card); border: var(--border); border-radius: 999px; box-shadow: 6px 6px 0 var(--shade); padding: 8px 8px 8px 22px; z-index: 45; max-width: calc(100% - 32px); }
@@ -748,6 +743,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .list-card.has-rows { background: none; border: 0; padding: 0; box-shadow: none; }
   .list-card.has-rows .tx-list { gap: 14px; }
   .list-card.has-rows .day-head { padding: 0 6px 6px; }
+  .list-card.has-rows .tx-list.with-bal .day-head { padding: 6px 12px; margin: 10px 0 8px; }
   .list-card.has-rows .day-items { background: var(--card); border: var(--border); border-radius: 24px; padding: 2px 10px; }
   .list-card.has-rows .day-items .tx-row { padding: 10px 2px; border-radius: 14px; }
   .list-card.has-rows .day-items .tx-row + .tx-row { border-top: 1.5px dashed var(--line); border-radius: 0; }
