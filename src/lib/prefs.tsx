@@ -27,9 +27,11 @@ export interface Prefs {
   convertTotal: boolean
   /** How Início sums up the month on desktop: a receipt in its own column, or four boxes in a row. */
   homeSummary: 'receipt' | 'boxes'
+  /** Whether the Lançamentos forecast starts from the Saldo anterior. Off: only the period's own money counts. */
+  previousInForecast: boolean
 }
 
-export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false, homeSummary: 'boxes' }
+export const DEFAULT_PREFS: Prefs = { order: 'desc', period: 'month', dailyBalance: false, nextDays: 7, language: 'pt-BR', showSaved: false, homeCurrency: 'BRL', convertTotal: false, homeSummary: 'boxes', previousInForecast: true }
 const KEY = 'tally-prefs'
 /** The last language used on this device, for the login screen. */
 const LANGUAGE_KEY = 'tally-language'
