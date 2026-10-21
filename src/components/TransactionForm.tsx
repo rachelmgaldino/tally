@@ -189,7 +189,9 @@ export function TransactionForm({
   function offerApplyToNext(before: Transaction, after: Transaction) {
     const { patch, dayShift } = seriesChanges(before, after)
     const hasLater = allTxs.some((x) => x.series_id === after.series_id && (x.series_index ?? 0) > (after.series_index ?? 0))
-    if (!hasLater || (Object.keys(patch).length === 0 && dayShift === 0)) return
+    // Card instalments can also move to another invoice, which the later ones follow.
+    const invoiceMoved = series?.kind === 'installment' && before.card_id === after.card_id && before.invoice_month !== after.invoice_month
+    if (!hasLater || (Object.keys(patch).length === 0 && dayShift === 0 && !invoiceMoved)) return
     ask({
       title: s.changeSaved,
       text: s.applyToNextText,

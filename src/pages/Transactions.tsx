@@ -35,9 +35,14 @@ function shownDescription(tx: Transaction): string {
   return tx.description
 }
 import { currencyOf, formatMoney, formatCents, formatSigned, homeCurrency, isForeign, type Currency } from '../lib/money'
+import { listedDate } from '../lib/series'
 import { byId, useAccounts, useCards, useCategories, useSeries, useTags, useTransactionMutations, useTransactions } from '../lib/queries'
 import type { CategoryKind, Transaction, TxKind } from '../lib/types'
 import { tone } from '../lib/theme'
+
+/** A row of the list; card instalments carry their purchase date when listed in a later month. */
+type Listed = Transaction & { purchase_date?: string }
+const purchaseDate = (tx: Listed) => tx.purchase_date ?? tx.date
 
 const KIND_FILTERS: TxKind[] = ['expense', 'income', 'transfer', 'payment']
 
@@ -108,6 +113,11 @@ export default function Transactions() {
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return source
+      .map((tx) => {
+        // Card instalments keep the purchase date but are listed a month apart, beside their invoice.
+        const on = listedDate(tx, tx.series_id ? seriesMap.get(tx.series_id) : undefined)
+        return on === tx.date ? tx : { ...tx, date: on, purchase_date: tx.date } as Listed
+      })
       .filter((tx) => tx.date >= from && tx.date < to)
       .filter((tx) => !accountFilter || (filteredCard
         ? tx.card_id === accountFilter
@@ -121,10 +131,10 @@ export default function Transactions() {
       .filter((tx) => !tagFilter || tx.tag_ids.includes(tagFilter))
       .filter((tx) => !needle || tx.description.toLowerCase().includes(needle))
       .sort((a, b) => (a.date === b.date ? b.created_at.localeCompare(a.created_at) : b.date.localeCompare(a.date)) * (prefs.order === 'asc' ? -1 : 1))
-  }, [source, from, to, accountFilter, filteredCard, kindFilter, categoryFilter, tagFilter, search, categoryMap, prefs.order])
+  }, [source, from, to, accountFilter, filteredCard, kindFilter, categoryFilter, tagFilter, search, categoryMap, seriesMap, prefs.order])
 
   const groups = useMemo(() => {
-    const out: { date: string; items: Transaction[] }[] = []
+    const out: { date: string; items: Listed[] }[] = []
     for (const tx of rows) {
       const last = out[out.length - 1]
       if (last && last.date === tx.date) last.items.push(tx)
@@ -231,7 +241,7 @@ export default function Transactions() {
         ? `${accountMap.get(tx.account_id ?? '')?.name ?? ''} > ${accountMap.get(tx.to_account_id ?? '')?.name ?? ''}`
         : [tx.account_id && accountMap.get(tx.account_id)?.name, tx.card_id && cardMap.get(tx.card_id)?.name].filter(Boolean).join(' > ')
       lines.push([
-        `${dayMonth(tx.date)}/${tx.date.slice(0, 4)}`,
+        `${dayMonth(purchaseDate(tx))}/${purchaseDate(tx).slice(0, 4)}`,
         shownDescription(tx),
         c.kinds[tx.kind],
         cat ? (parent ? `${parent.name} > ${cat.name}` : cat.name) : '',
@@ -460,7 +470,7 @@ export default function Transactions() {
                         {series?.kind === 'fixed' && <Repeat2 size={15} className="fixed" aria-label={s.recurring} />}
                         {series?.installments && <span className="part">{tx.series_index}/{series.installments}</span>}
                         {tx.attachments.length > 0 && <Paperclip size={13} className="clip" aria-label={s.withAttachment} />}
-                        <span className="sub">{sub}{(tx.kind === 'expense' || tx.kind === 'income') && !tx.virtual && (card ?? account) && <> · {(card ?? account)!.name}</>}</span>
+                        <span className="sub">{sub}{tx.purchase_date && <> · {s.boughtOn(dayMonth(tx.purchase_date))}</>}{(tx.kind === 'expense' || tx.kind === 'income') && !tx.virtual && (card ?? account) && <> · {(card ?? account)!.name}</>}</span>
                       </div>
                       {(tx.kind === 'transfer' || tx.kind === 'payment' || tx.virtual) && <div className="tx-where">
                         {tx.kind === 'transfer' ? (
