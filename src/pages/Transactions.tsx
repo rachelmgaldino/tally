@@ -86,6 +86,9 @@ export default function Transactions() {
     try { return localStorage.getItem(MODE_KEY) === 'all' ? 'all' : 'cash' } catch { return 'cash' }
   })
   const [choosingMode, setChoosingMode] = useState(false)
+  // TEMPORARY: switch between three looks for the day balance while Rachel picks one.
+  const [balLook, setBalLookState] = useState(() => { try { return localStorage.getItem('tally-bal-look') ?? 'a' } catch { return 'a' } })
+  const setBalLook = (v: string) => { setBalLookState(v); try { localStorage.setItem('tally-bal-look', v) } catch { /* ignore */ } }
   const [totalsOnly, setTotalsOnlyState] = useState(() => {
     try { return localStorage.getItem(SUMMARY_KEY) !== 'saldos' } catch { return true }
   })
@@ -418,11 +421,18 @@ export default function Transactions() {
             <button className="btn btn-ghost-green" onClick={() => open({ kind: 'expense', accountId: accountFilter ?? undefined })}>{s.addEntry}</button>
           </div>
         ) : (
-          <div className="tx-list">
+          <div className={`tx-list bal-${balLook}`}>
             {groups.map((g) => (
               <section key={g.date}>
                 <div className={`day-head ${g.date === todayIso ? 'today' : ''}`}>
                   {g.date === todayIso ? s.todayDay(dayLabel(g.date)) : dayLabel(g.date)}
+                  {g === groups[0] && dayBalance.size > 0 && !selecting && (
+                    <span className="bal-try" role="group" aria-label="Day balance look (temporary)">
+                      {['a', 'b', 'c'].map((v) => (
+                        <button key={v} type="button" className={balLook === v ? 'on' : ''} onClick={() => setBalLook(v)}>{v.toUpperCase()}</button>
+                      ))}
+                    </span>
+                  )}
                   {dayBalance.has(g.date) && !selecting && (
                     <span className={`day-head-bal ${dayBalance.get(g.date)! < 0 ? 'expense' : ''}`}>{s.dayBalanceShort(formatMoney(dayBalance.get(g.date)!, summaryCurrency))}</span>
                   )}
