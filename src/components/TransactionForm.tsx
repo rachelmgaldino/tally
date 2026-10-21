@@ -1,4 +1,4 @@
-import { AlignLeft, ArrowRight, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, Wallet, X } from 'lucide-react'
+import { ArrowRight, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CopyPlus, CreditCard, Info, MessageSquare, Paperclip, Plus, Repeat2, Tag as TagIcon, Trash2, Wallet, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
@@ -18,6 +18,8 @@ import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
 import { caretToEnd, Modal, MoneyInput, Segmented, Toggle } from './ui'
 import { tone } from '../lib/theme'
+import { fold, type Suggestion } from '../lib/suggest'
+import { DescriptionField } from './DescriptionField'
 
 export type FormKind = Exclude<TxKind, 'payment'>
 
@@ -91,6 +93,17 @@ export function TransactionForm({
   const crossing = !!fromAccount && !!toAccount && currency !== toCurrency
   const [categoryId, setCategoryId] = useState<string | null>(source?.category_id ?? null)
   const [notes, setNotes] = useState(source?.notes ?? '')
+  // Picking a past description copies its category and account or card, except
+  // the ones already chosen by hand for this entry.
+  const [picked, setPicked] = useState<Suggestion | null>(null)
+  const [touched, setTouched] = useState({ category: !!source, source: !!source })
+  const stillPicked = picked && fold(picked.description) === fold(description) ? picked : null
+  function pick(sg: Suggestion) {
+    setDescription(sg.description)
+    if (!touched.category && sg.last.category_id) setCategoryId(sg.last.category_id)
+    if (!touched.source) setAccountId(sg.last.card_id ?? sg.last.account_id)
+    setPicked(sg)
+  }
   const [tagIds, setTagIds] = useState<string[]>(source?.tag_ids ?? [])
   const [kept, setKept] = useState<Attachment[]>(editing?.attachments ?? [])
   const [files, setFiles] = useState<File[]>([])
@@ -170,6 +183,8 @@ export function TransactionForm({
       toast(editing ? s.entryUpdated : repeat ? s.entriesSaved : s.entrySaved)
       if (again) {
         setDescription(kind === 'transfer' ? common.kinds.transfer : '')
+        setPicked(null)
+        setTouched({ category: false, source: false })
         setAmount(0)
         setToAmount(0)
         setNotes('')
@@ -299,11 +314,8 @@ export function TransactionForm({
             )}
           </>
         ) : null}
-        <div className="field f-desc">
-          <span className="f-ico phone-only"><AlignLeft size={20} /></span>
-          <label htmlFor="desc">{s.description}</label>
-          <input id="desc" className="input" placeholder={s.descriptionPlaceholder} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
+        <DescriptionField value={description} onChange={setDescription} kind={kind} txs={allTxs} categories={categories} accounts={active} cards={usableCards}
+          picked={stillPicked} onPick={pick} suggest={!editing && kind !== 'transfer'} />
         <div className="grid-2" style={{ gap: 10 }}>
           <div className="field f-date">
             <span className="f-ico phone-only"><Calendar size={20} /></span>
@@ -330,22 +342,22 @@ export function TransactionForm({
         {kind !== 'transfer' && (
           <>
             <div className="grid-2" style={{ gap: 10 }}>
-              <div className="field f-src">
+              <div className={`field f-src ${stillPicked && !touched.source ? 'ac-filled' : ''}`}>
                 <span className="f-ico phone-only">
                   {card ? <AccountIcon icon={card.icon} color={card.color} size={40} square />
                     : srcAccount ? <AccountAvatar account={srcAccount} size={40} />
                     : <Wallet size={20} />}
                 </span>
                 <label><span className="desk-only">{usableCards.length ? s.accountOrCardDesk : s.account}</span><span className="phone-only">{usableCards.length ? s.accountOrCardPhone : s.account}</span></label>
-                <SourceSelect accounts={active} cards={usableCards} value={accountId} onChange={setAccountId} />
+                <SourceSelect accounts={active} cards={usableCards} value={accountId} onChange={(v) => { setAccountId(v); setTouched((x) => ({ ...x, source: true })) }} />
                 <ChevronRight size={18} className="f-chev phone-only" />
               </div>
-              <div className="field f-cat">
+              <div className={`field f-cat ${stillPicked && !touched.category ? 'ac-filled' : ''}`}>
                 <span className="f-ico phone-only">
                   {pickedCategory ? <CategoryAvatar category={pickedParent ?? pickedCategory} size={40} /> : <TagIcon size={20} />}
                 </span>
                 <label>{s.category}</label>
-                <CategorySelect categories={categories} kind={kind} value={categoryId} onChange={setCategoryId} />
+                <CategorySelect categories={categories} kind={kind} value={categoryId} onChange={(v) => { setCategoryId(v); setTouched((x) => ({ ...x, category: true })) }} />
                 <ChevronRight size={18} className="f-chev phone-only" />
               </div>
             </div>
