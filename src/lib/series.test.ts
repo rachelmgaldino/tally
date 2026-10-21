@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daysBetween, occurrenceDate, seriesChanges, seriesRows, shiftDate, splitInstallments } from './series'
+import { daysBetween, listedDate, occurrenceDate, seriesChanges, seriesRows, shiftDate, splitInstallments } from './series'
 import type { NewTransaction, Transaction } from './types'
 
 describe('occurrenceDate', () => {
@@ -39,6 +39,14 @@ describe('seriesRows', () => {
     const rows = seriesRows(template, { id: 's', kind: 'installment', period: 'monthly', start_date: '2026-09-22', installments: 2 }, 0, '2026-10-01', true)
     expect(rows.map((r) => [r.date, r.amount_cents, r.series_index])).toEqual([['2026-09-22', 4450, 1], ['2026-10-22', 4450, 2]])
     expect(rows.every((r) => r.series_id === 's')).toBe(true)
+  })
+  it('keeps the purchase date on every card instalment', () => {
+    const s = { id: 's', kind: 'installment' as const, period: 'monthly' as const, start_date: '2026-05-30', installments: 4 }
+    const rows = seriesRows({ ...template, date: '2026-05-30', card_id: 'c1' }, s, 0, '2026-06-01', true)
+    expect(rows.map((r) => r.date)).toEqual(['2026-05-30', '2026-05-30', '2026-05-30', '2026-05-30'])
+    // …and lists the k-th one k-1 months later; older moving-date ones stay where they are.
+    expect(rows.map((r) => listedDate(r as Transaction, s))).toEqual(['2026-05-30', '2026-06-30', '2026-07-30', '2026-08-30'])
+    expect(listedDate({ date: '2026-07-30', card_id: 'c1', series_index: 3 }, s)).toBe('2026-07-30')
   })
   it('creates fixed entries up to the horizon, only the first paid when the rest are in the future', () => {
     const rows = seriesRows({ ...template, date: '2099-01-01' }, { id: 's', kind: 'fixed', period: 'monthly', start_date: '2099-01-01', installments: null }, 0, '2099-04-01', true)

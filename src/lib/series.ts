@@ -94,8 +94,10 @@ export function seriesRows(
   const out: NewTransaction[] = []
   const amounts = series.installments ? splitInstallments(template.amount_cents, series.installments) : null
   const count = series.installments ?? Infinity
+  // Instalments on a card all keep the purchase date; each one goes to a later invoice instead.
+  const samePurchase = series.kind === 'installment' && !!template.card_id
   for (let k = from; k < count && out.length < limit; k++) {
-    const date = occurrenceDate(series.start_date, series.period, k)
+    const date = samePurchase ? series.start_date : occurrenceDate(series.start_date, series.period, k)
     if (!series.installments && date >= until) break
     out.push({
       ...template,
@@ -109,6 +111,16 @@ export function seriesRows(
     })
   }
   return out
+}
+
+/**
+ * The day a card instalment shows on in the full list. They all keep the purchase
+ * date, so the k-th one is listed k-1 months after it, next to the invoice it is in.
+ * Older instalments that were saved with moving dates keep their own date.
+ */
+export function listedDate(tx: Pick<Transaction, 'date' | 'card_id' | 'series_index'>, series?: Pick<Series, 'kind' | 'period' | 'start_date'>): string {
+  if (!tx.card_id || series?.kind !== 'installment' || tx.date !== series.start_date || !tx.series_index) return tx.date
+  return occurrenceDate(tx.date, series.period, tx.series_index - 1)
 }
 
 /** Fields that "Sim, atualizar próximos" copies to the following entries. */

@@ -542,10 +542,14 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .pick.on { border: var(--border); background: var(--yellow); }
 .tx-row.dim { opacity: 0.45; cursor: default; }
 .day-head { display: flex; align-items: center; gap: 10px; }
+/* "Saldo no fim de cada dia": the balance sits quietly at the end of the date line. */
+.day-head-bal { margin-left: auto; font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-head-bal.expense { color: var(--expense); }
+/* With the day balance on, each date line is a soft yellow band with the balance at its right end. */
+.tx-list.with-bal .day-head { background: color-mix(in srgb, var(--yellow) 28%, transparent); border-radius: 14px; padding: 8px 14px; margin: 12px 0 6px; }
+.tx-list.with-bal .day-head-bal { color: var(--ink); }
+@media (max-width: 760px) { .day-head-bal { font-size: 13px; } }
 .day-pick { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
-.day-balance { display: flex; justify-content: flex-end; align-items: baseline; gap: 8px; padding: 4px 12px 10px; font-size: 13px; font-weight: 800; color: var(--muted); border-bottom: 1.5px dashed var(--line); margin: 0 12px; }
-.day-balance b { font-family: var(--display); font-weight: 500; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
-.day-balance b.expense { color: var(--expense); }
 .bulk-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; background: var(--card); border: var(--border); border-radius: 999px; box-shadow: 6px 6px 0 var(--shade); padding: 8px 8px 8px 22px; z-index: 45; max-width: calc(100% - 32px); }
 .bulk-bar > b { font-weight: 800; margin-right: 6px; white-space: nowrap; }
 .bulk-bar .picker-pop { top: auto; bottom: calc(100% + 8px); max-height: 320px; min-width: 240px; }
@@ -646,7 +650,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .tx-row { gap: 10px; padding: 10px 8px; }
   .tx-amount { font-size: 16px; }
   .paid-btn, .paid-spacer { width: 32px; height: 32px; }
-  .day-balance { margin: 0 8px; padding: 4px 8px 10px; }
   .search-pill { min-width: 100%; order: -1; }
   .bulk-bar { bottom: calc(96px + env(safe-area-inset-bottom)); border-radius: 26px; padding: 8px; }
   .bulk-bar > b { width: 100%; text-align: center; margin: 0; }
@@ -740,8 +743,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .list-card.has-rows { background: none; border: 0; padding: 0; box-shadow: none; }
   .list-card.has-rows .tx-list { gap: 14px; }
   .list-card.has-rows .day-head { padding: 0 6px 6px; }
-  .day-head-bal { margin-left: auto; font-family: var(--display); font-weight: 500; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .day-head-bal.expense { color: var(--expense); }
+  .list-card.has-rows .tx-list.with-bal .day-head { padding: 6px 12px; margin: 10px 0 8px; background: color-mix(in srgb, var(--lavender) 45%, transparent); }
   .list-card.has-rows .day-items { background: var(--card); border: var(--border); border-radius: 24px; padding: 2px 10px; }
   .list-card.has-rows .day-items .tx-row { padding: 10px 2px; border-radius: 14px; }
   .list-card.has-rows .day-items .tx-row + .tx-row { border-top: 1.5px dashed var(--line); border-radius: 0; }
@@ -776,6 +778,7 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .form-group, .f-paid { display: contents; }
 .f-date-in { display: flex; gap: 6px; }
 .f-date-in .input { flex: 1; min-width: 0; }
+.date-pick { display: flex; flex: 1; min-width: 0; }
 @media (max-width: 760px) {
   /* Novo lançamento: a big amount, then the details as one list */
   .ph-amount { display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -798,12 +801,19 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .form-group .f-date { order: 4; }
   .form-group .f-paid { order: 5; display: flex; }
   .form-group .f-paid .toggle { flex-direction: row-reverse; justify-content: space-between; width: 100%; }
-  .form-group .invoice-banner { order: 6; margin-bottom: 12px; }
+  /* "Entra na fatura de" is one more row of the card: icon, label over the month, chevron. */
+  .form-group .invoice-banner { order: 6; display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; align-items: center; background: none; border: 0; border-top: 1.5px dashed var(--line); border-radius: 0; padding: 10px 0; }
+  .form-group .invoice-banner > svg { grid-column: 1; grid-row: 1 / span 2; justify-self: center; width: 20px; height: 20px; color: var(--muted); }
+  .form-group .invoice-banner .inv-label { grid-column: 2; font-size: 12px; font-weight: 800; color: var(--muted); }
+  .form-group .invoice-pick { grid-column: 2; display: block; }
+  .form-group .invoice-pick > button { width: 100%; justify-content: space-between; border: 0; border-radius: 0; padding: 0; min-height: 30px; background: none; font-size: 16px; color: var(--ink); }
+  .form-group .invoice-pick > button svg { color: var(--muted); }
   .f-date-in { align-items: center; }
-  .f-date-in .input { flex: none; width: 40px; min-height: 36px; border: var(--border); border-radius: 999px; padding: 0; color: transparent; position: relative; }
-  .f-date-in .input::-webkit-datetime-edit { display: none; }
-  .f-date-in .input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
-  .f-date-in::after { content: '···'; margin-left: -40px; width: 40px; text-align: center; pointer-events: none; font-weight: 800; }
+  .date-pick { position: relative; flex: none; display: grid; place-items: center; min-width: 40px; height: 36px; padding: 0 10px; border: var(--border); border-radius: 999px; background: var(--card); font-weight: 800; font-size: 14px; overflow: hidden; }
+  .date-pick.on { background: var(--yellow); }
+  /* iOS ignores most styling on date inputs, so the real one is an invisible tap target over the chip. */
+  .f-date-in .date-pick .input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; opacity: 0; padding: 0; margin: 0; border: 0; }
+  .f-date-in .date-pick .input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; }
   .day-chip { min-height: 36px; padding: 0 14px; border-radius: 999px; border: var(--border); background: var(--card); font-weight: 800; font-size: 14px; }
   .day-chip.on { background: var(--yellow); }
   .form-actions { border-top: 0; padding-top: 4px; }
@@ -932,6 +942,11 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .ph-amount input { border: 0; background: none; outline: none; font-family: var(--display); font-weight: 500; font-size: 48px; min-width: 2ch; max-width: 75vw; text-align: left; font-variant-numeric: tabular-nums; padding: 0; color: var(--ink); }
 .ph-amount.expense input { color: var(--expense); }
 .ph-amount.income input { color: var(--income); }
+/* Focus on the big amount: a soft yellow underline, and a yellow caret. */
+.ph-amount .row { border-bottom: 4px solid transparent; border-radius: 2px; transition: border-color 0.15s; }
+.ph-amount .row:focus-within { border-bottom-color: var(--yellow); }
+.ph-amount input { caret-color: var(--ink); }
+.ph-amount input::selection, .input input::selection { background: var(--yellow); color: var(--ink); }
 .day-chip { min-height: 48px; padding: 0 18px; border-radius: 999px; border: var(--border); background: var(--card); font-weight: 800; font-size: 14px; flex: none; }
 .day-chip:hover:not(.on) { background: var(--hover); }
 .day-chip.on { background: var(--yellow); }
@@ -1106,6 +1121,8 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   --sky: var(--hover);
   --green-tint: var(--hover);
 }
+/* Day balance band at night: a slightly lighter indigo instead of the yellow, desktop and phone */
+:root[data-theme='dark'] .tx-list.with-bal .day-head { background: var(--hover); }
 
 /* Which pastel each built-in surface carries. */
 :root[data-theme='dark'] :is(.side nav a.active, .btn-primary, .prompt-option.primary, .save-btn, .ph-card-pick button.on, .cat-icons button.on,

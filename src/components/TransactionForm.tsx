@@ -2,7 +2,7 @@ import { AlignLeft, ArrowRight, Calendar, Check, ChevronDown, ChevronRight, Circ
 import { useRef, useState } from 'react'
 import { formatSize, MAX_ATTACHMENT_BYTES } from '../lib/attachments'
 import { invoiceFor, invoiceName, monthsBetween, shiftInvoice, toMonth } from '../lib/cards'
-import { monthTitle, today } from '../lib/dates'
+import { dayMonth, monthTitle, today } from '../lib/dates'
 import { t } from '../lib/i18n'
 import { applyToNext, convertEntry, createEntry, deleteEntries, deleteFromHere, updateEntry, useRefresh, type RepeatOptions } from '../lib/entries'
 import { centsFromTyping, currencyOf, formatMoney, formatCents, symbol } from '../lib/money'
@@ -16,10 +16,13 @@ import { TagInput } from './TagInput'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
-import { Modal, MoneyInput, Segmented, Toggle } from './ui'
+import { caretToEnd, Modal, MoneyInput, Segmented, Toggle } from './ui'
 import { tone } from '../lib/theme'
 
 export type FormKind = Exclude<TxKind, 'payment'>
+
+/** The invoices offered in "Entra na fatura de": two before the date's own, up to two years after. */
+const INVOICE_SHIFTS = Array.from({ length: 27 }, (_, i) => i - 2)
 
 function yesterday(): string {
   const d = new Date(`${today()}T12:00:00`)
@@ -186,7 +189,9 @@ export function TransactionForm({
   function offerApplyToNext(before: Transaction, after: Transaction) {
     const { patch, dayShift } = seriesChanges(before, after)
     const hasLater = allTxs.some((x) => x.series_id === after.series_id && (x.series_index ?? 0) > (after.series_index ?? 0))
-    if (!hasLater || (Object.keys(patch).length === 0 && dayShift === 0)) return
+    // Card instalments can also move to another invoice, which the later ones follow.
+    const invoiceMoved = series?.kind === 'installment' && before.card_id === after.card_id && before.invoice_month !== after.invoice_month
+    if (!hasLater || (Object.keys(patch).length === 0 && dayShift === 0 && !invoiceMoved)) return
     ask({
       title: s.changeSaved,
       text: s.applyToNextText,
@@ -259,8 +264,8 @@ export function TransactionForm({
           <label htmlFor="ph-amount">{s.amount}</label>
           <div className="row">
             <span className="prefix">{symbol(currency)}</span>
-            <input id="ph-amount" inputMode="numeric" value={formatCents(amount)} style={{ width: `${formatCents(amount).length * 0.62 + 0.2}em` }}
-              onChange={(e) => setAmount(centsFromTyping(e.target.value))} onFocus={(e) => e.target.select()} />
+            <input id="ph-amount" inputMode="numeric" value={formatCents(amount)} style={{ width: `${formatCents(amount).length * 0.62 + 0.2}em` }} autoFocus={!editing}
+              onChange={(e) => setAmount(centsFromTyping(e.target.value))} onFocus={caretToEnd} />
           </div>
         </div>}
         <div className="form-group">
@@ -297,7 +302,7 @@ export function TransactionForm({
         <div className="field f-desc">
           <span className="f-ico phone-only"><AlignLeft size={20} /></span>
           <label htmlFor="desc">{s.description}</label>
-          <input id="desc" className="input" placeholder={s.descriptionPlaceholder} value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={kind !== 'transfer'} />
+          <input id="desc" className="input" placeholder={s.descriptionPlaceholder} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div className="grid-2" style={{ gap: 10 }}>
           <div className="field f-date">
@@ -307,7 +312,11 @@ export function TransactionForm({
               {[[today(), common.today], [yesterday(), s.yesterday]].map(([d, l]) => (
                 <button type="button" key={l} className={`day-chip ${date === d ? 'on' : ''}`} onClick={() => changeDate(d)}>{l}</button>
               ))}
-              <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
+              {/* On the phone the native input sits invisibly over a round chip that shows the picked day. */}
+              <span className={`date-pick ${date !== today() && date !== yesterday() ? 'on' : ''}`}>
+                <span className="date-face phone-only" aria-hidden="true">{date !== today() && date !== yesterday() ? dayMonth(date) : '···'}</span>
+                <input id="date" className="input" type="date" value={date} onChange={(e) => changeDate(e.target.value)} />
+              </span>
             </div>
           </div>
         </div>
@@ -342,14 +351,18 @@ export function TransactionForm({
             </div>
             {card && invoice && (
               <div className="invoice-banner">
-                <CreditCard size={18} /> {s.goesToInvoice}
+                <CreditCard size={18} /> <span className="inv-label">{s.goesToInvoice}</span>
                 <Popover
                   className="invoice-pick"
                   trigger={(_, toggle) => (
-                    <button type="button" onClick={toggle}>{monthTitle(toMonth(invoice))} <ChevronDown size={14} /></button>
+                    <button type="button" onClick={toggle}>
+                      <span>{monthTitle(toMonth(invoice))}</span>
+                      <ChevronDown size={14} className="desk-only" /><ChevronRight size={18} className="phone-only" />
+                    </button>
                   )}
                 >
-                  {(close) => [-2, -1, 0, 1, 2, 3].map((d) => {
+                  {/* Old purchases still being paid can land in an invoice months after their date. */}
+                  {(close) => INVOICE_SHIFTS.map((d) => {
                     const m = shiftInvoice(invoiceFor(card, date || today()), d)
                     return (
                       <button type="button" key={d} className={`picker-item ${d === invoiceShift ? 'on' : ''}`} onClick={() => { setInvoiceShift(d); close() }}>
