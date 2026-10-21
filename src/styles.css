@@ -542,10 +542,13 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .pick.on { border: var(--border); background: var(--yellow); }
 .tx-row.dim { opacity: 0.45; cursor: default; }
 .day-head { display: flex; align-items: center; gap: 10px; }
+/* "Saldo no fim de cada dia": the balance sits quietly at the end of the date line. */
+.day-head-bal { margin-left: auto; font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-head-bal.expense { color: var(--expense); }
+/* In line with the amounts, which stop short of the paid button. */
+@media (min-width: 761px) { .day-head-bal { margin-right: 50px; } }
+@media (max-width: 760px) { .day-head-bal { font-size: 13px; } }
 .day-pick { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
-.day-balance { display: flex; justify-content: flex-end; align-items: baseline; gap: 8px; padding: 4px 12px 10px; font-size: 13px; font-weight: 800; color: var(--muted); border-bottom: 1.5px dashed var(--line); margin: 0 12px; }
-.day-balance b { font-family: var(--display); font-weight: 500; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
-.day-balance b.expense { color: var(--expense); }
 .bulk-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; background: var(--card); border: var(--border); border-radius: 999px; box-shadow: 6px 6px 0 var(--shade); padding: 8px 8px 8px 22px; z-index: 45; max-width: calc(100% - 32px); }
 .bulk-bar > b { font-weight: 800; margin-right: 6px; white-space: nowrap; }
 .bulk-bar .picker-pop { top: auto; bottom: calc(100% + 8px); max-height: 320px; min-width: 240px; }
@@ -646,7 +649,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .tx-row { gap: 10px; padding: 10px 8px; }
   .tx-amount { font-size: 16px; }
   .paid-btn, .paid-spacer { width: 32px; height: 32px; }
-  .day-balance { margin: 0 8px; padding: 4px 8px 10px; }
   .search-pill { min-width: 100%; order: -1; }
   .bulk-bar { bottom: calc(96px + env(safe-area-inset-bottom)); border-radius: 26px; padding: 8px; }
   .bulk-bar > b { width: 100%; text-align: center; margin: 0; }
@@ -740,8 +742,6 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .list-card.has-rows { background: none; border: 0; padding: 0; box-shadow: none; }
   .list-card.has-rows .tx-list { gap: 14px; }
   .list-card.has-rows .day-head { padding: 0 6px 6px; }
-  .day-head-bal { margin-left: auto; font-family: var(--display); font-weight: 500; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .day-head-bal.expense { color: var(--expense); }
   .list-card.has-rows .day-items { background: var(--card); border: var(--border); border-radius: 24px; padding: 2px 10px; }
   .list-card.has-rows .day-items .tx-row { padding: 10px 2px; border-radius: 14px; }
   .list-card.has-rows .day-items .tx-row + .tx-row { border-top: 1.5px dashed var(--line); border-radius: 0; }

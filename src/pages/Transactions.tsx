@@ -424,7 +424,7 @@ export default function Transactions() {
                 <div className={`day-head ${g.date === todayIso ? 'today' : ''}`}>
                   {g.date === todayIso ? s.todayDay(dayLabel(g.date)) : dayLabel(g.date)}
                   {dayBalance.has(g.date) && !selecting && (
-                    <span className={`day-head-bal phone-only ${dayBalance.get(g.date)! < 0 ? 'expense' : ''}`}>{s.dayBalanceShort(formatMoney(dayBalance.get(g.date)!, summaryCurrency))}</span>
+                    <span className={`day-head-bal ${dayBalance.get(g.date)! < 0 ? 'expense' : ''}`}>{s.dayBalanceShort(formatMoney(dayBalance.get(g.date)!, summaryCurrency))}</span>
                   )}
                   {selecting && (
                     <button className="day-pick" onClick={() => {
@@ -512,9 +512,6 @@ export default function Transactions() {
                   )
                 })}
                 </div>
-                {dayBalance.has(g.date) && (
-                  <div className="day-balance desk-only">{s.dayBalance} <b className={dayBalance.get(g.date)! < 0 ? 'expense' : ''}>{formatMoney(dayBalance.get(g.date)!, summaryCurrency)}</b></div>
-                )}
               </section>
             ))}
           </div>
