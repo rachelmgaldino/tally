@@ -69,7 +69,7 @@ export function t(): Strings {
 
 /** For Intl: number and date formatting follow the language (the currency symbol comes from the account). */
 export function locale(): string {
-  return current === 'en' ? 'en-US' : 'pt-BR'
+  return current === 'en' ? 'en-CA' : 'pt-BR'
 }
 
 export const isLanguage = (v: unknown): v is Language => v === 'pt-BR' || v === 'en'
