@@ -182,16 +182,17 @@ export default function Transactions() {
   }, [rows, keptIds, abroadIds, foreignCardIds])
 
   // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
+  // It shows whichever total the summary card is on; only a card filter has no account balance to show.
   const dayBalance = useMemo(() => {
     const out = new Map<string, number>()
-    if (!prefs.dailyBalance || simpleTotal) return out
+    if (!prefs.dailyBalance || filteredCard) return out
     const ids = new Set(summaryAccounts.map((a) => a.id))
     const base = summaryAccounts.reduce((s, a) => s + a.initial_balance_cents, 0)
     for (const g of groups) {
       out.set(g.date, ledger.reduce((s, tx) => (tx.date <= g.date ? s + effectOnSet(tx, ids) : s), base))
     }
     return out
-  }, [prefs.dailyBalance, simpleTotal, summaryAccounts, groups, ledger])
+  }, [prefs.dailyBalance, filteredCard, summaryAccounts, groups, ledger])
 
   const pickedRows = rows.filter((tx) => picked.has(tx.id))
   const payable = pickedRows.filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.card_id)
