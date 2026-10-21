@@ -132,7 +132,7 @@ export function TransactionForm({
       description: description.trim(),
       amount_cents: amount,
       date,
-      paid: kind === 'transfer' || card ? true : paid,
+      paid: card ? true : paid,
       account_id: card ? null : accountId,
       to_account_id: kind === 'transfer' ? toAccountId : null,
       to_amount_cents: crossing ? toAmount : null,
@@ -320,15 +320,15 @@ export function TransactionForm({
             </div>
           </div>
         </div>
+        {!card && <div className="f-paid"><Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={
+          <span className="paid-label">
+            <CircleCheck size={20} className="phone-only" />
+            <span className="desk-only">{kind === 'income' ? s.receivedDesk : kind === 'transfer' ? s.doneDesk : s.paidDesk}</span>
+            <span className="phone-only">{kind === 'income' ? s.receivedPhone : kind === 'transfer' ? s.donePhone : s.paidPhone}</span>
+          </span>
+        } /></div>}
         {kind !== 'transfer' && (
           <>
-            {!card && <div className="f-paid"><Toggle checked={paid} onChange={(v) => { setPaid(v); setPaidTouched(true) }} label={
-              <span className="paid-label">
-                <CircleCheck size={20} className="phone-only" />
-                <span className="desk-only">{kind === 'income' ? s.receivedDesk : s.paidDesk}</span>
-                <span className="phone-only">{kind === 'income' ? s.receivedPhone : s.paidPhone}</span>
-              </span>
-            } /></div>}
             <div className="grid-2" style={{ gap: 10 }}>
               <div className="field f-src">
                 <span className="f-ico phone-only">

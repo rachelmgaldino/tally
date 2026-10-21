@@ -56,7 +56,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
 
   async function togglePaid() {
     await update.mutateAsync({ id: tx.id, patch: { paid: !tx.paid } })
-    toast(tx.paid ? s.markedPending : s.markedPaid)
+    toast(tx.paid ? s.markedPending : tx.kind === 'transfer' ? s.markedDone : s.markedPaid)
   }
 
   async function del() {
@@ -211,10 +211,10 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
               <Repeat2 size={18} /> {s.repeat}
             </button>
           )}
-          {tx.kind !== 'transfer' && !isPayment && !card && (
+          {!isPayment && !card && (
             <button className="btn pay-act" onClick={togglePaid}>
               {tx.paid ? <Undo2 size={18} /> : <ThumbsUp size={18} />}
-              {tx.paid ? s.undo : s.pay}
+              {tx.paid ? s.undo : tx.kind === 'transfer' ? s.markDone : s.pay}
             </button>
           )}
           {!isPayment && <button className="btn" onClick={() => open({ kind: tx.kind, copyOf: tx })}><Copy size={18} /> {s.copy}</button>}

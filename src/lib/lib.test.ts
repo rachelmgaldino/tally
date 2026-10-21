@@ -111,6 +111,14 @@ describe('balances', () => {
     expect(s.incomeAll).toBe(plain.incomeAll)
     expect(s.forecast).toBe(plain.forecast - 40000)
   })
+  it('waits for a pending transfer before moving the balance', () => {
+    const resgate = [...txs, tx({ kind: 'transfer', amount_cents: 30000, date: '2026-10-10', account_id: 'poupanca', to_account_id: 'nu', paid: false })]
+    expect(accountBalance(accounts[0], resgate, undefined, '2026-10-18')).toEqual({ current: 203150, forecast: 413150 })
+    const s = periodSummary(accounts.slice(0, 2), resgate, '2026-10-01', '2026-11-01', new Set(['poupanca']))
+    const plain = periodSummary(accounts.slice(0, 2), txs, '2026-10-01', '2026-11-01')
+    expect(s.balance).toBe(plain.balance)
+    expect(s.forecast).toBe(plain.forecast + 30000)
+  })
   it('lands a transfer between currencies with the amount that arrived', () => {
     const wise = acc('wise', 10000, 'CAD')
     const sent = [tx({ kind: 'transfer', amount_cents: 200000, to_amount_cents: 49730, date: '2026-10-08', account_id: 'nu', to_account_id: 'wise' })]

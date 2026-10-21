@@ -104,7 +104,7 @@ export function seriesRows(
       date,
       amount_cents: amounts ? amounts[k] : template.amount_cents,
       // Card purchases are settled by paying the invoice, so they never show as pending.
-      paid: template.kind === 'transfer' || template.card_id ? true : paidFor(date, firstPaid, k === 0),
+      paid: template.card_id ? true : paidFor(date, firstPaid, k === 0),
       series_id: series.id,
       series_index: k + 1,
       attachments: k === 0 ? template.attachments : [],
