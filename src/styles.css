@@ -299,9 +299,15 @@ select.input { appearance: auto; }
 .sum-body { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 30px; align-items: center; padding-right: 30px; }
 .sum-big { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 36px; line-height: 1.1; margin: 4px 0 8px; }
 .sum-minis { display: flex; gap: 18px; padding-top: 8px; border-top: 1.5px dashed var(--edge); }
-.sum-minis div { display: flex; flex-direction: column; gap: 1px; }
+.sum-minis > * { display: flex; flex-direction: column; gap: 1px; }
 .sum-minis span { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .sum-minis b { font-family: var(--display); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 16px; }
+/* Saldo anterior is a button that looks like its neighbour; the dotted underline says it can be tapped. */
+.sum-prev { padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: 6px; }
+.sum-prev span { text-decoration: underline dotted 1.5px; text-underline-offset: 3px; }
+.sum-prev:hover span { color: var(--ink); }
+.sum-prev[aria-pressed='false'] span, .sum-prev[aria-pressed='false'] b { color: var(--faint); }
+.sum-prev[aria-pressed='false'] b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .sum-side-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
 .sum-sum { font-size: 12px; font-weight: 700; color: var(--muted); text-align: right; }
 .sum-sum b { color: var(--ink); }

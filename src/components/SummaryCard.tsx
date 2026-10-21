@@ -1,6 +1,6 @@
 import { Minus, Plus, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { PeriodSummary } from '../lib/balances'
+import { withoutPrevious, type PeriodSummary } from '../lib/balances'
 import { t } from '../lib/i18n'
 import { formatMoney, formatCents, type Currency } from '../lib/money'
 
@@ -11,7 +11,7 @@ import { formatMoney, formatCents, type Currency } from '../lib/money'
  * button pressed: just the money in and out.
  */
 export function SummaryCard({
-  summary, totals, totalsOnly, onToggle, title, isMonth, filter, currency,
+  summary, totals, totalsOnly, onToggle, title, isMonth, filter, currency, withPrevious, onWithPrevious,
 }: {
   summary: PeriodSummary
   /** Paid in and out, plus what is still pending (shown when nothing is paid yet). */
@@ -26,6 +26,9 @@ export function SummaryCard({
   filter?: ReactNode
   /** What the amounts are in: the filtered account's or card's currency, else the Moeda principal. */
   currency?: Currency
+  /** Whether the forecast starts from the Saldo anterior. Tapping "Saldo anterior" flips it. */
+  withPrevious: boolean
+  onWithPrevious: (v: boolean) => void
 }) {
   const s = t().entries.card
   const money = (cents: number) => formatMoney(cents, currency)
@@ -87,7 +90,7 @@ export function SummaryCard({
     )
   }
 
-  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast, saved, sent: sentAll } = summary
+  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast, saved, sent: sentAll } = withPrevious ? summary : withoutPrevious(summary)
   const toPay = expenseAll - expensePaid
   const left = Math.max(forecast, 0)
   const short = Math.max(-forecast, 0)
@@ -103,14 +106,20 @@ export function SummaryCard({
           <div className="k">{s.forecastEnd(isMonth)}</div>
           <div className={`sum-big${forecast < 0 ? ' expense' : ''}`}>{money(forecast)}</div>
           <div className="sum-minis">
-            <div><span>{s.previousBalance}</span><b>{money(previous)}</b></div>
+            {/* The pair itself is the switch, so the card keeps its layout: left out, the amount is struck through. */}
+            <button type="button" className="sum-prev" aria-pressed={withPrevious} onClick={() => onWithPrevious(!withPrevious)}
+              title={withPrevious ? s.previousOn : s.previousOff}>
+              <span>{s.previousBalance}</span><b>{money(summary.previous)}</b>
+            </button>
             <div><span>{s.currentBalance}</span><b>{money(balance)}</b></div>
           </div>
         </div>
         <div className="sum-side">
           <div className="sum-side-head">
             <span className="k">{s.money(isMonth)}</span>
-            <small className="sum-sum">{s.moneySum(money(previous), money(incomeAll))}<b>{money(previous + incomeAll)}</b></small>
+            <small className="sum-sum">
+              {withPrevious ? <>{s.moneySum(money(previous), money(incomeAll))}<b>{money(previous + incomeAll)}</b></> : <><b>{money(incomeAll)}</b>{s.incomeOnly}</>}
+            </small>
             <b className="sum-sum-short">{money(previous + incomeAll)}</b>
           </div>
           <div className="sum-bar" role="img" aria-label={s.barAria(money(expensePaid), money(toPay), short ? money(short) : null, money(left))}>
