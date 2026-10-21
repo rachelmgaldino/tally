@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountBalance, periodSummary, withoutPrevious } from './balances'
+import { accountBalance, endOfDayBalances, periodSummary, withoutPrevious } from './balances'
 import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
 import { centsFromTyping, formatMoney, formatCents, formatSigned } from './money'
 import type { Account, Transaction } from './types'
@@ -96,6 +96,22 @@ describe('balances', () => {
     expect(nov.previous).toBe(oct.forecast)
     expect(nov.balance).toBe(oct.forecast)
     expect(nov.forecast).toBe(oct.forecast + 180000)
+  })
+  it('ends past days with only what is paid and future days with the forecast', () => {
+    const on = '2026-10-21'
+    const base = endOfDayBalances([accounts[0]], txs, [on], on).get(on)!
+    const late = [...txs,
+      tx({ kind: 'expense', amount_cents: 30000, date: '2026-10-15', paid: false }),
+      tx({ kind: 'expense', amount_cents: 5000, date: on, paid: false }),
+      tx({ kind: 'transfer', amount_cents: 7000, date: '2026-10-25', account_id: 'nu', to_account_id: 'inter', paid: false }),
+    ]
+    const days = endOfDayBalances([accounts[0]], late, ['2026-10-15', on, '2026-10-22', '2026-10-25'], on)
+    // Unpaid bills, overdue or due today, leave past days and today alone...
+    expect(days.get(on)).toBe(base)
+    expect(days.get('2026-10-15')).toBe(endOfDayBalances([accounts[0]], txs, ['2026-10-15'], on).get('2026-10-15'))
+    // ...and count from tomorrow on, with pending transfers too.
+    expect(days.get('2026-10-22')).toBe(base - 35000)
+    expect(days.get('2026-10-25')).toBe(base - 35000 - 7000)
   })
   it('computes account balances', () => {
     expect(accountBalance(accounts[1], txs, undefined, '2026-10-18')).toEqual({ current: -20000, forecast: -20000 })

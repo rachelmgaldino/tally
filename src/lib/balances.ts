@@ -135,3 +135,20 @@ export function periodSummary(
     sent,
   }
 }
+
+/**
+ * Balance of a set of accounts at the end of each of `dates`. Up to today it
+ * counts only what is paid or done, so it matches the bank. After today it is
+ * a forecast: everything not paid yet counts too, including bills already
+ * overdue, which land on the first day after today rather than on the past.
+ */
+export function endOfDayBalances(accounts: Account[], txs: Transaction[], dates: string[], on = today()): Map<string, number> {
+  const ids = new Set(accounts.map((a) => a.id))
+  const base = accounts.reduce((s, a) => s + a.initial_balance_cents, 0)
+  const out = new Map<string, number>()
+  for (const date of dates) {
+    const forecast = date > on
+    out.set(date, txs.reduce((s, tx) => (tx.date <= date && (tx.paid || forecast) ? s + effectOnSet(tx, ids) : s), base))
+  }
+  return out
+}
