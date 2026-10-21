@@ -64,7 +64,7 @@ export const en: typeof pt = {
   haveAccount: 'Already have an account? ',
   noAccount: "Don't have an account yet? ",
   salaryChip: 'salary',
-  billChip: 'Inter bill · due 11/05',
+  billChip: 'Inter bill · due 05/11',
   bubbleBack: 'So good to see you again!',
   bubbleNew: 'Yay, someone new!',
   headlineBack: 'Your month is waiting for you.',

@@ -217,7 +217,7 @@ export function TransactionPanel({ tx, onClose, onNavigate }: { tx: Transaction;
               {tx.paid ? s.undo : tx.kind === 'transfer' ? s.markDone : s.pay}
             </button>
           )}
-          {!isPayment && <button className="btn" onClick={() => open({ kind: tx.kind, copyOf: tx })}><Copy size={18} /> {s.copy}</button>}
+          {!isPayment && <button className="btn btn-lav" onClick={() => open({ kind: tx.kind, copyOf: tx })}><Copy size={18} /> {s.copy}</button>}
           <button className="btn btn-pink" onClick={del}><Trash2 size={18} /> {common.delete}</button>
         </div>
       </aside>

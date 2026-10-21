@@ -16,8 +16,6 @@ export const pt = {
   /** Week spans: "12 a 18 de outubro", "27 de set a 3 de out". */
   weekSameMonth: (d1: number, d2: number, month: string) => `${d1} a ${d2} de ${month}`,
   weekTwoMonths: (d1: number, m1: string, d2: number, m2: string) => `${d1} de ${m1} a ${d2} de ${m2}`,
-  /** Day and month in short dates: "18/10". */
-  dayMonthOrder: 'dm' as 'dm' | 'md',
 
   kinds: { expense: 'Despesa', income: 'Receita', transfer: 'Transferência', payment: 'Pagamento de fatura' },
   periods: {
@@ -111,13 +109,13 @@ export const en: typeof pt = {
   months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
   monthsInline: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
   weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-  dayOfMonth: (d, month) => `${month} ${d}`,
-  weekdayDate: (weekday, d, month) => `${weekday}, ${month} ${d}`,
-  longDate: (d, month, y) => `${month} ${d}, ${y}`,
+  // Canadian style, day before month: "18 October", "18/10/2026".
+  dayOfMonth: (d, month) => `${d} ${month}`,
+  weekdayDate: (weekday, d, month) => `${weekday}, ${d} ${month}`,
+  longDate: (d, month, y) => `${d} ${month} ${y}`,
   monthYear: (month, y) => `${month} ${y}`,
-  weekSameMonth: (d1, d2, month) => `${month} ${d1} to ${d2}`,
-  weekTwoMonths: (d1, m1, d2, m2) => `${m1} ${d1} to ${m2} ${d2}`,
-  dayMonthOrder: 'md',
+  weekSameMonth: (d1, d2, month) => `${d1} to ${d2} ${month}`,
+  weekTwoMonths: (d1, m1, d2, m2) => `${d1} ${m1} to ${d2} ${m2}`,
 
   kinds: { expense: 'Expense', income: 'Income', transfer: 'Transfer', payment: 'Bill payment' },
   periods: {
