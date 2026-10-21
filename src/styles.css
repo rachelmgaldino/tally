@@ -1298,3 +1298,37 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   .fx-box .input input { font-family: var(--display); font-size: 20px; }
   .pref-select { width: 100%; }
 }
+
+/* Descrição suggestions: Frequentes chips while empty, a list of matches once typing */
+.f-desc { position: relative; }
+.ac-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px); background: var(--card); border: var(--border); border-radius: 18px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; }
+.ac-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; text-align: left; color: var(--ink); }
+.ac-item.on { background: var(--hover); }
+.ac-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ac-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-name b { font-weight: 800; text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+.ac-txt small, .ac-meta small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.ac-meta { display: flex; flex-direction: column; align-items: flex-end; font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ac-foot { font-size: 11px; color: var(--faint); padding: 6px 10px 2px; border-top: 1.5px dashed var(--line); margin-top: 4px; display: flex; gap: 4px; align-items: center; }
+.ac-foot kbd { font: inherit; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 6px; border: 1.5px solid var(--line-strong); background: var(--card); color: var(--muted); }
+.ac-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 2px; }
+.ac-chips-lbl { font-size: 12px; font-weight: 800; color: var(--faint); margin-right: 2px; }
+.ac-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px; border: var(--border); background: var(--card); font-size: 13px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.ac-chip:hover { background: var(--hover); }
+.ac-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; border: 1.5px solid var(--edge); }
+.ac-filled-note { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--muted); padding: 2px 4px 0; }
+.ac-filled-note svg { flex: none; color: #c9a13d; }
+:root[data-theme='dark'] .ac-filled-note svg { color: var(--yellow); }
+/* What a picked suggestion filled in, until it's changed by hand. */
+.ac-filled .input { background: color-mix(in srgb, var(--yellow) 32%, var(--field)); }
+:root[data-theme='dark'] .ac-filled .input { background: color-mix(in srgb, var(--yellow) 22%, var(--field)); }
+@media (max-width: 760px) {
+  /* On the phone the list opens inside the card and pushes the rows below down. */
+  .form-group .f-desc > .ac-list, .form-group .f-desc > .ac-chips { grid-column: 1 / -1 !important; }
+  .ac-list { position: static; box-shadow: none; border: 0; border-top: 1.5px dashed var(--line); border-radius: 0; padding: 4px 0 0; margin-top: 8px; }
+  .ac-item { padding: 8px 4px; }
+  .form-group .f-desc > .ac-filled-note { padding-left: 0; }
+  .ac-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 8px -14px 0; padding: 2px 14px; }
+  .form-group .ac-filled .input { border-radius: 8px; padding: 0 8px; margin-left: -8px; }
+  :root[data-theme='dark'] .form-group .ac-filled .input { background: color-mix(in srgb, var(--yellow) 14%, var(--card)); }
+}

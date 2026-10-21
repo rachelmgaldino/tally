@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { accountBalance, endOfDayBalances, periodSummary, withoutPrevious } from './balances'
 import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
 import { centsFromTyping, formatMoney, formatCents, formatSigned } from './money'
+import { matchAt, suggestions } from './suggest'
 import type { Account, Transaction } from './types'
 
 describe('money', () => {
@@ -155,5 +156,44 @@ describe('balances', () => {
     expect(s.sent).toBe(200000)
     expect(s.expenseAll).toBe(plain.expenseAll)
     expect(s.forecast).toBe(plain.forecast - 200000)
+  })
+})
+
+describe('description suggestions', () => {
+  const tx = (description: string, date: string, extra: Partial<Transaction> = {}): Transaction => ({
+    id: `${description}-${date}`, created_at: `${date}T12:00:00Z`, kind: 'expense', description, amount_cents: 1000, date, paid: true,
+    account_id: 'a', to_account_id: null, card_id: null, invoice_month: null, category_id: 'c', notes: null,
+    series_id: null, series_index: null, tag_ids: [], attachments: [], ...extra,
+  })
+  const now = '2026-10-21'
+  const txs = [
+    tx('Pinheiro Supermercado', '2026-10-01', { category_id: 'old' }),
+    tx('pinheiro supermercado', '2026-10-20', { category_id: 'groceries', card_id: 'nu', account_id: null }),
+    tx('Padaria Pinheiro', '2026-10-18'),
+    tx('Padaria Pinheiro', '2026-10-10'),
+    tx('Padaria Pinheiro', '2026-10-03'),
+    tx('Café com a Bia', '2026-10-15'),
+    tx('Aluguel', '2026-10-10', { series_id: 's' }),
+    tx('Pinheiro Futuro', '2026-11-10'),
+    tx('Pinheiro Salário', '2026-10-05', { kind: 'income' }),
+  ]
+
+  it('matches the start of any word, ignoring case and accents', () => {
+    expect(matchAt('Pinheiro Supermercado', 'SUPER')).toEqual([9, 14])
+    expect(matchAt('Café com a Bia', 'cafe')).toEqual([0, 4])
+    expect(matchAt('Pinheiro Supermercado', 'ermer')).toBeNull()
+  })
+  it('puts whole-name matches first and merges the same name, keeping the latest entry', () => {
+    const list = suggestions(txs, 'expense', 'pinh', 5, now)
+    expect(list.map((s) => s.description)).toEqual(['pinheiro supermercado', 'Padaria Pinheiro'])
+    expect(list[0].count).toBe(2)
+    expect(list[0].last.category_id).toBe('groceries')
+  })
+  it('skips future entries and other kinds', () => {
+    expect(suggestions(txs, 'expense', 'futuro', 5, now)).toEqual([])
+    expect(suggestions(txs, 'income', 'pinh', 5, now).map((s) => s.description)).toEqual(['Pinheiro Salário'])
+  })
+  it('lists the most used as Frequentes, leaving out repeating entries', () => {
+    expect(suggestions(txs, 'expense', '', 4, now).map((s) => s.description)).toEqual(['Padaria Pinheiro', 'pinheiro supermercado', 'Café com a Bia'])
   })
 })
