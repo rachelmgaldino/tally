@@ -1121,6 +1121,8 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
   --sky: var(--hover);
   --green-tint: var(--hover);
 }
+/* Day balance band at night: a slightly lighter indigo instead of the yellow, desktop and phone */
+:root[data-theme='dark'] .tx-list.with-bal .day-head { background: var(--hover); }
 
 /* Which pastel each built-in surface carries. */
 :root[data-theme='dark'] :is(.side nav a.active, .btn-primary, .prompt-option.primary, .save-btn, .ph-card-pick button.on, .cat-icons button.on,
