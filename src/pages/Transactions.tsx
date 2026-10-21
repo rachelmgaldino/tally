@@ -13,7 +13,7 @@ import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { Modal, Segmented } from '../components/ui'
-import { effectOnSet, periodSummary, withoutPrevious } from '../lib/balances'
+import { endOfDayBalances, periodSummary, withoutPrevious } from '../lib/balances'
 import { transactionsTable } from '../lib/api'
 import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
 import { deleteEntries, useRefresh, useSeriesUpkeep } from '../lib/entries'
@@ -183,18 +183,13 @@ export default function Transactions() {
     return sum
   }, [rows, keptIds, abroadIds, foreignCardIds])
 
-  // "Saldo no fim de cada dia": balance of the accounts in view after each day, pending entries included.
-  // It shows whichever total the summary card is on; only a card filter has no account balance to show.
+  // "Saldo no fim de cada dia": balance of the accounts in view after each day. Past days and today count
+  // only what's paid, like the bank; later days are a forecast with everything pending (see endOfDayBalances).
+  // Only a card filter has no account balance to show.
   const dayBalance = useMemo(() => {
-    const out = new Map<string, number>()
-    if (!prefs.dailyBalance || filteredCard) return out
-    const ids = new Set(summaryAccounts.map((a) => a.id))
-    const base = summaryAccounts.reduce((s, a) => s + a.initial_balance_cents, 0)
-    for (const g of groups) {
-      out.set(g.date, ledger.reduce((s, tx) => (tx.date <= g.date ? s + effectOnSet(tx, ids) : s), base))
-    }
-    return out
-  }, [prefs.dailyBalance, filteredCard, summaryAccounts, groups, ledger])
+    if (!prefs.dailyBalance || filteredCard) return new Map<string, number>()
+    return endOfDayBalances(summaryAccounts, ledger, groups.map((g) => g.date), todayIso)
+  }, [prefs.dailyBalance, filteredCard, summaryAccounts, groups, ledger, todayIso])
 
   const pickedRows = rows.filter((tx) => picked.has(tx.id))
   const payable = pickedRows.filter((tx) => (tx.kind === 'expense' || tx.kind === 'income') && !tx.card_id)
