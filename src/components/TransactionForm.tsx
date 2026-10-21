@@ -16,7 +16,7 @@ import { TagInput } from './TagInput'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
 import { useTxForm } from './TxFormContext'
-import { Modal, MoneyInput, Segmented, Toggle } from './ui'
+import { caretToEnd, Modal, MoneyInput, Segmented, Toggle } from './ui'
 import { tone } from '../lib/theme'
 
 export type FormKind = Exclude<TxKind, 'payment'>
@@ -265,7 +265,7 @@ export function TransactionForm({
           <div className="row">
             <span className="prefix">{symbol(currency)}</span>
             <input id="ph-amount" inputMode="numeric" value={formatCents(amount)} style={{ width: `${formatCents(amount).length * 0.62 + 0.2}em` }} autoFocus={!editing}
-              onChange={(e) => setAmount(centsFromTyping(e.target.value))} onFocus={(e) => e.target.select()} />
+              onChange={(e) => setAmount(centsFromTyping(e.target.value))} onFocus={caretToEnd} />
           </div>
         </div>}
         <div className="form-group">

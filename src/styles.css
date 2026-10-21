@@ -940,6 +940,11 @@ button.stat { display: flex; flex-direction: column; justify-content: flex-start
 .ph-amount input { border: 0; background: none; outline: none; font-family: var(--display); font-weight: 500; font-size: 48px; min-width: 2ch; max-width: 75vw; text-align: left; font-variant-numeric: tabular-nums; padding: 0; color: var(--ink); }
 .ph-amount.expense input { color: var(--expense); }
 .ph-amount.income input { color: var(--income); }
+/* Focus on the big amount: a soft yellow underline, and a yellow caret. */
+.ph-amount .row { border-bottom: 4px solid transparent; border-radius: 2px; transition: border-color 0.15s; }
+.ph-amount .row:focus-within { border-bottom-color: var(--yellow); }
+.ph-amount input { caret-color: var(--ink); }
+.ph-amount input::selection, .input input::selection { background: var(--yellow); color: var(--ink); }
 .day-chip { min-height: 48px; padding: 0 18px; border-radius: 999px; border: var(--border); background: var(--card); font-weight: 800; font-size: 14px; flex: none; }
 .day-chip:hover:not(.on) { background: var(--hover); }
 .day-chip.on { background: var(--yellow); }
