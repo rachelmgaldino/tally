@@ -77,7 +77,6 @@ export const pt = {
   summaryMonth: (month: string) => `Resumo de ${month}`,
   summarySpan: (span: string) => `Resumo · ${span}`,
   periodBalance: 'Saldo do período',
-  forecast: 'Previsto',
 
   // Bulk actions
   bulkActions: 'Ações em lote',
@@ -140,9 +139,11 @@ export const pt = {
     expenseLegend: 'saídas',
     keptLegend: 'guardado',
     sentLegend: 'para outras moedas',
-    forecastEnd: (isMonth: boolean): string => (isMonth ? 'Previsto pro fim do mês' : 'Previsto pro fim do período'),
+    forecastEnd: (isMonth: boolean): string => (isMonth ? 'Previsto fim do mês' : 'Previsto fim do período'),
     previousBalance: 'Saldo anterior',
     currentBalance: 'Saldo atual',
+    /** A past period: the balance on its last day, "18/10". */
+    balanceOn: (day: string) => `Saldo em ${day}`,
     money: (isMonth: boolean): string => (isMonth ? 'Dinheiro do mês' : 'Dinheiro do período'),
     /** "R$ 1.000,00 que já tinha + R$ 500,00 de receitas = " (the total follows in bold) */
     moneySum: (previous: string, income: string) => `${previous} que já tinha + ${income} de receitas = `,
@@ -231,7 +232,6 @@ export const en: typeof pt = {
   summaryMonth: (month) => `${month} summary`,
   summarySpan: (span) => `Summary · ${span}`,
   periodBalance: 'Period balance',
-  forecast: 'Forecast',
 
   bulkActions: 'Bulk actions',
   tapEntries: 'Tap transactions',
@@ -288,9 +288,10 @@ export const en: typeof pt = {
     expenseLegend: 'money out',
     keptLegend: 'set aside',
     sentLegend: 'to other currencies',
-    forecastEnd: (isMonth) => (isMonth ? 'Forecast for end of month' : 'Forecast for end of period'),
+    forecastEnd: (isMonth) => (isMonth ? 'End-of-month forecast' : 'End-of-period forecast'),
     previousBalance: 'Previous balance',
     currentBalance: 'Current balance',
+    balanceOn: (day) => `Balance on ${day}`,
     money: (isMonth) => (isMonth ? "This month's money" : "This period's money"),
     moneySum: (previous, income) => `${previous} you had + ${income} income = `,
     incomeOnly: ' income',
