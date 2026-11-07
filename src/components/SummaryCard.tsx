@@ -1,19 +1,24 @@
 import { Minus, Plus, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { withoutPrevious, type PeriodSummary } from '../lib/balances'
+import { dayMonth } from '../lib/dates'
 import { t } from '../lib/i18n'
 import { formatMoney, formatCents, type Currency } from '../lib/money'
 
 /**
- * The card at the end of Lançamentos. With balances: the forecast for the end
- * of the period, and one bar for all the period's money (what was already there
- * plus what comes in) split into paid, still to pay and what's left. With the
- * button pressed: just the money in and out.
+ * The card at the end of Lançamentos. Both views lead with the balance the bank
+ * shows (Saldo atual). With balances: below it the Saldo anterior and the
+ * forecast for the end of the period, and one bar for all the period's money
+ * (what was already there plus what comes in) split into paid, still to pay and
+ * what's left. With the button pressed: just the money in and out. A filtered
+ * card has no balance, so it gets the period's in minus out instead.
  */
 export function SummaryCard({
-  summary, totals, totalsOnly, onToggle, title, isMonth, filter, currency, withPrevious, onWithPrevious,
+  summary, balance, totals, totalsOnly, onToggle, title, isMonth, filter, currency, withPrevious, onWithPrevious,
 }: {
   summary: PeriodSummary
+  /** The bank balance: today's, or a past period's last day (`on`). Null when a card is filtered. */
+  balance: { cents: number; on: string | null } | null
   /** Paid in and out, plus what is still pending (shown when nothing is paid yet). */
   totals: { income: number; expense: number; pendingIncome: number; pendingExpense: number; saved: number; sent: number }
   totalsOnly: boolean
@@ -40,6 +45,7 @@ export function SummaryCard({
   )
   const head = <div className="sum-head"><span>{title}</span>{filter && <span className="sum-head-filter">{filter}</span>}{toggle}</div>
   const heroFilter = filter && <div className="sum-hero-filter">{filter}</div>
+  const balanceLabel = balance?.on ? s.balanceOn(dayMonth(balance.on)) : s.currentBalance
 
   if (totalsOnly) {
     const { income, expense, pendingIncome, pendingExpense, saved, sent: sentAll } = totals
@@ -51,8 +57,17 @@ export function SummaryCard({
         <div className="sum-body">
           <div className="sum-hero">
             {heroFilter}
-            <div className="k">{s.periodBalance}</div>
-            <div className="sum-big">{money(income - expense - saved - sentAll)}</div>
+            {balance ? (
+              <>
+                <div className="k">{balanceLabel}</div>
+                <div className={`sum-big${balance.cents < 0 ? ' expense' : ''}`}>{money(balance.cents)}</div>
+              </>
+            ) : (
+              <>
+                <div className="k">{s.periodBalance}</div>
+                <div className="sum-big">{money(income - expense - saved - sentAll)}</div>
+              </>
+            )}
           </div>
           <div className="sum-side">
             {income + expense + kept + sent === 0 ? (
@@ -90,7 +105,8 @@ export function SummaryCard({
     )
   }
 
-  const { previous, incomeAll, expensePaid, expenseAll, balance, forecast, saved, sent: sentAll } = withPrevious ? summary : withoutPrevious(summary)
+  const { previous, incomeAll, expensePaid, expenseAll, forecast, saved, sent: sentAll } = withPrevious ? summary : withoutPrevious(summary)
+  const now = balance?.cents ?? 0
   const toPay = expenseAll - expensePaid
   const left = Math.max(forecast, 0)
   const short = Math.max(-forecast, 0)
@@ -103,15 +119,15 @@ export function SummaryCard({
       <div className="sum-body">
         <div className="sum-hero">
           {heroFilter}
-          <div className="k">{s.forecastEnd(isMonth)}</div>
-          <div className={`sum-big${forecast < 0 ? ' expense' : ''}`}>{money(forecast)}</div>
+          <div className="k">{balanceLabel}</div>
+          <div className={`sum-big${now < 0 ? ' expense' : ''}`}>{money(now)}</div>
           <div className="sum-minis">
             {/* The pair itself is the switch, so the card keeps its layout: left out, the amount is struck through. */}
             <button type="button" className="sum-prev" aria-pressed={withPrevious} onClick={() => onWithPrevious(!withPrevious)}
               title={withPrevious ? s.previousOn : s.previousOff}>
               <span>{s.previousBalance}</span><b>{money(summary.previous)}</b>
             </button>
-            <div><span>{s.currentBalance}</span><b>{money(balance)}</b></div>
+            <div><span>{s.forecastEnd(isMonth)}</span><b className={forecast < 0 ? 'expense' : undefined}>{money(forecast)}</b></div>
           </div>
         </div>
         <div className="sum-side">

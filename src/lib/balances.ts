@@ -1,4 +1,4 @@
-import { today } from './dates'
+import { addDays, today } from './dates'
 import type { Account, Transaction } from './types'
 
 /**
@@ -151,4 +151,16 @@ export function endOfDayBalances(accounts: Account[], txs: Transaction[], dates:
     out.set(date, txs.reduce((s, tx) => (tx.date <= date && (tx.paid || forecast) ? s + effectOnSet(tx, ids) : s), base))
   }
   return out
+}
+
+/**
+ * The bank balance the summary card leads with, for the period [from, to).
+ * A past period shows what was paid by its last day (`on` is that day); the
+ * current or a later period shows today's balance (`on` is null, "Saldo atual").
+ */
+export function balanceAsOf(accounts: Account[], txs: Transaction[], to: string, on = today()): { cents: number; on: string | null } {
+  const lastDay = addDays(to, -1)
+  const past = lastDay < on
+  const day = past ? lastDay : on
+  return { cents: endOfDayBalances(accounts, txs, [day], on).get(day)!, on: past ? day : null }
 }

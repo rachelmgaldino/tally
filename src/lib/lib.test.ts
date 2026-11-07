@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountBalance, endOfDayBalances, periodSummary, withoutPrevious } from './balances'
+import { accountBalance, balanceAsOf, endOfDayBalances, periodSummary, withoutPrevious } from './balances'
 import { addDays, addMonths, monthEnd, monthLabel, shortDate } from './dates'
 import { centsFromTyping, formatMoney, formatCents, formatSigned } from './money'
 import { matchAt, suggestions } from './suggest'
@@ -113,6 +113,20 @@ describe('balances', () => {
     // ...and count from tomorrow on, with pending transfers too.
     expect(days.get('2026-10-22')).toBe(base - 35000)
     expect(days.get('2026-10-25')).toBe(base - 35000 - 7000)
+  })
+  it('leads the card with the bank balance: a past month\'s last day, else today', () => {
+    const on = '2026-11-07'
+    const late = [...txs,
+      tx({ kind: 'expense', amount_cents: 35792, date: '2026-10-05', paid: false }),
+      tx({ kind: 'expense', amount_cents: 1000, date: '2026-11-03' }),
+    ]
+    const oct = balanceAsOf([accounts[0]], late, '2026-11-01', on)
+    expect(oct).toEqual({ cents: 180000 - 12400 - 4450 + 20000 + 20000, on: '2026-10-31' })
+    // November and December both show today's balance: paid only, so the unpaid
+    // October bill and the pending November income stay out.
+    const nov = balanceAsOf([accounts[0]], late, '2026-12-01', on)
+    expect(nov).toEqual({ cents: oct.cents - 1000, on: null })
+    expect(balanceAsOf([accounts[0]], late, '2027-01-01', on)).toEqual(nov)
   })
   it('computes account balances', () => {
     expect(accountBalance(accounts[1], txs, undefined, '2026-10-18')).toEqual({ current: -20000, forecast: -20000 })

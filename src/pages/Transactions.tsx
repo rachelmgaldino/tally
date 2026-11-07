@@ -13,7 +13,7 @@ import { orderedCategories } from '../components/Selects'
 import { TransactionPanel } from '../components/TransactionPanel'
 import { useTxForm } from '../components/TxFormContext'
 import { Modal, Segmented } from '../components/ui'
-import { endOfDayBalances, periodSummary, withoutPrevious } from '../lib/balances'
+import { balanceAsOf, endOfDayBalances, periodSummary } from '../lib/balances'
 import { transactionsTable } from '../lib/api'
 import { cashFlow, isCardPurchase, toMonth } from '../lib/cards'
 import { deleteEntries, useRefresh, useSeriesUpkeep } from '../lib/entries'
@@ -151,6 +151,8 @@ export default function Transactions() {
   const foreignCardIds = useMemo(() => new Set(accountFilter ? [] : cards.filter(isForeign).map((c) => c.id)), [cards, accountFilter])
   const summaryAccounts = accountFilter ? accounts.filter((a) => a.id === accountFilter) : accounts.filter((a) => !keptIds.has(a.id) && !abroadIds.has(a.id))
   const summary = periodSummary(summaryAccounts, ledger, from, to, keptIds, abroadIds)
+  // What the bank shows, so the card leads with a number Rachel can check. A card has no balance.
+  const bankBalance = filteredCard ? null : balanceAsOf(summaryAccounts, ledger, to, todayIso)
   // The filtered account's or card's currency, or the Moeda principal.
   const summaryCurrency: Currency = accountFilter ? currencyOf(accountMap.get(accountFilter) ?? cardMap.get(accountFilter)) : homeCurrency()
   // A plain total (income minus expenses, transfers left out) when asked for, or when a card is filtered,
@@ -518,6 +520,7 @@ export default function Transactions() {
         <div id="tx-summary">
         <SummaryCard
           summary={summary}
+          balance={bankBalance}
           totals={totals}
           totalsOnly={simpleTotal}
           onToggle={filteredCard ? undefined : () => setTotalsOnly(!totalsOnly)}
@@ -535,8 +538,8 @@ export default function Transactions() {
         </div>
         {rows.length > 0 && (
           <SummaryPill
-            label={simpleTotal ? s.periodBalance : s.forecast}
-            cents={simpleTotal ? totals.income - totals.expense - totals.saved - totals.sent : (prefs.previousInForecast ? summary : withoutPrevious(summary)).forecast}
+            label={!bankBalance ? s.periodBalance : bankBalance.on ? s.card.balanceOn(dayMonth(bankBalance.on)) : s.card.currentBalance}
+            cents={bankBalance ? bankBalance.cents : totals.income - totals.expense - totals.saved - totals.sent}
             currency={summaryCurrency}
           />
         )}
